@@ -1,0 +1,1222 @@
+fileFormatVersion: 2
+guid: 05c06ce2ef169314d9d523524e9ade4e
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -5431139748416994281
+    second: orenge_0
+  - first:
+      213: -5998254486905726989
+    second: orenge_1
+  - first:
+      213: -8988440642314778876
+    second: orenge_2
+  - first:
+      213: 2369854443312170441
+    second: orenge_3
+  - first:
+      213: 1532927715029911145
+    second: orenge_4
+  - first:
+      213: 3947367867940358522
+    second: orenge_5
+  - first:
+      213: -7807586249307033233
+    second: orenge_6
+  - first:
+      213: 4483190439756688777
+    second: orenge_7
+  - first:
+      213: -7709198652577841764
+    second: orenge_8
+  - first:
+      213: 5173517407901272287
+    second: orenge_9
+  - first:
+      213: 1002817501793142815
+    second: orenge_10
+  - first:
+      213: -1028748477445129826
+    second: orenge_11
+  - first:
+      213: 2753755372865166027
+    second: orenge_12
+  - first:
+      213: -445914944806238027
+    second: orenge_13
+  - first:
+      213: -4267537105563533596
+    second: orenge_14
+  - first:
+      213: 8645412542627001605
+    second: orenge_15
+  - first:
+      213: -5320517244551906672
+    second: orenge_16
+  - first:
+      213: -4193912740605859292
+    second: orenge_17
+  - first:
+      213: 2222086761170643858
+    second: orenge_18
+  - first:
+      213: 6065223983999164775
+    second: orenge_19
+  - first:
+      213: 8830954228216389710
+    second: orenge_20
+  - first:
+      213: 8107262658327244344
+    second: orenge_21
+  - first:
+      213: 8108481807731284109
+    second: orenge_22
+  - first:
+      213: -993917277298549052
+    second: orenge_23
+  - first:
+      213: -7720573220662791462
+    second: orenge_24
+  - first:
+      213: 1663910925668592446
+    second: orenge_25
+  - first:
+      213: -4838058092888865631
+    second: orenge_26
+  - first:
+      213: -7067964680411477527
+    second: orenge_27
+  - first:
+      213: -8733600762608548177
+    second: orenge_28
+  - first:
+      213: -5163338293628927359
+    second: orenge_29
+  - first:
+      213: -5002340335170638147
+    second: orenge_30
+  - first:
+      213: -2807231814217663053
+    second: orenge_31
+  - first:
+      213: -5939882589888393363
+    second: orenge_32
+  - first:
+      213: 6423672093884037027
+    second: orenge_33
+  - first:
+      213: -4744344244363191994
+    second: orenge_34
+  - first:
+      213: 207956020310037199
+    second: orenge_35
+  - first:
+      213: -7596369715486363969
+    second: orenge_36
+  - first:
+      213: 1760497228083980321
+    second: orenge_37
+  - first:
+      213: -1955479318778985222
+    second: orenge_38
+  - first:
+      213: -6485135698664176504
+    second: orenge_39
+  - first:
+      213: 6574964523036713377
+    second: orenge_40
+  - first:
+      213: -2127524056844800652
+    second: orenge_41
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: orenge_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 279
+        height: 1536
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 714c91a9c27b0a4b0800000000000000
+      internalID: -5431139748416994281
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: orenge_1
+      rect:
+        serializedVersion: 2
+        x: 22
+        y: 1353
+        width: 11
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3f75793035be1cca0800000000000000
+      internalID: -5998254486905726989
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: orenge_2
+      rect:
+        serializedVersion: 2
+        x: 46
+        y: 1353
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 407c42ecbd4a24380800000000000000
+      internalID: -8988440642314778876
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: orenge_3
+      rect:
+        serializedVersion: 2
+        x: 267
+        y: 1296
+        width: 249
+        height: 215
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9c5c0076f0a63e020800000000000000
+      internalID: 2369854443312170441
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: orenge_4
+      rect:
+        serializedVersion: 2
+        x: 518
+        y: 1300
+        width: 154
+        height: 211
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 96685b092ad064510800000000000000
+      internalID: 1532927715029911145
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: orenge_5
+      rect:
+        serializedVersion: 2
+        x: 669
+        y: 877
+        width: 355
+        height: 634
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a79406e692ed7c630800000000000000
+      internalID: 3947367867940358522
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: orenge_6
+      rect:
+        serializedVersion: 2
+        x: 154
+        y: 1309
+        width: 6
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f6174d03ca1e5a390800000000000000
+      internalID: -7807586249307033233
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: orenge_7
+      rect:
+        serializedVersion: 2
+        x: 221
+        y: 1311
+        width: 12
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 98def16b3fd773e30800000000000000
+      internalID: 4483190439756688777
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: orenge_8
+      rect:
+        serializedVersion: 2
+        x: 240
+        y: 1317
+        width: 7
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c9d7d2aabac630590800000000000000
+      internalID: -7709198652577841764
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: orenge_9
+      rect:
+        serializedVersion: 2
+        x: 227
+        y: 1296
+        width: 9
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fd841490ca60cc740800000000000000
+      internalID: 5173517407901272287
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: orenge_10
+      rect:
+        serializedVersion: 2
+        x: 249
+        y: 1293
+        width: 11
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f18cce86439baed00800000000000000
+      internalID: 1002817501793142815
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: orenge_11
+      rect:
+        serializedVersion: 2
+        x: 263
+        y: 1293
+        width: 12
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e99b8a6d5b629b1f0800000000000000
+      internalID: -1028748477445129826
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: orenge_12
+      rect:
+        serializedVersion: 2
+        x: 351
+        y: 1301
+        width: 9
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bca93fdebed473620800000000000000
+      internalID: 2753755372865166027
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: orenge_13
+      rect:
+        serializedVersion: 2
+        x: 654
+        y: 1290
+        width: 11
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5b849c268bacfc9f0800000000000000
+      internalID: -445914944806238027
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: orenge_14
+      rect:
+        serializedVersion: 2
+        x: 753
+        y: 1295
+        width: 13
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4ee3615ec99a6c4c0800000000000000
+      internalID: -4267537105563533596
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: orenge_15
+      rect:
+        serializedVersion: 2
+        x: 171
+        y: 8
+        width: 853
+        height: 1290
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5053df3f6ecaaf770800000000000000
+      internalID: 8645412542627001605
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: orenge_16
+      rect:
+        serializedVersion: 2
+        x: 387
+        y: 1290
+        width: 8
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 09ab42161c9b926b0800000000000000
+      internalID: -5320517244551906672
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: orenge_17
+      rect:
+        serializedVersion: 2
+        x: 680
+        y: 1287
+        width: 9
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 42ae33d259a3cc5c0800000000000000
+      internalID: -4193912740605859292
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: orenge_18
+      rect:
+        serializedVersion: 2
+        x: 744
+        y: 1281
+        width: 10
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 29bacabd22076de10800000000000000
+      internalID: 2222086761170643858
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: orenge_19
+      rect:
+        serializedVersion: 2
+        x: 151
+        y: 1252
+        width: 16
+        height: 14
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 761237914110c2450800000000000000
+      internalID: 6065223983999164775
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: orenge_20
+      rect:
+        serializedVersion: 2
+        x: 854
+        y: 1235
+        width: 26
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e406298051add8a70800000000000000
+      internalID: 8830954228216389710
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: orenge_21
+      rect:
+        serializedVersion: 2
+        x: 134
+        y: 1223
+        width: 10
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 83e62620f68c28070800000000000000
+      internalID: 8107262658327244344
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: orenge_22
+      rect:
+        serializedVersion: 2
+        x: 860
+        y: 1116
+        width: 74
+        height: 79
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d885a895e3d178070800000000000000
+      internalID: 8108481807731284109
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: orenge_23
+      rect:
+        serializedVersion: 2
+        x: 865
+        y: 1090
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4ce1f769085e432f0800000000000000
+      internalID: -993917277298549052
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: orenge_24
+      rect:
+        serializedVersion: 2
+        x: 879
+        y: 1081
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ad23008af830bd490800000000000000
+      internalID: -7720573220662791462
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: orenge_25
+      rect:
+        serializedVersion: 2
+        x: 169
+        y: 1034
+        width: 8
+        height: 14
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e3b2e5ecb26671710800000000000000
+      internalID: 1663910925668592446
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: orenge_26
+      rect:
+        serializedVersion: 2
+        x: 853
+        y: 1031
+        width: 6
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1a4c7a23cc3cbdcb0800000000000000
+      internalID: -4838058092888865631
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: orenge_27
+      rect:
+        serializedVersion: 2
+        x: 139
+        y: 942
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9e90113229b89ed90800000000000000
+      internalID: -7067964680411477527
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: orenge_28
+      rect:
+        serializedVersion: 2
+        x: 150
+        y: 856
+        width: 9
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fa603a601640cc680800000000000000
+      internalID: -8733600762608548177
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: orenge_29
+      rect:
+        serializedVersion: 2
+        x: 127
+        y: 784
+        width: 10
+        height: 14
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1828311bd232858b0800000000000000
+      internalID: -5163338293628927359
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: orenge_30
+      rect:
+        serializedVersion: 2
+        x: 137
+        y: 743
+        width: 11
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: dbeab8cf7fd149ab0800000000000000
+      internalID: -5002340335170638147
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: orenge_31
+      rect:
+        serializedVersion: 2
+        x: 863
+        y: 609
+        width: 6
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3bd716fc985ba09d0800000000000000
+      internalID: -2807231814217663053
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: orenge_32
+      rect:
+        serializedVersion: 2
+        x: 169
+        y: 575
+        width: 10
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d6fcc2e514c419da0800000000000000
+      internalID: -5939882589888393363
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: orenge_33
+      rect:
+        serializedVersion: 2
+        x: 161
+        y: 527
+        width: 8
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3a73c8d3cb7752950800000000000000
+      internalID: 6423672093884037027
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: orenge_34
+      rect:
+        serializedVersion: 2
+        x: 851
+        y: 511
+        width: 14
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 649109edb04b82eb0800000000000000
+      internalID: -4744344244363191994
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: orenge_35
+      rect:
+        serializedVersion: 2
+        x: 36
+        y: 465
+        width: 6
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fc2db7f06eec2e200800000000000000
+      internalID: 207956020310037199
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: orenge_36
+      rect:
+        serializedVersion: 2
+        x: 18
+        y: 415
+        width: 15
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fbe66e5bdf5449690800000000000000
+      internalID: -7596369715486363969
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: orenge_37
+      rect:
+        serializedVersion: 2
+        x: 41
+        y: 417
+        width: 8
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1286104c6ea8e6810800000000000000
+      internalID: 1760497228083980321
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: orenge_38
+      rect:
+        serializedVersion: 2
+        x: 158
+        y: 412
+        width: 11
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: af44e8e8bedbcd4e0800000000000000
+      internalID: -1955479318778985222
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: orenge_39
+      rect:
+        serializedVersion: 2
+        x: 166
+        y: 327
+        width: 12
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 884cae8117b2006a0800000000000000
+      internalID: -6485135698664176504
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: orenge_40
+      rect:
+        serializedVersion: 2
+        x: 159
+        y: 295
+        width: 10
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1a12666e567fe3b50800000000000000
+      internalID: 6574964523036713377
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: orenge_41
+      rect:
+        serializedVersion: 2
+        x: 264
+        y: 278
+        width: 7
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 47deaa474248972e0800000000000000
+      internalID: -2127524056844800652
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      orenge_0: -5431139748416994281
+      orenge_1: -5998254486905726989
+      orenge_10: 1002817501793142815
+      orenge_11: -1028748477445129826
+      orenge_12: 2753755372865166027
+      orenge_13: -445914944806238027
+      orenge_14: -4267537105563533596
+      orenge_15: 8645412542627001605
+      orenge_16: -5320517244551906672
+      orenge_17: -4193912740605859292
+      orenge_18: 2222086761170643858
+      orenge_19: 6065223983999164775
+      orenge_2: -8988440642314778876
+      orenge_20: 8830954228216389710
+      orenge_21: 8107262658327244344
+      orenge_22: 8108481807731284109
+      orenge_23: -993917277298549052
+      orenge_24: -7720573220662791462
+      orenge_25: 1663910925668592446
+      orenge_26: -4838058092888865631
+      orenge_27: -7067964680411477527
+      orenge_28: -8733600762608548177
+      orenge_29: -5163338293628927359
+      orenge_3: 2369854443312170441
+      orenge_30: -5002340335170638147
+      orenge_31: -2807231814217663053
+      orenge_32: -5939882589888393363
+      orenge_33: 6423672093884037027
+      orenge_34: -4744344244363191994
+      orenge_35: 207956020310037199
+      orenge_36: -7596369715486363969
+      orenge_37: 1760497228083980321
+      orenge_38: -1955479318778985222
+      orenge_39: -6485135698664176504
+      orenge_4: 1532927715029911145
+      orenge_40: 6574964523036713377
+      orenge_41: -2127524056844800652
+      orenge_5: 3947367867940358522
+      orenge_6: -7807586249307033233
+      orenge_7: 4483190439756688777
+      orenge_8: -7709198652577841764
+      orenge_9: 5173517407901272287
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
