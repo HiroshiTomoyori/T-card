@@ -132,6 +132,8 @@ public class TitleManager : MonoBehaviour
 
         if (difficultyBGM != null)
             difficultyBGM.Play();
+
+        isTransitioning = false;
     }
 
     public void SelectDifficulty()
@@ -172,6 +174,9 @@ public class TitleManager : MonoBehaviour
 
     public void SelectEasy()
     {
+            if(isTransitioning)
+        return;
+
         isAdvancedRule = false;
         StartCoroutine(
             SelectRoutine(
@@ -183,6 +188,8 @@ public class TitleManager : MonoBehaviour
 
     public void SelectNormal()
     {
+            if(isTransitioning)
+        return;
         isAdvancedRule = false;
         StartCoroutine(
             SelectRoutine(
@@ -194,6 +201,8 @@ public class TitleManager : MonoBehaviour
 
     public void SelectHard()
     {
+            if(isTransitioning)
+        return;
         isAdvancedRule = false;
         StartCoroutine(
             SelectRoutine(
@@ -205,6 +214,8 @@ public class TitleManager : MonoBehaviour
 
     public void SelectSecret()
     {
+            if(isTransitioning)
+        return;
         isAdvancedRule = true;
 
         StartCoroutine(

@@ -86,6 +86,11 @@ public class TurnManager : MonoBehaviour
     //public Transform playerWallArea;
     public Transform enemyWallArea;
 
+    bool isEndingTurn = false;
+
+    List<GameObject> pendingWallTargets =
+    new List<GameObject>();
+
 
     public float resultWaitTime = 1.5f;
 
@@ -230,6 +235,35 @@ public void StartBattleByAttackSelect(GameObject attacker)
     }
     selectingTarget = true;
 
+    /*if(maxWallBreakCount >= 2 &&
+    attackArrowManager != null)
+    {
+        attackArrowManager.SetArrowColor(
+            new Color(0.8f, 0.2f, 1f)
+        );
+    }
+    else if(attackArrowManager != null)
+    {
+        attackArrowManager.SetArrowColor(Color.red);
+    }*/
+
+    if(maxWallBreakCount >= 2 &&
+    attackArrowManager != null)
+    {
+        // モナーク攻撃：紫
+        attackArrowManager.SetPlayerArrowColor(
+            new Color(0.8f, 0.2f, 1f)
+        );
+    }
+    else if(attackArrowManager != null)
+    {
+        // 通常攻撃：緑
+        attackArrowManager.SetPlayerArrowColor(
+            new Color(0.55f, 1f, 0.55f, 1f)
+        );
+    }
+
+
     SetEnemyWallClickable(true);
 
     if(!isBattlePhase)
@@ -255,57 +289,53 @@ public void StartBattleByAttackSelect(GameObject attacker)
     Debug.Log("攻撃対象を選択してください");
 }
 
-    public void SelectAttackTarget(GameObject target)
+public void SelectAttackTarget(GameObject target)
+{
+    if(!selectingTarget)
+        return;
+
+    if(currentAttacker == null)
+        return;
+
+    if(target == null)
+        return;
+
+    CardController attackerCard =
+        currentAttacker.GetComponent<CardController>();
+
+    if(attackerCard == null)
+        return;
+
+    Debug.Log(
+        currentAttacker.name +
+        " が " +
+        target.name +
+        " を攻撃"
+    );
+
+    CardController blocker =
+        SelectEnemyBlocker(attackerCard);
+
+    if(blocker != null)
     {
-        if(!selectingTarget)
-            return;
-
-        if(currentAttacker == null)
-            return;
-
-        if(target == null)
-            return;
-
         Debug.Log(
-            currentAttacker.name +
-            " が " +
-            target.name +
-            " を攻撃"
+            "CPUがブロック：" +
+            blocker.data.cardName
         );
 
-        if(handDealer != null)
-        {
-            handDealer.DamageEnemyWallFromAttack(target);
-        }
+        ResolveCardBattle(
+            attackerCard,
+            blocker
+        );
 
-        wallBreakCount++;
+        attackerCard.Tap();
+        attackerCard.SetAttackable(false);
 
-        CardController attackerCard =
-            currentAttacker.GetComponent<CardController>();
+        CardActionIcon icon =
+            attackerCard.GetComponent<CardActionIcon>();
 
-        if(wallBreakCount < maxWallBreakCount &&
-        handDealer != null &&
-        !handDealer.IsEnemyWallZero())
-        {
-            Debug.Log("ダブルWallブレイク：もう1枚選択してください");
-
-            SetEnemyWallClickable(true);
-            return;
-        }
-
-        if(attackerCard != null)
-        {
-            attackerCard.Tap();
-            attackerCard.SetAttackable(false);
-
-            CardActionIcon icon =
-                attackerCard.GetComponent<CardActionIcon>();
-
-            if(icon != null)
-            {
-                icon.HideAll();
-            }
-        }
+        if(icon != null)
+            icon.HideAll();
 
         wallBreakCount = 0;
         maxWallBreakCount = 1;
@@ -314,9 +344,169 @@ public void StartBattleByAttackSelect(GameObject attacker)
         currentAttacker = null;
 
         SetEnemyWallClickable(false);
-
         HideAttackArrow();
+
+        return;
     }
+
+    pendingWallTargets.Add(target);
+
+    wallBreakCount++;
+
+    Debug.Log(
+        "Wall選択：" +
+        wallBreakCount +
+        "/" +
+        maxWallBreakCount
+    );
+
+    // まだ2枚目選択が必要
+    if(wallBreakCount < maxWallBreakCount &&
+    handDealer != null &&
+    !handDealer.IsEnemyWallZero())
+    {
+        Debug.Log("2枚目のWallを選択してください");
+
+        return;
+    }
+
+    //=========================
+    // ここで同時破壊
+    //=========================
+
+    foreach(GameObject wall in pendingWallTargets)
+    {
+        if(handDealer != null)
+        {
+            handDealer.DamageEnemyWallFromAttack(
+                wall
+            );
+        }
+    }
+
+    pendingWallTargets.Clear();
+
+    attackerCard.Tap();
+    attackerCard.SetAttackable(false);
+
+    CardActionIcon attackerIcon =
+        attackerCard.GetComponent<CardActionIcon>();
+
+    if(attackerIcon != null)
+    {
+        attackerIcon.HideAll();
+    }
+
+    wallBreakCount = 0;
+    maxWallBreakCount = 1;
+
+    selectingTarget = false;
+    currentAttacker = null;
+
+    SetEnemyWallClickable(false);
+
+    HideAttackArrow();
+    pendingWallTargets.Clear();
+}
+
+CardController SelectEnemyBlocker(
+    CardController attacker
+)
+{
+    if(attacker == null || attacker.data == null)
+        return null;
+
+    int enemyWallCount =
+        GetAliveEnemyWallCount();
+
+    bool dangerousAttack =
+        IsMonarchCard(attacker.data) ||
+        attacker.data.name.Contains("K") ||
+        attacker.data.name.Contains("Joker");
+
+        // Wallが5枚なら弱い攻撃だけ通す
+        if(enemyWallCount >= 5 &&
+        !dangerousAttack &&
+        attacker.data.power <= 4)
+        {
+            return null;
+        }
+
+    CardController bestBlocker = null;
+    int bestScore = -999;
+
+    for(int i = 0; i < enemyBattleArea.childCount; i++)
+    {
+        CardController card =
+            enemyBattleArea.GetChild(i)
+            .GetComponent<CardController>();
+
+        if(card == null)
+            continue;
+
+        if(card.isTapped)
+            continue;
+
+        if(card.data == null)
+            continue;
+
+        if(!IsGuardCard(card.data))
+            continue;
+
+        card.data.SetPowerFromName();
+
+        int score = 0;
+
+        if(card.data.power == 2)
+            score += 40;
+
+        if(card.data.power == 3)
+            score += 40;
+
+        if(card.data.power == 4)
+            score += 35;
+
+        if(dangerousAttack)
+            score += 80;
+        else
+            score += 25;
+
+        score -= card.data.power;
+
+        if(score > bestScore)
+        {
+            bestScore = score;
+            bestBlocker = card;
+        }
+    }
+
+    return bestBlocker;
+}
+
+int GetAliveEnemyWallCount()
+{
+    if(handDealer == null)
+        return 0;
+
+    if(handDealer.enemyWallArea == null)
+        return 0;
+
+    int count = 0;
+
+    for(int i = 0; i < handDealer.enemyWallArea.childCount; i++)
+    {
+        CanvasGroup cg =
+            handDealer.enemyWallArea.GetChild(i)
+            .GetComponent<CanvasGroup>();
+
+        if(cg != null && cg.alpha <= 0.01f)
+            continue;
+
+        count++;
+    }
+
+    return count;
+}
     public void SelectEnemyBattleCardTarget(GameObject target)
     {
         if(!selectingTarget)
@@ -580,6 +770,11 @@ public void HideAttackArrow()
 
 public void EndPlayerTurn()
 {
+    if(isEndingTurn)
+        return;
+
+    isEndingTurn = true;
+
     StartCoroutine(EndPlayerTurnRoutine());
 }
 
@@ -604,6 +799,8 @@ public void EndPlayerTurn()
 
 
         StartPlayerTurn();
+
+        isEndingTurn = false;
     }
 
 void StartPlayerTurn(bool firstTurn = false)
@@ -870,24 +1067,135 @@ void SetEnemyWallClickable(bool value)
             Debug.Log("=== 敵ターン終了 ===");
         }
 
-    IEnumerator EnemyResourcePhase()
+CardData SelectEnemyResourceChargeCard()
+{
+    if(handDealer == null)
+        return null;
+
+    if(handDealer.enemyHandCards == null)
+        return null;
+
+    if(handDealer.enemyHandCards.Count == 0)
+        return null;
+
+    // リソース13以上なら消極的
+    bool lowPriorityCharge = false;
+
+    if(enemyResourceManager != null &&
+    enemyResourceManager.currentResource >= 13)
     {
-        Debug.Log("敵 Resource Phase");
-
-        if(handDealer != null)
-        {
-            yield return StartCoroutine(
-                handDealer.EnemyChargeResourceAnimation()
-            );
-        }
-
-        if(enemyResourceManager != null)
-        {
-            enemyResourceManager.AddResource();
-        }
-
-        yield return new WaitForSeconds(0.5f);
+        lowPriorityCharge = true;
     }
+
+    CardData bestCard = null;
+    int bestScore = -999;
+
+    foreach(CardData card in handDealer.enemyHandCards)
+    {
+        if(card == null)
+            continue;
+
+        card.SetPowerFromName();
+
+        int score = 0;
+
+        if(turnCount <= 10)
+        {
+            if(card.power == 2)
+                score += 40;
+
+            if(card.power == 3)
+                score += 40;
+
+            if(card.power == 9)
+                score += 35;
+
+            if(GetCardName(card).Contains("Q"))
+                score += 35;
+        }
+
+        if(GetCardName(card).Contains("K")
+)
+            score -= 80;
+
+        if(card.power == 1)
+            score -= 80;
+
+        if(GetCardName(card).Contains("Joker"))
+            score -= 100;
+
+        if(card.power >= 2 && card.power <= 6)
+            score += 10;
+
+        if(score > bestScore)
+        {
+            bestScore = score;
+            bestCard = card;
+        }
+    }
+
+// リソース13未満なら、最低1枚はチャージする
+if(!lowPriorityCharge)
+{
+    if(bestCard != null)
+    {
+        Debug.Log(
+            "CPUリソースチャージ：" +
+            GetCardName(bestCard)
+        );
+
+        return bestCard;
+    }
+
+    // 念のため
+    return handDealer.enemyHandCards[
+        Random.Range(
+            0,
+            handDealer.enemyHandCards.Count
+        )
+    ];
+}
+
+// 13以降は慎重
+if(bestScore < 20)
+{
+    Debug.Log("CPUリソース温存");
+    return null;
+}
+
+return bestCard;
+}
+
+IEnumerator EnemyResourcePhase()
+{
+    Debug.Log("敵 Resource Phase");
+
+    CardData chargeCard =
+        SelectEnemyResourceChargeCard();
+
+    if(chargeCard == null)
+    {
+        Debug.Log("敵はリソースチャージを見送り");
+        yield return new WaitForSeconds(0.3f);
+        yield break;
+    }
+
+    if(handDealer != null)
+    {
+        yield return StartCoroutine(
+            handDealer.EnemyChargeSpecificResourceAnimation(
+                chargeCard
+            )
+        );
+    }
+
+    if(enemyResourceManager != null)
+    {
+        enemyResourceManager.AddResource();
+    }
+
+    yield return new WaitForSeconds(0.5f);
+}
 
 IEnumerator EnemyMainPhase()
 {
@@ -951,7 +1259,7 @@ IEnumerator EnemyMainPhase()
 
         Debug.Log(
             "敵手札コスト確認：" +
-            card.name +
+            GetCardName(card) +
             " cost=" +
             card.cost +
             " / enemyResource=" +
@@ -975,12 +1283,15 @@ IEnumerator EnemyMainPhase()
     }
 
     CardData selectedCard =
-        summonableCards[
-            Random.Range(
-                0,
-                summonableCards.Count
-            )
-        ];
+        SelectEnemySummonCard(
+        summonableCards
+    );
+
+    if(selectedCard == null)
+    {
+        Debug.Log("CPU召喚：selectedCard が null");
+        yield break;
+    }
 
     enemyResourceManager.UseResource(
         selectedCard.cost
@@ -1090,6 +1401,247 @@ IEnumerator EnemyMainPhase()
     );
 }
 
+CardData SelectEnemySummonCard(
+    List<CardData> summonableCards
+)
+{
+    CardData bestCard = null;
+    int bestScore = -999;
+
+    foreach(CardData card in summonableCards)
+    {
+        if(card == null)
+            continue;
+
+        card.SetPowerFromName();
+
+        int score = 0;
+
+        string name = GetCardName(card);
+
+// Aceは破壊対象がいないなら召喚候補から除外
+if(card.power == 1 && !HasPlayerFaceCard())
+{
+    Debug.Log("CPU召喚除外：Ace空撃ち " + name);
+    continue;
+}
+
+// Reverseは有効対象がないなら召喚候補から除外
+if(IsReverseCard(card) && !HasUsefulReverseTarget())
+{
+    Debug.Log("CPU召喚除外：Reverse空撃ち " + name);
+    continue;
+}
+
+        // Reverseカードはメリットがないなら出さない
+if(IsReverseCard(card))
+{
+    if(HasUsefulReverseTarget())
+    {
+        score += 50;
+    }
+    else
+    {
+        score -= 100;
+    }
+}
+
+    // Aceは破壊対象がいないなら空撃ちしない
+    if(card.power == 1)
+    {
+        if(HasPlayerFaceCard())
+        {
+            score += 80;
+        }
+        else
+        {
+            score -= 100;
+        }
+    }
+
+        // 前半は5を積極的にプレイ
+        if(turnCount <= 10 && card.power == 5)
+            score += 50;
+
+        // 後半はKing優先
+        if(turnCount > 10 &&
+        GetCardName(card).Contains("K"))
+            score += 45;
+
+        // Guardカードは状況次第
+        if(IsGuardCard(card))
+        {
+            if(HasPlayerAttackableCard())
+                score += 30;
+            else
+                score -= 40;
+        }
+
+        // 高パワーは少し優先
+        score += card.power;
+
+        if(score > bestScore)
+        {
+            bestScore = score;
+            bestCard = card;
+        }
+    }
+
+    if(bestCard == null)
+    {
+        return summonableCards[
+            Random.Range(
+                0,
+                summonableCards.Count
+            )
+        ];
+    }
+
+    if(bestCard == null)
+    {
+        Debug.Log("CPU召喚選択：候補なし");
+        return summonableCards[0];
+    }
+
+    Debug.Log(
+        "CPU召喚選択：" +
+        GetCardName(bestCard) +
+        " score=" +
+        bestScore
+    );
+
+    // どれか選ばれていれば、スコアが低くても召喚する
+    if(bestCard != null)
+    {
+        Debug.Log(
+            "CPU召喚選択：" +
+            GetCardName(bestCard) +
+            " score=" +
+            bestScore
+        );
+
+        return bestCard;
+    }
+
+    // 本当に何も選べなかった時だけランダム
+    Debug.Log("CPU召喚：強制ランダム選択");
+
+    return summonableCards[
+        Random.Range(
+            0,
+            summonableCards.Count
+        )
+    ];
+}
+
+string GetCardName(CardData data)
+{
+    if(data == null)
+        return "";
+
+    if(!string.IsNullOrEmpty(data.cardName))
+        return data.cardName;
+
+    return data.name;
+}
+
+bool IsReverseCard(CardData card)
+{
+    if(card == null || card.effectTypes == null)
+        return false;
+
+    return System.Array.Exists(
+        card.effectTypes,
+        x => x == EffectType.TapAllEnemyBattle
+    );
+}
+
+bool HasUsefulReverseTarget()
+{
+    // まずは仮で「プレイヤー場にカードがある時だけ有効」にする
+    if(playerBattleArea == null)
+        return false;
+
+    return playerBattleArea.childCount > 0;
+}
+
+bool HasPlayerFaceCard()
+{
+    if(playerBattleArea == null)
+        return false;
+
+    for(int i = 0; i < playerBattleArea.childCount; i++)
+    {
+        CardController card =
+            playerBattleArea.GetChild(i)
+            .GetComponent<CardController>();
+
+        if(card == null || card.data == null)
+            continue;
+
+        string name = GetCardName(card.data);
+
+        if(name.Contains("J") ||
+           name.Contains("Q") ||
+           name.Contains("K") ||
+           name.Contains("Joker"))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+bool IsGuardCard(CardData card)
+{
+    if(card == null)
+        return false;
+
+    if(card.effectTypes == null)
+        return false;
+
+    return System.Array.Exists(
+        card.effectTypes,
+        x => x == EffectType.BlockOnly
+    );
+}
+
+bool HasPlayerAttackableCard()
+{
+    if(playerBattleArea == null)
+        return false;
+
+    for(int i = 0; i < playerBattleArea.childCount; i++)
+    {
+        CardController card =
+            playerBattleArea.GetChild(i)
+            .GetComponent<CardController>();
+
+        if(card == null)
+            continue;
+
+        if(card.isTapped)
+            continue;
+
+        if(card.hasSummonSickness)
+            continue;
+
+        if(card.data != null &&
+        card.data.effectTypes != null &&
+        System.Array.Exists(
+            card.data.effectTypes,
+            x => x == EffectType.CannotAttack
+        ))
+        {
+            continue;
+        }
+
+        return true;
+    }
+
+    return false;
+}
+
 IEnumerator EnemyBattlePhase()
 {
     Debug.Log("=== Enemy Battle Phase ===");
@@ -1129,6 +1681,16 @@ IEnumerator EnemyBattlePhase()
             Debug.Log(
                 "敵カードは召喚酔い中なので攻撃不可：" +
                 attacker.name
+            );
+
+            continue;
+        }
+
+        if(!ShouldEnemyAttack(attacker))
+        {
+            Debug.Log(
+                "CPU判断：攻撃見送り：" +
+                attacker.data.cardName
             );
 
             continue;
@@ -1268,7 +1830,85 @@ IEnumerator EnemyBattlePhase()
         yield return new WaitForSeconds(0.4f);
     }
 }
-    void LayoutEnemyBattleCards()
+
+bool ShouldEnemyAttack(CardController attacker)
+{
+    if(attacker == null || attacker.data == null)
+        return false;
+
+    attacker.data.SetPowerFromName();
+
+    int aliveWallCount =
+        GetAlivePlayerWallCount();
+
+    // Wallが無いなら直接攻撃
+    if(aliveWallCount <= 0)
+        return true;
+
+    // とどめが近いなら攻撃
+    if(aliveWallCount <= 1)
+        return true;
+
+    // Monarch / King / Joker は積極攻撃
+    if(IsMonarchCard(attacker.data))
+        return true;
+
+    if(attacker.data.name.Contains("K"))
+        return true;
+
+    if(attacker.data.name.Contains("Joker"))
+        return true;
+
+    // Wallが4枚以上あるなら、弱い攻撃は控える
+    if(aliveWallCount >= 4)
+    {
+        if(attacker.data.power < 9)
+            return false;
+    }
+
+    // 9以上なら攻撃してよい
+    if(attacker.data.power >= 9)
+        return true;
+
+    // それ以外は控えめ
+    return false;
+}
+
+int GetAlivePlayerWallCount()
+{
+    if(playerWallArea == null)
+        return 0;
+
+    int count = 0;
+
+    for(int i = 0; i < playerWallArea.childCount; i++)
+    {
+        CanvasGroup cg =
+            playerWallArea.GetChild(i)
+            .GetComponent<CanvasGroup>();
+
+        if(cg != null && cg.alpha <= 0.01f)
+            continue;
+
+        count++;
+    }
+
+    return count;
+}
+
+bool IsMonarchCard(CardData card)
+{
+    if(card == null)
+        return false;
+
+    if(card.effectTypes == null)
+        return false;
+
+    return System.Array.Exists(
+        card.effectTypes,
+        x => x == EffectType.DoubleWallBreak
+    );
+}    void LayoutEnemyBattleCards()
     {
         if(enemyBattleArea == null)
             return;
@@ -1970,26 +2610,114 @@ public void StartSelectEnemyBattleToDestroy(
 {
     pendingDestroySelfCard = selfCard;
 
-    isSelectingDestroyTarget = true;
+    if(selfCard == null)
+        return;
 
     Debug.Log(
-        "破壊する敵カードを選択してください"
+        "破壊効果発動カード：" +
+        GetCardName(selfCard.data)
     );
+
+    bool isEnemyCard =
+        enemyBattleArea != null &&
+        selfCard.transform.IsChildOf(enemyBattleArea);
+
+    Debug.Log("A効果 isEnemyCard = " + isEnemyCard);
+
+    if(isEnemyCard)
+    {
+        CardController target =
+            GetCpuDestroyTargetFromPlayerBattle();
+
+        if(target == null)
+        {
+            Debug.Log("CPU A効果：破壊対象なし");
+
+            SendCardToOwnGraveyard(selfCard);
+
+            pendingDestroySelfCard = null;
+            isSelectingDestroyTarget = false;
+            return;
+        }
+
+        Debug.Log(
+            "CPU A効果：破壊対象 = " +
+            GetCardName(target.data)
+        );
+
+        TrySelectDestroyTarget(target);
+        return;
+    }
+
+    isSelectingDestroyTarget = true;
+
+    Debug.Log("破壊する敵カードを選択してください");
+}
+
+CardController GetCpuDestroyTargetFromPlayerBattle()
+{
+    if(playerBattleArea == null)
+        return null;
+
+    CardController bestTarget = null;
+    int bestScore = -999;
+
+    for(int i = 0; i < playerBattleArea.childCount; i++)
+    {
+        CardController card =
+            playerBattleArea.GetChild(i)
+            .GetComponent<CardController>();
+
+        if(card == null || card.data == null)
+            continue;
+
+        card.data.SetPowerFromName();
+
+        int score = card.data.power;
+
+        string name = GetCardName(card.data);
+
+        if(name.Contains("Joker"))
+            score += 100;
+
+        if(name.Contains("K"))
+            score += 80;
+
+        if(name.Contains("Q"))
+            score += 60;
+
+        if(name.Contains("J"))
+            score += 50;
+
+        if(score > bestScore)
+        {
+            bestScore = score;
+            bestTarget = card;
+        }
+    }
+
+    return bestTarget;
 }
 
 public bool TrySelectDestroyTarget(
     CardController target
 )
 {
-    if(!isSelectingDestroyTarget)
-        return false;
-
     if(target == null)
         return false;
 
     Debug.Log(
         "選択破壊：" +
-        target.data.cardName
+        GetCardName(target.data)
+    );
+
+    Debug.Log(
+        "A自身：" +
+        (
+            pendingDestroySelfCard != null
+            ? GetCardName(pendingDestroySelfCard.data)
+            : "NULL"
+        )
     );
 
     SendCardToOwnGraveyard(target);

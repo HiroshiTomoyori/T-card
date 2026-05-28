@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9c4dfa0d5b237b74e9e3c27000eaf2ed, type: 3}
   m_Name: Heart_6
   m_EditorClassIdentifier: 
-  cardName: 
+  cardName: Heart_6
   suit: 1
   artwork: {fileID: 21300000, guid: d25e9973126e11048a5c07709b0dd160, type: 3}
   cost: 6

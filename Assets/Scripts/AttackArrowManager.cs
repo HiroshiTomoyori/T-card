@@ -34,6 +34,9 @@ public class AttackArrowManager : MonoBehaviour
     readonly Color playerArrowColor =
         new Color(0.55f, 1f, 0.55f, 1f);
 
+    Color currentPlayerArrowColor =
+        new Color(0.55f, 1f, 0.55f, 1f);
+
     void Start()
     {
         Hide();
@@ -133,7 +136,11 @@ public class AttackArrowManager : MonoBehaviour
         RectTransform to
     )
     {
-        ShowArrow(from, to, playerArrowColor);
+        ShowArrow(
+            from,
+            to,
+            currentPlayerArrowColor
+        );
     }
 
     IEnumerator GrowArrow(float targetLength)
@@ -214,6 +221,11 @@ public class AttackArrowManager : MonoBehaviour
 
         if (headImage != null)
             headImage.color = color;
+    }
+
+    public void SetPlayerArrowColor(Color color)
+    {
+        currentPlayerArrowColor = color;
     }
 
     void Update()

@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9c4dfa0d5b237b74e9e3c27000eaf2ed, type: 3}
   m_Name: Diamond_9
   m_EditorClassIdentifier: 
-  cardName: 
+  cardName: Diamond_9
   suit: 3
   artwork: {fileID: 21300000, guid: ba10a4c3ccbb4f84fa8ca1d9d787ea48, type: 3}
   cost: 9

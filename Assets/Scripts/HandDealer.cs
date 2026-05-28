@@ -1456,6 +1456,138 @@ public IEnumerator EnemyChargeResourceAnimation()
     );
 }
 
+public IEnumerator EnemyChargeSpecificResourceAnimation(
+    CardData selectedCard
+)
+{
+    Debug.Log("敵指定リソースアニメ開始");
+
+    if(selectedCard == null)
+        yield break;
+
+    if(enemyHandCards == null)
+        yield break;
+
+    if(!enemyHandCards.Contains(selectedCard))
+        yield break;
+
+    enemyHandCards.Remove(selectedCard);
+
+    GameObject moveCard =
+        Instantiate(
+            cardPrefab,
+            transform.root
+        );
+
+    RectTransform rt =
+        moveCard.GetComponent<RectTransform>();
+
+    SetupCardSize(
+        moveCard,
+        handCardSize
+    );
+
+    CardController card =
+        moveCard.GetComponent<CardController>();
+
+    if(card != null)
+    {
+        card.SetData(selectedCard);
+    }
+
+    rt.position =
+        enemyHandCountText.transform.position;
+
+    Vector3 start =
+        rt.position;
+
+    Vector3 end =
+        enemyResourcePosition.position;
+
+    float t = 0f;
+    float moveTime = 0.6f;
+
+    while(t < moveTime)
+    {
+        t += Time.deltaTime;
+
+        float rate =
+            Mathf.Clamp01(
+                t / moveTime
+            );
+
+        rt.position =
+            Vector3.Lerp(
+                start,
+                end,
+                rate
+            );
+
+        yield return null;
+    }
+
+    rt.position = end;
+
+    yield return new WaitForSeconds(0.4f);
+
+    CanvasGroup cg =
+        moveCard.GetComponent<CanvasGroup>();
+
+    if(cg == null)
+    {
+        cg =
+            moveCard.AddComponent
+            <CanvasGroup>();
+    }
+
+    t = 0f;
+
+    float vanishTime = 0.25f;
+
+    Vector3 startScale =
+        Vector3.one;
+
+    Vector3 endScale =
+        Vector3.one * 0.6f;
+
+    while(t < vanishTime)
+    {
+        t += Time.deltaTime;
+
+        float rate =
+            Mathf.Clamp01(
+                t / vanishTime
+            );
+
+        cg.alpha =
+            Mathf.Lerp(
+                1f,
+                0f,
+                rate
+            );
+
+        rt.localScale =
+            Vector3.Lerp(
+                startScale,
+                endScale,
+                rate
+            );
+
+        yield return null;
+    }
+
+    enemyHandCount--;
+
+    UpdateEnemyHandCountText();
+
+    Destroy(moveCard);
+
+    Debug.Log(
+        "敵が指定カードをリソースへ送った：" +
+        selectedCard.cardName
+    );
+}
+
     public void DamagePlayerWall(GameObject wall)
     {
         StartCoroutine(

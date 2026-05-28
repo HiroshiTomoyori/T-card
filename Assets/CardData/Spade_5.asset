@@ -12,7 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9c4dfa0d5b237b74e9e3c27000eaf2ed, type: 3}
   m_Name: Spade_5
   m_EditorClassIdentifier: 
-  cardName: 
+  cardName: Spade_5
+  suit: 0
   artwork: {fileID: 21300000, guid: 7f9f3e20a0aa40648ba28956586d9b8c, type: 3}
   cost: 5
   power: 5

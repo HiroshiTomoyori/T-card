@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9c4dfa0d5b237b74e9e3c27000eaf2ed, type: 3}
   m_Name: Spade_A
   m_EditorClassIdentifier: 
-  cardName: 
+  cardName: Spade_A
   suit: 0
   artwork: {fileID: 21300000, guid: ca37a6c619bc4594fabe9f006fd2fbe1, type: 3}
   cost: 4
