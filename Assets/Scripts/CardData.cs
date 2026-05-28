@@ -23,7 +23,8 @@ public enum EffectType
     NoSummonSickness,
     CannotAttack,
     DoubleWallBreak,
-    ShieldTrigger
+    ShieldTrigger,
+    JokerExtraTurn
 }
 
 public enum Suit

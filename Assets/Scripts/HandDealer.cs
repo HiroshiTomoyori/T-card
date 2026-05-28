@@ -54,6 +54,10 @@ public class HandDealer : MonoBehaviour
 
     [Header("BGM")]
     public AudioSource bgmSource;
+
+    public AudioClip normalBGM;
+    public AudioClip advancedBGM;
+
     public AudioClip dangerBGM;
 
     [Header("SE")]
@@ -128,12 +132,35 @@ public class HandDealer : MonoBehaviour
 
     void Start()
     {
+        ApplyRuleBGMClipOnly();
+
         if (enemyHandCountText != null)
             enemyHandCountText.gameObject.SetActive(false);
 
         if (enemyDeckImage != null)
             enemyDeckImage.gameObject.SetActive(true);
+    }void ApplyRuleBGMClipOnly()
+    {
+        if(bgmSource == null)
+            return;
+
+        AudioClip selectedBGM =
+            GameSettings.IsAdvancedRule
+            ? advancedBGM
+            : normalBGM;
+
+        if(selectedBGM == null)
+            return;
+
+        bgmSource.clip = selectedBGM;
+
+        Debug.Log(
+            "ルールBGM設定のみ：" +
+            (GameSettings.IsAdvancedRule ? "Advanced" : "Normal")
+        );
     }
+
+
     IEnumerator DealRoutine()
     {
         SetOpeningLock(true);
@@ -1677,7 +1704,8 @@ IEnumerator DamagePlayerWallRoutine(GameObject wall)
             if(CardEffectManager.I != null)
             {
                 CardEffectManager.I.ActivateOnSummon(
-                    triggerController
+                    triggerController,
+                    true
                 );
             }
         }

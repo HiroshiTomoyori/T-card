@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections;
 
 public class CardEffectManager : MonoBehaviour
 {
@@ -9,7 +10,13 @@ public class CardEffectManager : MonoBehaviour
         I = this;
     }
 
-public void ActivateOnSummon(CardController card)
+
+
+public void ActivateOnSummon(
+    CardController card,
+    bool isShieldTrigger = false,
+    bool isEnemy = false
+)
 {
     if(card == null)
         return;
@@ -67,13 +74,50 @@ public void ActivateOnSummon(CardController card)
                 }
                 break;
 
-            case EffectType.JokerClearBattleArea:
-                if(turnManager != null)
-                {
-                    Debug.Log("効果発動：JOKER 全体墓地送り");
-                    turnManager.JokerClearBattleArea(card);
-                }
-                break;
+case EffectType.JokerClearBattleArea:
+    if(turnManager != null)
+    {
+        if(isShieldTrigger)
+        {
+            Debug.Log("シールドトリガーJOKER：選択なしで一掃");
+            turnManager.JokerClearBattleArea(card);
+        }
+        else if(isEnemy &&
+        GameSettings.IsAdvancedRule &&
+        HasEffect(card, EffectType.JokerExtraTurn))
+        {
+            int choice = Random.Range(0, 2);
+
+            if(choice == 0)
+            {
+                Debug.Log("敵JOKER：ランダム選択 → 一掃");
+                turnManager.JokerClearBattleArea(card);
+            }
+            else
+            {
+                Debug.Log("敵JOKER：ランダム選択 → 追加ターン");
+                turnManager.RequestEnemyExtraTurn();
+
+                turnManager.SendCardToOwnGraveyard(card);
+            }
+        }
+        else if(GameSettings.IsAdvancedRule &&
+        HasEffect(card, EffectType.JokerExtraTurn))
+        {
+            Debug.Log("JOKER効果選択パネル表示");
+            turnManager.ShowJokerEffectSelectPanel(card);
+        }
+        else
+        {
+            Debug.Log("効果発動：JOKER 全体墓地送り");
+            turnManager.JokerClearBattleArea(card);
+        }
+    }
+    break;
+
+case EffectType.JokerExtraTurn:
+    // 選択パネル側からのみ発動
+    break;
 
             case EffectType.TapAllEnemyBattle:
 
@@ -114,6 +158,23 @@ public void ActivateOnSummon(CardController card)
     }
 }
 
+
+    bool HasEffect(CardController card, EffectType effectType)
+    {
+        if(card == null)
+            return false;
+
+        if(card.data == null)
+            return false;
+
+        if(card.data.effectTypes == null)
+            return false;
+
+        return System.Array.Exists(
+            card.data.effectTypes,
+            x => x == effectType
+        );
+    }
     public void ActivateOnAttack(CardController card)
     {
         if(card == null || card.data == null)
@@ -136,5 +197,19 @@ public void ActivateOnSummon(CardController card)
             return;
 
         Debug.Log("ブロック時効果チェック：" + card.data.name);
+    }
+
+    public IEnumerator ActivateOnSummonRoutine(
+    CardController card,
+    bool isShieldTrigger = false,
+    bool isEnemy = false
+    )
+    {
+        if(card == null)
+            yield break;
+
+        ActivateOnSummon(card, isShieldTrigger, isEnemy);
+
+        yield return null;
     }
 }

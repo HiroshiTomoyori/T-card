@@ -135,6 +135,7 @@ public void OnDrop(PointerEventData eventData)
     if(CardEffectManager.I != null)
     {
         CardEffectManager.I.ActivateOnSummon(card);
+        //CardEffectManager.I.ActivateOnSummon(card, true);
 
         Debug.Log("召喚時効果発動：" + card.data.name);
     }

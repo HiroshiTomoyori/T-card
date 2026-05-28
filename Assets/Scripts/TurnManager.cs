@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.UI;
 using System.Collections.Generic;
 
 public class TurnManager : MonoBehaviour
@@ -10,6 +11,8 @@ public class TurnManager : MonoBehaviour
     int maxWallBreakCount = 1;
     bool isPlayerFirst = true;
     bool isBattlePhase = false;
+
+    bool enemyExtraTurnRequested = false;
 
     public bool IsBattlePhase
     {
@@ -88,9 +91,18 @@ public class TurnManager : MonoBehaviour
 
     bool isEndingTurn = false;
 
+    bool playerExtraTurnRequested = false;
+
     List<GameObject> pendingWallTargets =
     new List<GameObject>();
 
+    [Header("Joker Effect Select")]
+    public GameObject jokerEffectPanel;
+    public Button jokerClearButton;
+    public Button jokerExtraTurnButton;
+
+    CardController pendingJokerEffectCard;
+    //bool playerExtraTurnRequested = false;
 
     public float resultWaitTime = 1.5f;
 
@@ -790,17 +802,51 @@ public void EndPlayerTurn()
 
         LockPlayerHand(false);
 
-        yield return StartCoroutine(EnemyTurnRoutine());
+    if(playerExtraTurnRequested)
+    {
+        playerExtraTurnRequested = false;
+
+        Debug.Log("Joker効果：エクストラターン開始");
 
         yield return ShowTurnLogo(
             playerTurnLogo,
             playerTurnSE
-        );
+    );
 
+    StartPlayerTurn();
 
-        StartPlayerTurn();
+    isEndingTurn = false;
+    yield break;
+    }
 
-        isEndingTurn = false;
+if(playerExtraTurnRequested)
+{
+    playerExtraTurnRequested = false;
+
+    Debug.Log("JOKER効果：追加ターン開始");
+
+    yield return ShowTurnLogo(
+        playerTurnLogo,
+        playerTurnSE
+    );
+
+    StartPlayerTurn();
+
+    isEndingTurn = false;
+
+    yield break;
+}
+
+yield return StartCoroutine(EnemyTurnRoutine());
+
+yield return ShowTurnLogo(
+    playerTurnLogo,
+    playerTurnSE
+);
+
+StartPlayerTurn();
+
+isEndingTurn = false;
     }
 
 void StartPlayerTurn(bool firstTurn = false)
@@ -1065,6 +1111,21 @@ void SetEnemyWallClickable(bool value)
             );
 
             Debug.Log("=== 敵ターン終了 ===");
+
+            if(enemyExtraTurnRequested)
+            {
+                enemyExtraTurnRequested = false;
+
+                Debug.Log("敵エクストラターン発動");
+
+                yield return new WaitForSeconds(0.5f);
+
+                yield return StartCoroutine(
+                    EnemyTurnRoutine()
+                );
+
+                yield break;
+            }
         }
 
 CardData SelectEnemyResourceChargeCard()
@@ -1347,7 +1408,9 @@ IEnumerator EnemyMainPhase()
         {
             CardEffectManager.I
             .ActivateOnSummon(
-                controller
+                controller,
+                false,
+                true
             );
         }
         else
@@ -2365,6 +2428,7 @@ void ShowBlockableCards()
 
     void SendToGraveyard(GameObject cardObj, Transform graveyard)
     {
+        Debug.Log("SendToGraveyard 実行：" + cardObj.name);
         if(cardObj == null)
             return;
 
@@ -2393,19 +2457,46 @@ void ShowBlockableCards()
 
         cardObj.transform.SetParent(graveyard, false);
 
-        RectTransform rt =
-            cardObj.GetComponent<RectTransform>();
+RectTransform rt =
+    cardObj.GetComponent<RectTransform>();
 
-        if(rt != null)
+if(rt != null)
+{
+    rt.anchorMin = new Vector2(0.5f, 0.5f);
+    rt.anchorMax = new Vector2(0.5f, 0.5f);
+    rt.pivot = new Vector2(0.5f, 0.5f);
+    rt.anchoredPosition = Vector2.zero;
+
+    rt.sizeDelta = new Vector2(45f, 65f);
+    rt.localScale = Vector3.one;
+}
+
+LayoutElement layout =
+    cardObj.GetComponent<LayoutElement>();
+
+if(layout == null)
+{
+    layout = cardObj.AddComponent<LayoutElement>();
+}
+
+layout.ignoreLayout = false;
+layout.preferredWidth = 45f;
+layout.preferredHeight = 65f;
+layout.minWidth = 45f;
+layout.minHeight = 65f;
+layout.flexibleWidth = 0f;
+layout.flexibleHeight = 0f;
+
+       /* LayoutElement layout =
+    cardObj.GetComponent<LayoutElement>();*/
+
+        if(layout != null)
         {
-            rt.anchorMin = new Vector2(0.5f, 0.5f);
-            rt.anchorMax = new Vector2(0.5f, 0.5f);
-            rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.anchoredPosition = Vector2.zero;
-            rt.localScale = Vector3.one * 0.45f;
+            layout.ignoreLayout = false;
+            layout.preferredWidth = 120f;
+            layout.preferredHeight = 170f;
         }
-
-        CardController card =
+                CardController card =
             cardObj.GetComponent<CardController>();
 
         if(card != null)
@@ -2464,7 +2555,7 @@ void ResolveCardBattle(CardController attacker, CardController defender)
     int attackerPower = attacker.data.power;
     int defenderPower = defender.data.power;
 
-    if(TitleManager.isAdvancedRule)
+    if(GameSettings.IsAdvancedRule)
     {
         int attackerBonus =
             GetSuitBattleBonus(
@@ -2724,9 +2815,20 @@ public bool TrySelectDestroyTarget(
 
     if(pendingDestroySelfCard != null)
     {
-        SendCardToOwnGraveyard(
-            pendingDestroySelfCard
-        );
+        if(pendingDestroySelfCard.transform.IsChildOf(enemyBattleArea))
+        {
+            SendToGraveyard(
+                pendingDestroySelfCard.gameObject,
+                enemyGraveyard
+            );
+        }
+        else
+        {
+            SendToGraveyard(
+                pendingDestroySelfCard.gameObject,
+                playerGraveyard
+            );
+        }
     }
 
     pendingDestroySelfCard = null;
@@ -3058,4 +3160,72 @@ void ClearArea(Transform area)
         );
     }
 }
+
+public void RequestPlayerExtraTurn()
+{
+    playerExtraTurnRequested = true;
+
+    Debug.Log("Joker効果：エクストラターン予約");
+}
+
+public void ShowJokerEffectSelectPanel(CardController jokerCard)
+{
+    if(jokerCard == null)
+        return;
+
+    pendingJokerEffectCard = jokerCard;
+
+    if(jokerEffectPanel != null)
+        jokerEffectPanel.SetActive(true);
+
+    if(jokerClearButton != null)
+    {
+        jokerClearButton.onClick.RemoveAllListeners();
+        jokerClearButton.onClick.AddListener(OnSelectJokerClear);
+    }
+
+    if(jokerExtraTurnButton != null)
+    {
+        jokerExtraTurnButton.onClick.RemoveAllListeners();
+        jokerExtraTurnButton.onClick.AddListener(OnSelectJokerExtraTurn);
+    }
+
+    Debug.Log("JOKER効果選択パネル表示");
+}
+
+void OnSelectJokerClear()
+{
+    if(jokerEffectPanel != null)
+        jokerEffectPanel.SetActive(false);
+
+    if(pendingJokerEffectCard != null)
+    {
+        Debug.Log("JOKER効果選択：バトルエリア一掃");
+        JokerClearBattleArea(pendingJokerEffectCard);
+    }
+
+    pendingJokerEffectCard = null;
+}
+
+    public void OnSelectJokerExtraTurn()
+    {
+        if(jokerEffectPanel != null)
+            jokerEffectPanel.SetActive(false);
+
+        RequestPlayerExtraTurn();
+
+        if(pendingJokerEffectCard != null)
+        {
+            Debug.Log("JOKER追加ターン選択：JOKERを墓地へ");
+            SendCardToOwnGraveyard(pendingJokerEffectCard);
+        }
+
+        pendingJokerEffectCard = null;
+    }
+
+    public void RequestEnemyExtraTurn()
+    {
+        Debug.Log("敵エクストラターン予約");
+        enemyExtraTurnRequested = true;
+    }
 }
