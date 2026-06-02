@@ -2949,8 +2949,8 @@ public bool IsSelectingDestroyTarget()
 
             // Jに勝利
             if(effect == EffectType.BreakableJack)
-            {
-                if(targetName.Contains("J"))
+            {   //0529修正
+                if(targetName.Contains("Jack"))
                     return true;
             }
         }
