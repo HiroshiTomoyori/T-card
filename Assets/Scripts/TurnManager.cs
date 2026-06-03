@@ -71,6 +71,11 @@ public class TurnManager : MonoBehaviour
     [Header("No Block Button")]
     public GameObject noBlockButton;
     public Vector2 noBlockButtonOffset = new Vector2(0f, -90f);
+    
+    [Header("UI")]
+    public Button endTurnButton;
+
+
 
     [Header("Graveyard")]
     public Transform playerGraveyard;
@@ -780,15 +785,17 @@ public void HideAttackArrow()
         attackArrowManager.Hide();
 }
 
-public void EndPlayerTurn()
-{
-    if(isEndingTurn)
-        return;
+    public void EndPlayerTurn()
+    {
+        if(isEndingTurn)
+            return;
 
-    isEndingTurn = true;
+        isEndingTurn = true;
 
-    StartCoroutine(EndPlayerTurnRoutine());
-}
+        SetEndTurnButton(false);
+
+        StartCoroutine(EndPlayerTurnRoutine());
+    }
 
     IEnumerator EndPlayerTurnRoutine()
     {
@@ -875,6 +882,8 @@ void StartPlayerTurn(bool firstTurn = false)
     {
         StartDrawPhase();
     }
+
+    SetEndTurnButton(true);
 
     StartResourcePhase();
 }
@@ -3069,14 +3078,23 @@ public bool IsSelectingDestroyTarget()
         Debug.Log("敵召喚酔い解除");
     }
 
-public void StartBattleEndResult()
-{
-    //Debug.LogError("★★ StartBattleEndResult 呼ばれた ★★");
+    public void StartBattleEndResult()
+    {
+        //Debug.LogError("★★ StartBattleEndResult 呼ばれた ★★");
 
-    StartCoroutine(
-        BattleEndResultRoutine()
-    );
-}
+        StartCoroutine(
+            BattleEndResultRoutine()
+        );
+    }
+
+    void SetEndTurnButton(bool value)
+    {
+        if(endTurnButton == null)
+            return;
+
+        endTurnButton.gameObject.SetActive(true);
+        endTurnButton.interactable = value;
+    }
 
 IEnumerator BattleEndResultRoutine()
 {

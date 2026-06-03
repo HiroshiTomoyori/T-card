@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9c4dfa0d5b237b74e9e3c27000eaf2ed, type: 3}
   m_Name: Heart_J
   m_EditorClassIdentifier: 
-  cardName: Heart_J
+  cardName: Heart_Jack
   suit: 1
-  artwork: {fileID: 21300000, guid: f41e7f50be0d9b24c932cd0b6db892ae, type: 3}
+  artwork: {fileID: 21300000, guid: 092441e7181403249b17561d8de3341f, type: 3}
   cost: 11
   power: 11
   effectTypes: 0800000006000000

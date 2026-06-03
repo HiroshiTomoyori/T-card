@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   cardName: Club_2
   suit: 2
-  artwork: {fileID: 21300000, guid: 877446eac734b9a46aec313bdbc957c5, type: 3}
+  artwork: {fileID: 21300000, guid: 0346721853dd4d547a59c1b31557124a, type: 3}
   cost: 2
   power: 2
   effectTypes: 060000000f00000011000000

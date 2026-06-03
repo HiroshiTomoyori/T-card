@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9c4dfa0d5b237b74e9e3c27000eaf2ed, type: 3}
   m_Name: Diamond_J
   m_EditorClassIdentifier: 
-  cardName: Diamond_J
+  cardName: Diamond_Jack
   suit: 3
-  artwork: {fileID: 21300000, guid: d71b60c5b2bd8b747baaedfd227cc1f2, type: 3}
+  artwork: {fileID: 21300000, guid: ed5ad6695d1ea6b4d94af558451d5932, type: 3}
   cost: 11
   power: 11
   effectTypes: 0800000006000000

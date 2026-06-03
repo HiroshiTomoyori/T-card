@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9c4dfa0d5b237b74e9e3c27000eaf2ed, type: 3}
   m_Name: Club_J
   m_EditorClassIdentifier: 
-  cardName: Club_J
+  cardName: Club_Jack
   suit: 2
-  artwork: {fileID: 21300000, guid: 85d8e97450879c44db33d6cb2658497c, type: 3}
+  artwork: {fileID: 21300000, guid: e7835e112caae5a4aa23ddc4238b3b1e, type: 3}
   cost: 11
   power: 11
   effectTypes: 0800000006000000
