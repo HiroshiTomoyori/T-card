@@ -716,7 +716,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_RaycastTarget: 1
+  m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
@@ -3604,7 +3604,7 @@ MonoBehaviour:
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
-  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_RaycastPadding: {x: 50, y: 70, z: 50, w: 50}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
@@ -5702,6 +5702,7 @@ RectTransform:
   - {fileID: 1269316057}
   - {fileID: 451291015}
   - {fileID: 619094523}
+  - {fileID: 1040944823}
   m_Father: {fileID: 1879408758}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -6553,6 +6554,60 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   advancedRuleToggle: {fileID: 852312333}
+--- !u!1 &1040944822
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1040944823}
+  - component: {fileID: 1040944824}
+  m_Layer: 0
+  m_Name: HandExpandManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1040944823
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1040944822}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 888953983}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1040944824
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1040944822}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 69bdce5ebdc032a439ca2f07b96d24a4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  handArea: {fileID: 1560023922}
+  expandedCenter: {x: 0, y: 700}
+  expandedSpacing: 65
+  expandedScale: 1.8
+  expandedAngleStep: 10
+  expandedArcHeight: 18
 --- !u!1 &1045119675
 GameObject:
   m_ObjectHideFlags: 0
@@ -9720,7 +9775,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   tablePanel: {fileID: 337256841}
   closedX: 280
-  openedX: -250
+  openedX: -200
   threshold: 120
   slideSpeed: 12
 --- !u!114 &1569006933

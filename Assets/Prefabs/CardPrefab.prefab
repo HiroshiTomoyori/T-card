@@ -166,6 +166,7 @@ GameObject:
   - component: {fileID: 5398876303123097329}
   - component: {fileID: 256864805387742380}
   - component: {fileID: 1902650862861980672}
+  - component: {fileID: 6719373766239160948}
   m_Layer: 0
   m_Name: CardPrefab
   m_TagString: Untagged
@@ -253,6 +254,7 @@ MonoBehaviour:
   hpText: {fileID: 0}
   attackGlow: {fileID: 392751367679996529}
   isTapped: 0
+  hasSummonSickness: 0
 --- !u!114 &2400019880623193424
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -303,6 +305,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   attackIcon: {fileID: 6437380531237873154}
   blockIcon: {fileID: 6624229477891268412}
+--- !u!114 &6719373766239160948
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 834065891895854406}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1978f9d5d8e09e0409bd77db1938fabe, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &6437380531237873154
 GameObject:
   m_ObjectHideFlags: 0

@@ -1228,7 +1228,7 @@ public void DamageEnemyWall(
         return normalEnemyDefeatSE;
     }
 
-        void SortPlayerHand()
+        public void SortPlayerHand()
     {
         List<Transform> cards = new List<Transform>();
 
@@ -1277,7 +1277,15 @@ public void DamageEnemyWall(
             cards[i].SetSiblingIndex(i);
         }
 
-        ForceHandLayout();
+        if(HandExpandManager.I != null &&
+        HandExpandManager.I.IsExpanded)
+        {
+            HandExpandManager.I.RefreshLayout();
+        }
+        else
+        {
+            ForceHandLayout();
+        }
     }
 
     int GetRankOrder(string cardName)

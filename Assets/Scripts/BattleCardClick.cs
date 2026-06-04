@@ -12,6 +12,13 @@ public class BattleCardClick : MonoBehaviour, IPointerClickHandler
 
     public void OnPointerClick(PointerEventData eventData)
     {
+        // 手札ならバトルカード扱いしない
+        if(transform.parent == null)
+            return;
+
+        if(transform.parent.name != "PlayerBattleArea")
+            return;
+
         TurnManager turnManager =
             FindFirstObjectByType<TurnManager>();
 

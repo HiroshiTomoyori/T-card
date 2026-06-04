@@ -17,6 +17,9 @@ public class CardController : MonoBehaviour
     public bool isTapped = false;
     public bool hasSummonSickness = false;
 
+    float lastClickTime = -1f;
+    const float DOUBLE_CLICK_TIME = 0.3f;
+
 
 
     bool isAttackable = false;
