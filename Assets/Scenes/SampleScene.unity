@@ -2063,7 +2063,7 @@ AudioSource:
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 0}
-  m_Resource: {fileID: 8300000, guid: 644f025bc0b563146add7beaf2cc5c19, type: 3}
+  m_Resource: {fileID: 8300000, guid: 1eebe549edb8fbb4f822d9b57c8984f5, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
   m_Pitch: 1
@@ -2177,7 +2177,7 @@ AudioSource:
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 0}
-  m_Resource: {fileID: 8300000, guid: ab09a5e48c9e4c84fa4da65fc3f1557b, type: 3}
+  m_Resource: {fileID: 8300000, guid: 6c392138dda41c54da74f3c87e5e7a2d, type: 3}
   m_PlayOnAwake: 0
   m_Volume: 1
   m_Pitch: 1
@@ -3889,7 +3889,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: -7352339073622421304, guid: 8a1461d2df051c740b76424bf989947c, type: 3}
+  m_Sprite: {fileID: -5049307236051055815, guid: fbeb8bb7196a53047864f61b02e2f124, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -6455,7 +6455,7 @@ AudioSource:
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 0}
-  m_Resource: {fileID: 8300000, guid: 2b33a09aa74f1b341acb071ff595d953, type: 3}
+  m_Resource: {fileID: 8300000, guid: e84cd8cddfe2d514f86eaea01065f6d5, type: 3}
   m_PlayOnAwake: 0
   m_Volume: 1
   m_Pitch: 1
@@ -7868,8 +7868,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -320}
-  m_SizeDelta: {x: 300, y: 120}
+  m_AnchoredPosition: {x: 0, y: -450}
+  m_SizeDelta: {x: 520, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1203872777
 MonoBehaviour:
@@ -11284,7 +11284,7 @@ MonoBehaviour:
   normalLoadingImage: {fileID: 21300000, guid: f8154d41b8a15454a825d037ec5dea1f, type: 3}
   hardLoadingImage: {fileID: 21300000, guid: cd1ebb4f604ce674db31fb2e297a1a50, type: 3}
   difficultyBackgroundImage: {fileID: 1790827050}
-  normalDifficultyImage: {fileID: 1946555508236246865, guid: b2073881fc0e9c34aadca060e53b77b2, type: 3}
+  normalDifficultyImage: {fileID: -4335724975608764451, guid: ff27b44bada155b4ab52908dc02ccd8f, type: 3}
   secretUnlockedDifficultyImage: {fileID: 8434508821395303071, guid: ba6167f1a59530d4d8f9382bd8db3696, type: 3}
   startSE: {fileID: 1004047684}
   bgmSource: {fileID: 404817850}
@@ -12134,7 +12134,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: fd63f821d37802740b5eed98f9d823f2, type: 3}
+  m_Sprite: {fileID: -4335724975608764451, guid: ff27b44bada155b4ab52908dc02ccd8f, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
