@@ -24,8 +24,8 @@ public class CoinTossManager : MonoBehaviour
     public AudioClip stopSE;
 
     [Header("Spin")]
-    public float minSpinTime = 2f;
-    public float maxSpinTime = 5f;
+    public float minSpinTime = 0.8f;
+    public float maxSpinTime = 1.5f;
 
     bool isSpinning = false;
 
@@ -83,10 +83,10 @@ public class CoinTossManager : MonoBehaviour
 
         float duration = Random.Range(minSpinTime, maxSpinTime);
 
-        if (Random.value < 0.2f)
+        /*if (Random.value < 0.2f)
         {
             duration += 2f;
-        }
+        }*/
 
         float timer = 0f;
         float yRotation = 0f;

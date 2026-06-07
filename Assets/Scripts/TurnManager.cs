@@ -787,6 +787,13 @@ public void HideAttackArrow()
 
     public void EndPlayerTurn()
     {
+        ResourcePhaseManager resourcePhase =
+    FindFirstObjectByType<ResourcePhaseManager>();
+
+if(resourcePhase != null)
+{
+    resourcePhase.EndResourcePhase();
+}
         if(isEndingTurn)
             return;
 

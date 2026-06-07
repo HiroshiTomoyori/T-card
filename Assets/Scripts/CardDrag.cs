@@ -1,115 +1,71 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.UI;
 
 public class CardDrag : MonoBehaviour,
     IBeginDragHandler,
     IDragHandler,
     IEndDragHandler
 {
-    RectTransform rt;
+    Transform originalParent;
+    Vector3 originalPosition;
+    bool droppedSuccessfully = false;
+
     Canvas canvas;
     CanvasGroup canvasGroup;
-    LayoutElement layoutElement;
-
-    Vector2 startPos;
-    Transform startParent;
-    int startSiblingIndex;
-
-    bool droppedSuccessfully = false;
 
     void Awake()
     {
-        rt = GetComponent<RectTransform>();
         canvas = GetComponentInParent<Canvas>();
-
         canvasGroup = GetComponent<CanvasGroup>();
-        if (canvasGroup == null)
-            canvasGroup = gameObject.AddComponent<CanvasGroup>();
 
-        layoutElement = GetComponent<LayoutElement>();
-        if (layoutElement == null)
-            layoutElement = gameObject.AddComponent<LayoutElement>();
+        if(canvasGroup == null)
+            canvasGroup = gameObject.AddComponent<CanvasGroup>();
     }
 
     public void OnBeginDrag(PointerEventData eventData)
     {
-        TurnManager turnManager =
-            FindFirstObjectByType<TurnManager>();
-
-        if(turnManager != null &&
-        turnManager.IsBattlePhase)
-        {
-            Debug.Log("バトルフェイズ中は召喚不可");
-            return;
-        }
-
         droppedSuccessfully = false;
 
-        startPos = rt.anchoredPosition;
-        startParent = transform.parent;
-        startSiblingIndex = transform.GetSiblingIndex();
-
-        layoutElement.ignoreLayout = true;
-
-        canvasGroup.blocksRaycasts = false;
-        canvasGroup.interactable = false;
+        originalParent = transform.parent;
+        originalPosition = transform.localPosition;
 
         transform.SetParent(canvas.transform, true);
         transform.SetAsLastSibling();
+
+        canvasGroup.blocksRaycasts = false;
+
+        ResourcePhaseManager rpm =
+            FindFirstObjectByType<ResourcePhaseManager>();
+
+        if(rpm != null)
+        {
+            rpm.ShowDropHighlight();
+        }
     }
 
     public void OnDrag(PointerEventData eventData)
     {
-        rt.anchoredPosition += eventData.delta / canvas.scaleFactor;
+        transform.position = eventData.position;
     }
 
-public void OnEndDrag(PointerEventData eventData)
-{
-    ResourceDropZone dropZone =
-    eventData.pointerEnter != null
-    ? eventData.pointerEnter.GetComponentInParent<ResourceDropZone>()
-    : null;
-
-    if(dropZone != null)
+    public void OnEndDrag(PointerEventData eventData)
     {
-        dropZone.OnDrop(eventData);
-    }
-    canvasGroup.blocksRaycasts = true;
-    canvasGroup.interactable = true;
+        ResourcePhaseManager rpm =
+            FindFirstObjectByType<ResourcePhaseManager>();
 
-    if (droppedSuccessfully)
-    {
-        layoutElement.ignoreLayout = false;
-        rt.localScale = Vector3.one;
-
-        RectTransform parentRect =
-            transform.parent as RectTransform;
-
-        if(parentRect != null)
+        if(rpm != null)
         {
-            LayoutRebuilder.ForceRebuildLayoutImmediate(parentRect);
+            rpm.HideDropHighlight();
         }
 
-        return;
+        canvasGroup.blocksRaycasts = true;
+
+        if(droppedSuccessfully)
+            return;
+
+        transform.SetParent(originalParent, false);
+        transform.localPosition = originalPosition;
     }
-
-    transform.SetParent(startParent, false);
-    transform.SetSiblingIndex(startSiblingIndex);
-
-    layoutElement.ignoreLayout = false;
-
-    rt.localScale = Vector3.one;
-    rt.anchoredPosition = startPos;
-
-    RectTransform startParentRect =
-        startParent as RectTransform;
-
-    if(startParentRect != null)
-    {
-        LayoutRebuilder.ForceRebuildLayoutImmediate(startParentRect);
-    }
-}
 
     public void MarkDroppedSuccessfully()
     {
@@ -121,24 +77,9 @@ public void OnEndDrag(PointerEventData eventData)
         droppedSuccessfully = true;
 
         transform.SetParent(battleArea, false);
-
-        rt.anchorMin = new Vector2(0.5f, 0.5f);
-        rt.anchorMax = new Vector2(0.5f, 0.5f);
-        rt.pivot = new Vector2(0.5f, 0.5f);
-
-        layoutElement.ignoreLayout = false;
-
-        rt.localScale = Vector3.one;
-        rt.anchoredPosition = Vector2.zero;
+        transform.localPosition = Vector3.zero;
+        transform.localScale = Vector3.one;
 
         canvasGroup.blocksRaycasts = true;
-        canvasGroup.interactable = true;
-        canvasGroup.alpha = 1f;
-
-        BattleAreaLayout layout = battleArea.GetComponent<BattleAreaLayout>();
-        if (layout != null)
-        {
-            layout.Refresh();
-        }
     }
 }

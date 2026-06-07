@@ -66,13 +66,14 @@ public void ActivateOnSummon(
                 }
                 break;
 
-            case EffectType.RecoverWall:
-                if(handDealer != null)
-                {
-                    Debug.Log("効果発動：Wall回復");
-                    handDealer.RecoverWallFromDeck();
-                }
-                break;
+case EffectType.RecoverWall:
+    if(handDealer != null)
+    {
+        Debug.Log("効果発動：Wall回復 最大9枚対応");
+
+        handDealer.RecoverWallByKing();
+    }
+    break;
 
 case EffectType.JokerClearBattleArea:
     if(turnManager != null)

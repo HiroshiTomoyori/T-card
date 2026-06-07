@@ -96,6 +96,8 @@ public class HandDealer : MonoBehaviour
     public List<CardData> enemyHandCards =
     new List<CardData>();
 
+
+public Transform playerWallArea;
     public void DealStart()
     {
         if (cardPrefab == null)
@@ -1893,7 +1895,7 @@ IEnumerator DamagePlayerWallRoutine(GameObject wall)
             return;
         }
 
-        if(playerWallAliveCount >= 5)
+        if(playerWallAliveCount >= 9)
         {
             Debug.Log("Wall最大");
             return;
@@ -1943,7 +1945,28 @@ IEnumerator DamagePlayerWallRoutine(GameObject wall)
             removed.cardName
         );
     }
+    public void RecoverWallByKing()
+    {
+        if(playerWallAliveCount < 5)
+        {
+            int recoverAmount = 5 - playerWallAliveCount;
 
+            for(int i = 0; i < recoverAmount; i++)
+            {
+                RecoverWallFromDeck();
+            }
+
+            return;
+        }
+
+        if(playerWallAliveCount < 9)
+        {
+            RecoverWallFromDeck();
+            return;
+        }
+
+        Debug.Log("Wall最大(9)");
+    }
     public IEnumerator DamagePlayerWallAndWait(GameObject wall)
     {
         yield return StartCoroutine(

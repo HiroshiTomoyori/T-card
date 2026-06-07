@@ -4,6 +4,8 @@ using UnityEngine.UI;
 
 public class ResourcePhaseManager : MonoBehaviour
 {
+    [Header("Drop Highlight")]
+    public GameObject resourceGlow;
     [Header("Drop Area")]
     public Image resourceAreaImage;
 
@@ -17,17 +19,39 @@ public class ResourcePhaseManager : MonoBehaviour
     public AudioClip chargeSE;
     public float effectTime = 0.6f;
 
-    public Button skipResourceButton;
-
     bool isRunning = false;
     bool hasCharged = false;
 
     void Start()
     {
         DisableResourceDrop();
-        HideSkipResourceButton();
-    }
 
+        if(resourceGlow != null)
+            resourceGlow.SetActive(false);
+    }
+public void ShowDropHighlight()
+{
+    Debug.Log("ResourceGlow 表示");
+
+    if(resourceGlow != null)
+    {
+        resourceGlow.SetActive(true);
+        resourceGlow.transform.SetAsLastSibling();
+
+        Image img = resourceGlow.GetComponent<Image>();
+        if(img != null)
+        {
+            img.enabled = true;
+            img.color = new Color(1f, 1f, 1f, 1f);
+        }
+    }
+}
+
+    public void HideDropHighlight()
+    {
+        if(resourceGlow != null)
+            resourceGlow.SetActive(false);
+    }
     public void StartResourcePhase()
     {
         isRunning = true;
@@ -36,17 +60,16 @@ public class ResourcePhaseManager : MonoBehaviour
         EnableResourceDrop();
 
         Debug.Log("=== Resource Phase 開始 ===");
+    }
 
-        if(skipResourceButton != null)
-        {
-            skipResourceButton.transform.SetAsLastSibling();
-            skipResourceButton.gameObject.SetActive(true);
-            skipResourceButton.interactable = true;
-        }
+    public bool IsRunning()
+    {
+        return isRunning;
     }
 
     public void TryChargeResource(CardDrag card)
     {
+        HideDropHighlight();
         if(!isRunning)
         {
             Debug.Log("今はリソースフェイズではありません");
@@ -134,6 +157,14 @@ public class ResourcePhaseManager : MonoBehaviour
 
         Debug.Log("リソースチャージ完了");
 
+        CompleteResourcePhase();
+    }
+
+    public void CompleteResourcePhase()
+    {
+        if(!isRunning)
+            return;
+
         EndResourcePhase();
 
         TurnManager turnManager =
@@ -152,41 +183,9 @@ public class ResourcePhaseManager : MonoBehaviour
     public void EndResourcePhase()
     {
         isRunning = false;
-
-        HideSkipResourceButton();
         DisableResourceDrop();
 
         Debug.Log("=== Resource Phase 終了 ===");
-    }
-
-    public void SkipResourceCharge()
-    {
-        Debug.Log("SkipResourceCharge ボタン押下");
-
-        if(!isRunning)
-        {
-            HideSkipResourceButton();
-            DisableResourceDrop();
-
-            Debug.Log("Resource Phase中ではないためボタン非表示");
-            return;
-        }
-
-        Debug.Log("リソースチャージせずMain Phaseへ");
-
-        EndResourcePhase();
-
-        TurnManager turnManager =
-            FindFirstObjectByType<TurnManager>();
-
-        if(turnManager != null)
-        {
-            turnManager.OnResourcePhaseComplete();
-        }
-        else
-        {
-            Debug.LogError("TurnManager が見つかりません");
-        }
     }
 
     void EnableResourceDrop()
@@ -203,16 +202,5 @@ public class ResourcePhaseManager : MonoBehaviour
             return;
 
         resourceAreaImage.raycastTarget = false;
-    }
-
-    void HideSkipResourceButton()
-    {
-        if(skipResourceButton == null)
-            return;
-
-        skipResourceButton.interactable = false;
-        skipResourceButton.gameObject.SetActive(false);
-
-        Debug.Log("SkipResourceButton 非表示");
     }
 }

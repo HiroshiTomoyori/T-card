@@ -105,6 +105,14 @@ public void OnDrop(PointerEventData eventData)
 
     cardDrag.DropToBattleArea(battleArea);
 
+    ResourcePhaseManager resourcePhase =
+    FindFirstObjectByType<ResourcePhaseManager>();
+
+if(resourcePhase != null)
+{
+    resourcePhase.EndResourcePhase();
+}
+
     if(selectedBaseCard != null)
     {
         StackBaseCardUnderK(
