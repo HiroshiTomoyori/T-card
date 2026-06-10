@@ -10,11 +10,11 @@ public class HandExpandManager : MonoBehaviour
     public Transform handArea;
 
     [Header("Expanded")]
-    public Vector2 expandedCenter = new Vector2(0f, 520f);
-    public float expandedSpacing = 65f;
-    public float expandedScale = 1.5f;
-    public float expandedAngleStep = 10f;
-    public float expandedArcHeight = 18f;
+    public Vector2 expandedCenter = new Vector2(0f, 760f);
+public float expandedSpacing = 95f;
+public float expandedScale = 0.85f;
+public float expandedAngleStep = 6f;
+public float expandedArcHeight = 12f;
 
     Vector2 originalHandAreaPosition;
     bool hasOriginalPosition = false;

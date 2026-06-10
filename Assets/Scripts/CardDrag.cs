@@ -9,6 +9,7 @@ public class CardDrag : MonoBehaviour,
     Transform originalParent;
     Vector3 originalPosition;
     bool droppedSuccessfully = false;
+    bool canDrag = false;
 
     Canvas canvas;
     CanvasGroup canvasGroup;
@@ -24,6 +25,17 @@ public class CardDrag : MonoBehaviour,
 
     public void OnBeginDrag(PointerEventData eventData)
     {
+        canDrag = false;
+
+        HandController hand =
+            GetComponentInParent<HandController>();
+
+        if(hand != null && hand.IsIdle)
+        {
+            return;
+        }
+
+        canDrag = true;
         droppedSuccessfully = false;
 
         originalParent = transform.parent;
@@ -38,25 +50,29 @@ public class CardDrag : MonoBehaviour,
             FindFirstObjectByType<ResourcePhaseManager>();
 
         if(rpm != null)
-        {
             rpm.ShowDropHighlight();
-        }
     }
 
     public void OnDrag(PointerEventData eventData)
     {
+        if(!canDrag)
+            return;
+
         transform.position = eventData.position;
     }
 
     public void OnEndDrag(PointerEventData eventData)
     {
+        if(!canDrag)
+            return;
+
+        canDrag = false;
+
         ResourcePhaseManager rpm =
             FindFirstObjectByType<ResourcePhaseManager>();
 
         if(rpm != null)
-        {
             rpm.HideDropHighlight();
-        }
 
         canvasGroup.blocksRaycasts = true;
 

@@ -3,31 +3,26 @@ using UnityEngine.EventSystems;
 
 public class HandCardDoubleClick : MonoBehaviour, IPointerClickHandler
 {
-    private static float lastClickTime = 0f;
-    private static bool isIdle = true;
+    private static float lastClickTime = -1f;
 
-    public float doubleClickTime = 0.35f;
+    public float doubleClickTime = 0.6f;
 
     public void OnPointerClick(PointerEventData eventData)
     {
         float now = Time.time;
 
-        if (now - lastClickTime <= doubleClickTime)
+        if(now - lastClickTime <= doubleClickTime)
         {
             HandController handController =
                 GetComponentInParent<HandController>();
 
-            if (handController == null)
+            if(handController != null)
             {
-                handController =
-                    FindFirstObjectByType<HandController>();
+                handController.Toggle();
             }
 
-            if (handController == null)
-                return;
-
-            isIdle = !isIdle;
-            handController.ChangeState(isIdle);
+            lastClickTime = -1f;
+            return;
         }
 
         lastClickTime = now;

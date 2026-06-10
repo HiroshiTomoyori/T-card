@@ -35,6 +35,7 @@ public class HandDealer : MonoBehaviour
 
     [Header("Enemy")]
     public TMPro.TextMeshProUGUI enemyHandCountText;
+    public Transform enemyHandArea;
     public Transform enemyWallArea;
     public int enemyWallCount = 5;
     public RectTransform enemyDeckPosition;
@@ -96,6 +97,9 @@ public class HandDealer : MonoBehaviour
     public List<CardData> enemyHandCards =
     new List<CardData>();
 
+    [Header("Enemy Hand Visual")]
+    public Vector2 enemyHandCardSize = new Vector2(35, 52);
+
 
 public Transform playerWallArea;
     public void DealStart()
@@ -125,10 +129,10 @@ public Transform playerWallArea;
             enemyDeckImage.gameObject.SetActive(true);
 
         StartCoroutine(DealRoutine());
-
+/*
         if (enemyHandCountText != null)
             enemyHandCountText.gameObject.SetActive(true);
-
+*/
         EnemyDraw(5);
     }
 
@@ -914,6 +918,8 @@ void ShowButtons()
 
             enemyHandCount++;
 
+            RefreshEnemyHandVisual();
+
             if (enemyHandCountText != null)
             {
                 UpdateEnemyHandCountText();
@@ -930,6 +936,10 @@ void ShowButtons()
 
     public void UpdateEnemyHandCountText()
     {
+        if(enemyHandCountText != null)
+        {
+            enemyHandCountText.gameObject.SetActive(false);
+        }
         if (enemyHandCountText == null)
             return;
 
@@ -1510,6 +1520,8 @@ public IEnumerator EnemyChargeSpecificResourceAnimation(
 
     enemyHandCards.Remove(selectedCard);
 
+    RefreshEnemyHandVisual();
+
     GameObject moveCard =
         Instantiate(
             cardPrefab,
@@ -1936,6 +1948,8 @@ IEnumerator DamagePlayerWallRoutine(GameObject wall)
 
         enemyHandCards.RemoveAt(index);
 
+        RefreshEnemyHandVisual();
+
         enemyHandCount--;
 
         UpdateEnemyHandCountText();
@@ -1975,35 +1989,119 @@ IEnumerator DamagePlayerWallRoutine(GameObject wall)
     }
 
     void SetOpeningLock(bool locked)
-{
-    CanvasGroup[] groups =
-        FindObjectsByType<CanvasGroup>(
-            FindObjectsSortMode.None
-        );
-
-    foreach(CanvasGroup cg in groups)
     {
-        if(cg == null)
-            continue;
+        CanvasGroup[] groups =
+            FindObjectsByType<CanvasGroup>(
+                FindObjectsSortMode.None
+            );
 
-        // Redrawボタンだけ除外
-        if(redrawButton != null &&
-        cg.gameObject == redrawButton)
-            continue;
+        foreach(CanvasGroup cg in groups)
+        {
+            if(cg == null)
+                continue;
 
-        // 確定ボタンだけ除外
-        if(confirmButton != null &&
-        cg.gameObject == confirmButton)
-            continue;
+            // Redrawボタンだけ除外
+            if(redrawButton != null &&
+            cg.gameObject == redrawButton)
+                continue;
 
-        cg.blocksRaycasts = !locked;
-        cg.interactable = !locked;
+            // 確定ボタンだけ除外
+            if(confirmButton != null &&
+            cg.gameObject == confirmButton)
+                continue;
+
+            cg.blocksRaycasts = !locked;
+            cg.interactable = !locked;
+        }
+
+        Debug.Log(
+            locked ?
+            "初期手札選択ロックON" :
+            "初期手札選択ロック解除"
+        );
     }
 
-    Debug.Log(
-        locked ?
-        "初期手札選択ロックON" :
-        "初期手札選択ロック解除"
-    );
-}
+    void RefreshEnemyHandVisual()
+    {
+        if(enemyHandArea == null)
+            return;
+
+        for(int i = enemyHandArea.childCount - 1; i >= 0; i--)
+        {
+            Destroy(enemyHandArea.GetChild(i).gameObject);
+        }
+
+        for(int i = 0; i < enemyHandCards.Count; i++)
+        {
+            GameObject cardObj =
+                Instantiate(cardPrefab, enemyHandArea);
+
+            cardObj.name = "EnemyHandBack";
+
+            SetupCardSize(cardObj, enemyHandCardSize);
+
+            LayoutElement layout =
+                cardObj.GetComponent<LayoutElement>();
+
+            if(layout != null)
+            {
+                layout.ignoreLayout = false;
+                layout.preferredWidth = enemyHandCardSize.x;
+                layout.preferredHeight = enemyHandCardSize.y;
+                layout.minWidth = enemyHandCardSize.x;
+                layout.minHeight = enemyHandCardSize.y;
+            }
+
+            RectTransform rt =
+                cardObj.GetComponent<RectTransform>();
+
+            if(rt != null)
+            {
+                rt.localScale = Vector3.one;
+                rt.localRotation = Quaternion.identity;
+            }
+
+            CardController card =
+                cardObj.GetComponent<CardController>();
+
+            if(card != null)
+            {
+                if(card.artworkImage != null)
+                    card.artworkImage.sprite = cardBackSprite;
+
+                if(card.costText != null)
+                    card.costText.gameObject.SetActive(false);
+
+                if(card.attackText != null)
+                    card.attackText.gameObject.SetActive(false);
+
+                if(card.hpText != null)
+                    card.hpText.gameObject.SetActive(false);
+
+                card.enabled = false;
+            }
+
+            CardDrag drag =
+                cardObj.GetComponent<CardDrag>();
+
+            if(drag != null)
+                drag.enabled = false;
+
+            BattleCardClick click =
+                cardObj.GetComponent<BattleCardClick>();
+
+            if(click != null)
+                click.enabled = false;
+
+            CanvasGroup cg =
+                cardObj.GetComponent<CanvasGroup>();
+
+            if(cg == null)
+                cg = cardObj.AddComponent<CanvasGroup>();
+
+            cg.alpha = 1f;
+            cg.blocksRaycasts = false;
+            cg.interactable = false;
+        }
+    }
 }
