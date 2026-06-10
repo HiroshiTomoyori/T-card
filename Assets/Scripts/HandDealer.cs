@@ -100,6 +100,9 @@ public class HandDealer : MonoBehaviour
     [Header("Enemy Hand Visual")]
     public Vector2 enemyHandCardSize = new Vector2(35, 52);
 
+    [Header("Opening Lock")]
+    public Button endTurnButton;
+
 
 public Transform playerWallArea;
     public void DealStart()
@@ -772,41 +775,86 @@ void ShowButtons()
 
     public void RedrawHand()
     {
-        if (!canRedraw) return;
-        if (hasRedrawn) return;
+        if(!canRedraw)
+            return;
+
+        if(hasRedrawn)
+            return;
 
         hasRedrawn = true;
         canRedraw = false;
 
         SetRedrawButtonInteractable(false);
 
+        if(confirmButton != null)
+        {
+            Button confirmBtn =
+                confirmButton.GetComponent<Button>();
+
+            if(confirmBtn != null)
+                confirmBtn.interactable = false;
+        }
+
+        if(endTurnButton != null)
+        {
+            endTurnButton.gameObject.SetActive(false);
+        }
+
+        SetOpeningLock(true);
+
         currentDeck = new List<CardData>(cardList);
 
-        StartCoroutine(DealRoutine());
+        StartCoroutine(RedrawRoutine());
     }
+    IEnumerator RedrawRoutine()
+    {
+        yield return StartCoroutine(DealRoutine());
 
+        SetOpeningLock(false);
+
+        if(confirmButton != null)
+        {
+            Button confirmBtn =
+                confirmButton.GetComponent<Button>();
+
+            if(confirmBtn != null)
+                confirmBtn.interactable = true;
+        }
+
+        if(endTurnButton != null)
+        {
+            endTurnButton.gameObject.SetActive(false);
+        }
+    }
     public void ConfirmHand()
     {
         HideButtons();
         canRedraw = false;
 
-        if (turnManager != null)
+        if(endTurnButton != null)
+        {
+            endTurnButton.gameObject.SetActive(true);
+        }
+
+        if(turnManager != null)
         {
             GameFlowManager flow =
                 FindFirstObjectByType<GameFlowManager>();
 
             bool playerFirst = true;
 
-            if (flow != null)
+            if(flow != null)
                 playerFirst = flow.PlayerFirst;
 
             Debug.Log("PlayerFirst = " + playerFirst);
 
             turnManager.StartFirstTurn(playerFirst);
-            Debug.Log("ConfirmHand PlayerFirst = " + playerFirst);
-        }
 
-        
+            Debug.Log(
+                "ConfirmHand PlayerFirst = " +
+                playerFirst
+            );
+        }
     }
 
     public void DrawOneCard()
