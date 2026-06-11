@@ -1851,7 +1851,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &358398297
 RectTransform:
   m_ObjectHideFlags: 0
@@ -4212,7 +4212,7 @@ RectTransform:
   m_GameObject: {fileID: 676032828}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 2.5, y: 2.5, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 888953983}
@@ -4242,7 +4242,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 2759922290047460726, guid: d0084082810eaad44863e28cd229bb6e, type: 3}
+  m_Sprite: {fileID: 5991750934007958987, guid: a4e2d7209a4dd804c9b42b58fb0b0da1, type: 3}
   m_Type: 0
   m_PreserveAspect: 1
   m_FillCenter: 1
@@ -6225,7 +6225,7 @@ RectTransform:
   m_GameObject: {fileID: 957037716}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 2.5, y: 2.5, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 888953983}
@@ -6250,8 +6250,8 @@ MonoBehaviour:
   coinImage: {fileID: 676032830}
   resultTextObject: {fileID: 1066137999}
   resultText: {fileID: 1066138001}
-  kingdomCoin: {fileID: -4673325136092000081, guid: 7f9e6d9d68aa74147bb9c2f6503e807d, type: 3}
-  fairyCoin: {fileID: 2759922290047460726, guid: d0084082810eaad44863e28cd229bb6e, type: 3}
+  kingdomCoin: {fileID: 5991750934007958987, guid: a4e2d7209a4dd804c9b42b58fb0b0da1, type: 3}
+  fairyCoin: {fileID: -8407745150158192257, guid: fe68c106f4b5e1047843103ccc294131, type: 3}
   seSource: {fileID: 1632339832}
   gameBgmSource: {fileID: 86075744}
   appearSE: {fileID: 8300000, guid: 6b1ce4bcc854edc4a9333b5aac3201e3, type: 3}
@@ -6470,7 +6470,7 @@ AudioSource:
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 0}
-  m_Resource: {fileID: 8300000, guid: e84cd8cddfe2d514f86eaea01065f6d5, type: 3}
+  m_Resource: {fileID: 8300000, guid: 6f8a78941eed9e74fb35181f9f87395f, type: 3}
   m_PlayOnAwake: 0
   m_Volume: 1
   m_Pitch: 1
@@ -6923,7 +6923,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: -100}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1066138001
@@ -9415,7 +9415,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1488937860
 RectTransform:
   m_ObjectHideFlags: 0
@@ -9583,6 +9583,7 @@ MonoBehaviour:
   enemyResourcePosition: {fileID: 694404508}
   enemyHandCards: []
   enemyHandCardSize: {x: 55, y: 82}
+  endTurnButton: {fileID: 0}
   playerWallArea: {fileID: 0}
 --- !u!1 &1540508880
 GameObject:
@@ -9777,7 +9778,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   idlePosition: {x: 0, y: -550, z: 0}
   expandPosition: {x: 0, y: -200, z: 0}
-  idleScale: 0.6
+  idleScale: 0.8
   expandScale: 1.6
   idleMaxWidth: 500
   idleMaxSpacing: 50
@@ -11348,7 +11349,7 @@ MonoBehaviour:
   normalLoadingImage: {fileID: 21300000, guid: f8154d41b8a15454a825d037ec5dea1f, type: 3}
   hardLoadingImage: {fileID: 21300000, guid: cd1ebb4f604ce674db31fb2e297a1a50, type: 3}
   difficultyBackgroundImage: {fileID: 1790827050}
-  normalDifficultyImage: {fileID: -4335724975608764451, guid: ff27b44bada155b4ab52908dc02ccd8f, type: 3}
+  normalDifficultyImage: {fileID: 7042847911465117151, guid: c4a56010c84a1744283ba555834ffb29, type: 3}
   secretUnlockedDifficultyImage: {fileID: 8434508821395303071, guid: ba6167f1a59530d4d8f9382bd8db3696, type: 3}
   startSE: {fileID: 1004047684}
   bgmSource: {fileID: 404817850}
