@@ -105,6 +105,23 @@ public void OnDrop(PointerEventData eventData)
 
     cardDrag.DropToBattleArea(battleArea);
 
+    // ★追加ここから
+    RectTransform rt =
+    card.GetComponent<RectTransform>();
+
+    if(rt != null)
+    {
+        rt.localRotation = Quaternion.identity;
+        //rt.localScale = Vector3.one;
+    }
+    // ★追加ここまで
+    BattleAreaLayout layout =
+        battleArea.GetComponent<BattleAreaLayout>();
+
+    if(layout != null)
+    {
+        layout.Refresh();
+    }
     ResourcePhaseManager resourcePhase =
     FindFirstObjectByType<ResourcePhaseManager>();
 

@@ -375,6 +375,8 @@ IEnumerator AnimateCardToHand(RectTransform cardRect)
 
             SetupCardSize(wallCard, wallCardSize);
 
+            DisableWallInput(wallCard);
+
             CardController card =
                 wallCard.GetComponent<CardController>();
 
@@ -543,6 +545,7 @@ IEnumerator AnimateCardToHand(RectTransform cardRect)
                 wallCardSize
             );
 
+            DisableWallInput(wallCard);
             CanvasGroup wallCg =
             wallCard.GetComponent<CanvasGroup>();
 
@@ -1711,7 +1714,7 @@ IEnumerator DamagePlayerWallRoutine(GameObject wall)
             wall.GetComponentInChildren<CardController>();
 
     if(wallCard == null ||
-    wallCard.data == null)
+       wallCard.data == null)
     {
         Debug.Log("破壊できるWallカードなし");
         yield break;
@@ -1734,10 +1737,26 @@ IEnumerator DamagePlayerWallRoutine(GameObject wall)
             x => x == EffectType.ShieldTrigger
         );
 
-    if(shieldTrigger)
+    bool useReverse = false;
+
+    if(shieldTrigger &&
+       ReverseChoiceManager.I != null)
+    {
+        yield return StartCoroutine(
+            ReverseChoiceManager.I.ShowChoiceRoutine(
+                data,
+                result =>
+                {
+                    useReverse = result;
+                }
+            )
+        );
+    }
+
+    if(shieldTrigger && useReverse)
     {
         Debug.Log(
-            "シールドトリガー発動：" +
+            "リバース使用：" +
             data.cardName
         );
 
@@ -1748,9 +1767,11 @@ IEnumerator DamagePlayerWallRoutine(GameObject wall)
         }
 
         if(turnManager == null ||
-        turnManager.playerBattleArea == null)
+           turnManager.playerBattleArea == null)
         {
-            Debug.LogWarning("playerBattleArea が見つからない");
+            Debug.LogWarning(
+                "playerBattleArea が見つからない"
+            );
             yield break;
         }
 
@@ -1760,8 +1781,13 @@ IEnumerator DamagePlayerWallRoutine(GameObject wall)
                 turnManager.playerBattleArea
             );
 
+        SetupCardSize(
+            triggerCard,
+            handCardSize
+        );
+
         triggerCard.name =
-            "ShieldTrigger_" + data.cardName;
+            "Reverse_" + data.cardName;
 
         CardController triggerController =
             triggerCard.GetComponent<CardController>();
@@ -1770,70 +1796,33 @@ IEnumerator DamagePlayerWallRoutine(GameObject wall)
         {
             triggerController.SetData(data);
             triggerController.SetSummonSickness(false);
-
-            if(CardEffectManager.I != null)
-            {
-                CardEffectManager.I.ActivateOnSummon(
-                    triggerController,
-                    true
-                );
-            }
-        }
-
-        RectTransform triggerRt =
-            triggerCard.GetComponent<RectTransform>();
-
-        if(triggerRt != null)
-        {
-            triggerRt.localScale =
-                Vector3.one * 0.7f;
-
-            triggerRt.sizeDelta =
-                new Vector2(160f, 230f);
-
-            triggerRt.anchoredPosition =
-                Vector2.zero;
+            triggerController.SetAttackable(false);
         }
 
         LayoutElement triggerLayout =
             triggerCard.GetComponent<LayoutElement>();
 
-        if(triggerLayout != null)
+        if(triggerLayout == null)
+            triggerLayout =
+                triggerCard.AddComponent<LayoutElement>();
+
+        triggerLayout.ignoreLayout = false;
+        triggerLayout.preferredWidth = handCardSize.x;
+        triggerLayout.preferredHeight = handCardSize.y;
+        triggerLayout.minWidth = handCardSize.x;
+        triggerLayout.minHeight = handCardSize.y;
+
+        RectTransform rt =
+            triggerCard.GetComponent<RectTransform>();
+
+        if(rt != null)
         {
-            triggerLayout.ignoreLayout = true;
+            rt.localRotation =
+                Quaternion.identity;
+
+            rt.sizeDelta =
+                handCardSize;
         }
-
-        CanvasGroup triggerCg =
-            triggerCard.GetComponent<CanvasGroup>();
-
-        if(triggerCg == null)
-            triggerCg =
-                triggerCard.AddComponent<CanvasGroup>();
-
-        triggerCg.alpha = 1f;
-        triggerCg.blocksRaycasts = true;
-        triggerCg.interactable = true;
-
-        CardDrag triggerDrag =
-            triggerCard.GetComponent<CardDrag>();
-
-        if(triggerDrag != null)
-            triggerDrag.enabled = false;
-
-        if(wallCg == null)
-            wallCg =
-                wall.AddComponent<CanvasGroup>();
-
-        wallCg.alpha = 0f;
-        wallCg.blocksRaycasts = false;
-        wallCg.interactable = false;
-
-        playerWallAliveCount--;
-
-        Debug.Log(
-            "プレイヤーWall残り：" +
-            playerWallAliveCount
-        );
 
         BattleAreaLayout layout =
             turnManager.playerBattleArea
@@ -1844,55 +1833,72 @@ IEnumerator DamagePlayerWallRoutine(GameObject wall)
             layout.Refresh();
         }
 
-        yield break;
+        if(CardEffectManager.I != null &&
+           triggerController != null)
+        {
+            CardEffectManager.I.ActivateOnSummon(
+                triggerController,
+                true
+            );
+        }
     }
-
-    GameObject handCard =
-        Instantiate(
-            cardPrefab,
-            handArea
+    else
+    {
+        Debug.Log(
+            shieldTrigger
+            ? "リバースを手札へ：" + data.cardName
+            : "通常Wallを手札へ：" + data.cardName
         );
 
-    handCard.name =
-        "HandCard_" + data.cardName;
+        GameObject handCard =
+            Instantiate(
+                cardPrefab,
+                handArea
+            );
 
-    SetupCardSize(
-        handCard,
-        handCardSize
-    );
+        handCard.name =
+            "HandCard_" + data.cardName;
 
-    CardController handController =
-        handCard.GetComponent<CardController>();
+        SetupCardSize(
+            handCard,
+            handCardSize
+        );
 
-    if(handController != null)
-    {
-        handController.SetData(data);
+        CardController handController =
+            handCard.GetComponent<CardController>();
+
+        if(handController != null)
+        {
+            handController.SetData(data);
+        }
+
+        LayoutElement layout2 =
+            handCard.GetComponent<LayoutElement>();
+
+        if(layout2 != null)
+        {
+            layout2.ignoreLayout = false;
+        }
+
+        CanvasGroup handCg =
+            handCard.GetComponent<CanvasGroup>();
+
+        if(handCg == null)
+            handCg =
+                handCard.AddComponent<CanvasGroup>();
+
+        handCg.alpha = 1f;
+        handCg.blocksRaycasts = true;
+        handCg.interactable = true;
+
+        CardDrag drag =
+            handCard.GetComponent<CardDrag>();
+
+        if(drag != null)
+            drag.enabled = true;
+
+        SortPlayerHand();
     }
-
-    LayoutElement layout2 =
-        handCard.GetComponent<LayoutElement>();
-
-    if(layout2 != null)
-    {
-        layout2.ignoreLayout = false;
-    }
-
-    CanvasGroup handCg =
-        handCard.GetComponent<CanvasGroup>();
-
-    if(handCg == null)
-        handCg =
-            handCard.AddComponent<CanvasGroup>();
-
-    handCg.alpha = 1f;
-    handCg.blocksRaycasts = true;
-    handCg.interactable = true;
-
-    CardDrag drag =
-        handCard.GetComponent<CardDrag>();
-
-    if(drag != null)
-        drag.enabled = true;
 
     if(wallCg == null)
         wallCg =
@@ -1908,8 +1914,6 @@ IEnumerator DamagePlayerWallRoutine(GameObject wall)
         "プレイヤーWall残り：" +
         playerWallAliveCount
     );
-
-    SortPlayerHand();
 }
 
     public void ChargeTopDeckToResource()
@@ -2151,5 +2155,38 @@ IEnumerator DamagePlayerWallRoutine(GameObject wall)
             cg.blocksRaycasts = false;
             cg.interactable = false;
         }
+    }
+
+    void DisableWallInput(GameObject wallCard)
+    {
+        if(wallCard == null)
+            return;
+
+        CanvasGroup cg =
+            wallCard.GetComponent<CanvasGroup>();
+
+        if(cg == null)
+            cg = wallCard.AddComponent<CanvasGroup>();
+
+        cg.blocksRaycasts = false;
+        cg.interactable = false;
+
+        CardDrag drag =
+            wallCard.GetComponent<CardDrag>();
+
+        if(drag != null)
+            drag.enabled = false;
+
+        BattleCardClick battleClick =
+            wallCard.GetComponent<BattleCardClick>();
+
+        if(battleClick != null)
+            battleClick.enabled = false;
+
+        HandCardDoubleClick handDoubleClick =
+            wallCard.GetComponent<HandCardDoubleClick>();
+
+        if(handDoubleClick != null)
+            handDoubleClick.enabled = false;
     }
 }
