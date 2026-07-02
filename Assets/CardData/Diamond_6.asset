@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   cardName: Diamond_6
   suit: 3
-  artwork: {fileID: -6702889852375535205, guid: 8965d0c254d30da45a304d040bb7b933, type: 3}
+  artwork: {fileID: 21300000, guid: c4f8033d739bff0438902657fd174d0e, type: 3}
   cost: 6
   power: 6
   effectTypes: 02000000

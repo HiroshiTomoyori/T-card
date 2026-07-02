@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   cardName: Club_Jack
   suit: 2
-  artwork: {fileID: -7702829183427735157, guid: 2c7625737182c8544a676319fb94eb8f, type: 3}
+  artwork: {fileID: 21300000, guid: 039bff6d186019044ad70e03207d833d, type: 3}
   cost: 11
   power: 11
   effectTypes: 0800000006000000
