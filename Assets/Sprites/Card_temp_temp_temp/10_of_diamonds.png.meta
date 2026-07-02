@@ -1,0 +1,546 @@
+fileFormatVersion: 2
+guid: 71794015e3ffa2346b97490bbc1200bf
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -335888830951895633
+    second: 10_of_diamonds_0
+  - first:
+      213: 2317782858347079866
+    second: 10_of_diamonds_1
+  - first:
+      213: -2515598044681099467
+    second: 10_of_diamonds_2
+  - first:
+      213: 634302233149352679
+    second: 10_of_diamonds_3
+  - first:
+      213: 4422309200437756778
+    second: 10_of_diamonds_4
+  - first:
+      213: 9141134933532994374
+    second: 10_of_diamonds_5
+  - first:
+      213: -8847422016515995465
+    second: 10_of_diamonds_6
+  - first:
+      213: 1086296169097209129
+    second: 10_of_diamonds_7
+  - first:
+      213: 8638684749736404192
+    second: 10_of_diamonds_8
+  - first:
+      213: 5203200392311709601
+    second: 10_of_diamonds_9
+  - first:
+      213: 722540868772251923
+    second: 10_of_diamonds_10
+  - first:
+      213: -3318960401450973691
+    second: 10_of_diamonds_11
+  - first:
+      213: 6614314291011365656
+    second: 10_of_diamonds_12
+  - first:
+      213: 3658218015420978727
+    second: 10_of_diamonds_13
+  - first:
+      213: -4689308173332691664
+    second: 10_of_diamonds_14
+  - first:
+      213: 3625313504953011207
+    second: 10_of_diamonds_15
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: 10_of_diamonds_0
+      rect:
+        serializedVersion: 2
+        x: 3
+        y: 287
+        width: 15
+        height: 33
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fad471b43eea65bf0800000000000000
+      internalID: -335888830951895633
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: 10_of_diamonds_1
+      rect:
+        serializedVersion: 2
+        x: 17
+        y: 286
+        width: 23
+        height: 34
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ab86442ca3b6a2020800000000000000
+      internalID: 2317782858347079866
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: 10_of_diamonds_2
+      rect:
+        serializedVersion: 2
+        x: 43
+        y: 243
+        width: 58
+        height: 75
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 537ad1518ecc61dd0800000000000000
+      internalID: -2515598044681099467
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: 10_of_diamonds_3
+      rect:
+        serializedVersion: 2
+        x: 121
+        y: 243
+        width: 58
+        height: 75
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7eaaa17358e7dc800800000000000000
+      internalID: 634302233149352679
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: 10_of_diamonds_4
+      rect:
+        serializedVersion: 2
+        x: 5
+        y: 242
+        width: 35
+        height: 44
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a63c80399c23f5d30800000000000000
+      internalID: 4422309200437756778
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: 10_of_diamonds_5
+      rect:
+        serializedVersion: 2
+        x: 82
+        y: 203
+        width: 57
+        height: 75
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 64be52d4ac5dbde70800000000000000
+      internalID: 9141134933532994374
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: 10_of_diamonds_6
+      rect:
+        serializedVersion: 2
+        x: 43
+        y: 164
+        width: 58
+        height: 75
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7b808973d84a73580800000000000000
+      internalID: -8847422016515995465
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: 10_of_diamonds_7
+      rect:
+        serializedVersion: 2
+        x: 121
+        y: 164
+        width: 58
+        height: 75
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 92528ef3c9c431f00800000000000000
+      internalID: 1086296169097209129
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: 10_of_diamonds_8
+      rect:
+        serializedVersion: 2
+        x: 43
+        y: 84
+        width: 58
+        height: 75
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0e46f9a9206c2e770800000000000000
+      internalID: 8638684749736404192
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: 10_of_diamonds_9
+      rect:
+        serializedVersion: 2
+        x: 81
+        y: 45
+        width: 58
+        height: 75
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1af99e6603b753840800000000000000
+      internalID: 5203200392311709601
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: 10_of_diamonds_10
+      rect:
+        serializedVersion: 2
+        x: 121
+        y: 84
+        width: 58
+        height: 75
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3194fda871bf60a00800000000000000
+      internalID: 722540868772251923
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: 10_of_diamonds_11
+      rect:
+        serializedVersion: 2
+        x: 43
+        y: 5
+        width: 58
+        height: 75
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5064de7791fa0f1d0800000000000000
+      internalID: -3318960401450973691
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: 10_of_diamonds_12
+      rect:
+        serializedVersion: 2
+        x: 121
+        y: 5
+        width: 58
+        height: 75
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 81ba584bdc3cacb50800000000000000
+      internalID: 6614314291011365656
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: 10_of_diamonds_13
+      rect:
+        serializedVersion: 2
+        x: 181
+        y: 3
+        width: 23
+        height: 35
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7261a1827e994c230800000000000000
+      internalID: 3658218015420978727
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: 10_of_diamonds_14
+      rect:
+        serializedVersion: 2
+        x: 183
+        y: 37
+        width: 34
+        height: 44
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0354b26bf0b3ceeb0800000000000000
+      internalID: -4689308173332691664
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: 10_of_diamonds_15
+      rect:
+        serializedVersion: 2
+        x: 204
+        y: 3
+        width: 14
+        height: 34
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 70c862ecc63bf4230800000000000000
+      internalID: 3625313504953011207
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      10_of_diamonds_0: -335888830951895633
+      10_of_diamonds_1: 2317782858347079866
+      10_of_diamonds_10: 722540868772251923
+      10_of_diamonds_11: -3318960401450973691
+      10_of_diamonds_12: 6614314291011365656
+      10_of_diamonds_13: 3658218015420978727
+      10_of_diamonds_14: -4689308173332691664
+      10_of_diamonds_15: 3625313504953011207
+      10_of_diamonds_2: -2515598044681099467
+      10_of_diamonds_3: 634302233149352679
+      10_of_diamonds_4: 4422309200437756778
+      10_of_diamonds_5: 9141134933532994374
+      10_of_diamonds_6: -8847422016515995465
+      10_of_diamonds_7: 1086296169097209129
+      10_of_diamonds_8: 8638684749736404192
+      10_of_diamonds_9: 5203200392311709601
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   cardName: Diamond_Jack
   suit: 3
-  artwork: {fileID: 21300000, guid: ed5ad6695d1ea6b4d94af558451d5932, type: 3}
+  artwork: {fileID: -3366052973729902432, guid: 3c42eb5bb2189674791e07fdcdb09aa5, type: 3}
   cost: 11
   power: 11
   effectTypes: 0800000006000000

@@ -8,6 +8,9 @@ public class CardDrag : MonoBehaviour,
 {
     Transform originalParent;
     Vector3 originalPosition;
+    Quaternion originalRotation;
+    Vector3 originalScale;
+
     bool droppedSuccessfully = false;
     bool canDrag = false;
 
@@ -40,6 +43,12 @@ public class CardDrag : MonoBehaviour,
 
         originalParent = transform.parent;
         originalPosition = transform.localPosition;
+        originalRotation = transform.localRotation;
+        originalScale = transform.localScale;
+
+        // 展開中の斜め・縮小状態をドラッグ開始時に戻す
+        transform.localRotation = Quaternion.identity;
+        transform.localScale = Vector3.one;
 
         transform.SetParent(canvas.transform, true);
         transform.SetAsLastSibling();
@@ -81,6 +90,8 @@ public class CardDrag : MonoBehaviour,
 
         transform.SetParent(originalParent, false);
         transform.localPosition = originalPosition;
+        transform.localRotation = originalRotation;
+        transform.localScale = originalScale;
     }
 
     public void MarkDroppedSuccessfully()
@@ -94,6 +105,7 @@ public class CardDrag : MonoBehaviour,
 
         transform.SetParent(battleArea, false);
         transform.localPosition = Vector3.zero;
+        transform.localRotation = Quaternion.identity;
         transform.localScale = Vector3.one;
 
         canvasGroup.blocksRaycasts = true;
