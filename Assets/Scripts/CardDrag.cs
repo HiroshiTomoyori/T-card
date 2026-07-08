@@ -6,6 +6,12 @@ public class CardDrag : MonoBehaviour,
     IDragHandler,
     IEndDragHandler
 {
+    [Header("ドラッグ中サイズ")]
+    public float draggingScale = 3.0f;
+
+    [Header("バトルエリアサイズ")]
+    public float battleScale = 1.2f;
+
     Transform originalParent;
     Vector3 originalPosition;
     Quaternion originalRotation;
@@ -28,15 +34,17 @@ public class CardDrag : MonoBehaviour,
 
     public void OnBeginDrag(PointerEventData eventData)
     {
+        // バトルエリア上のカードはドラッグ禁止
+        if(IsInBattleArea())
+            return;
+
         canDrag = false;
 
         HandController hand =
             GetComponentInParent<HandController>();
 
         if(hand != null && hand.IsIdle)
-        {
             return;
-        }
 
         canDrag = true;
         droppedSuccessfully = false;
@@ -46,12 +54,12 @@ public class CardDrag : MonoBehaviour,
         originalRotation = transform.localRotation;
         originalScale = transform.localScale;
 
-        // 展開中の斜め・縮小状態をドラッグ開始時に戻す
-        transform.localRotation = Quaternion.identity;
-        transform.localScale = Vector3.one;
-
         transform.SetParent(canvas.transform, true);
         transform.SetAsLastSibling();
+
+        transform.localRotation = Quaternion.identity;
+
+        ApplyDraggingScale();
 
         canvasGroup.blocksRaycasts = false;
 
@@ -68,6 +76,9 @@ public class CardDrag : MonoBehaviour,
             return;
 
         transform.position = eventData.position;
+
+        transform.localRotation = Quaternion.identity;
+        ApplyDraggingScale();
     }
 
     public void OnEndDrag(PointerEventData eventData)
@@ -94,6 +105,21 @@ public class CardDrag : MonoBehaviour,
         transform.localScale = originalScale;
     }
 
+void ApplyDraggingScale()
+{
+    float canvasScale = 1f;
+
+    if(canvas != null)
+        canvasScale = canvas.transform.lossyScale.x;
+
+    if(canvasScale <= 0f)
+        canvasScale = 1f;
+
+    // 1.15倍大きく表示
+    transform.localScale =
+        Vector3.one * ((draggingScale * 1.6f) / canvasScale);
+}
+
     public void MarkDroppedSuccessfully()
     {
         droppedSuccessfully = true;
@@ -106,8 +132,27 @@ public class CardDrag : MonoBehaviour,
         transform.SetParent(battleArea, false);
         transform.localPosition = Vector3.zero;
         transform.localRotation = Quaternion.identity;
-        transform.localScale = Vector3.one;
+
+        transform.localScale = Vector3.one * battleScale;
 
         canvasGroup.blocksRaycasts = true;
+    }
+
+    bool IsInBattleArea()
+    {
+        Transform t = transform.parent;
+
+        while(t != null)
+        {
+            if(t.name == "PlayerBattleArea" ||
+            t.name == "EnemyBattleArea")
+            {
+                return true;
+            }
+
+            t = t.parent;
+        }
+
+        return false;
     }
 }
