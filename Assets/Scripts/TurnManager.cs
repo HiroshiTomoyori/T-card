@@ -221,65 +221,90 @@ public void StartBattleByAttackSelect(GameObject attacker)
     }
 
     if(attackerCard.data != null &&
-    attackerCard.data.effectTypes != null &&
-    System.Array.Exists(
-        attackerCard.data.effectTypes,
-        x => x == EffectType.CannotAttack
-    ))
+       attackerCard.data.effectTypes != null &&
+       System.Array.Exists(
+           attackerCard.data.effectTypes,
+           x => x == EffectType.CannotAttack
+       ))
     {
         Debug.Log("攻撃不可カード");
         return;
     }
 
+    // すでに攻撃対象選択中なら、攻撃カードを切り替える
     if(selectingTarget)
     {
-        Debug.Log("すでに攻撃対象選択中");
+        if(currentAttacker == attacker)
+            return;
+
+        currentAttacker = attacker;
+        wallBreakCount = 0;
+        pendingWallTargets.Clear();
+
+        maxWallBreakCount = 1;
+
+        if(attackerCard.data != null &&
+           attackerCard.data.effectTypes != null &&
+           System.Array.Exists(
+               attackerCard.data.effectTypes,
+               x => x == EffectType.DoubleWallBreak
+           ))
+        {
+            maxWallBreakCount = 2;
+        }
+
+        if(maxWallBreakCount >= 2 &&
+           attackArrowManager != null)
+        {
+            attackArrowManager.SetPlayerArrowColor(
+                new Color(0.8f, 0.2f, 1f)
+            );
+        }
+        else if(attackArrowManager != null)
+        {
+            attackArrowManager.SetPlayerArrowColor(
+                new Color(0.55f, 1f, 0.55f, 1f)
+            );
+        }
+
+        HideAttackArrow();
+
+        Debug.Log("攻撃カード切り替え：" + attacker.name);
+        Debug.Log("攻撃対象を選択してください");
+
         return;
     }
 
     currentAttacker = attacker;
     wallBreakCount = 0;
     maxWallBreakCount = 1;
+    pendingWallTargets.Clear();
 
     if(attackerCard.data != null &&
-    attackerCard.data.effectTypes != null &&
-    System.Array.Exists(
-        attackerCard.data.effectTypes,
-        x => x == EffectType.DoubleWallBreak
-    ))
+       attackerCard.data.effectTypes != null &&
+       System.Array.Exists(
+           attackerCard.data.effectTypes,
+           x => x == EffectType.DoubleWallBreak
+       ))
     {
         maxWallBreakCount = 2;
     }
+
     selectingTarget = true;
 
-    /*if(maxWallBreakCount >= 2 &&
-    attackArrowManager != null)
-    {
-        attackArrowManager.SetArrowColor(
-            new Color(0.8f, 0.2f, 1f)
-        );
-    }
-    else if(attackArrowManager != null)
-    {
-        attackArrowManager.SetArrowColor(Color.red);
-    }*/
-
     if(maxWallBreakCount >= 2 &&
-    attackArrowManager != null)
+       attackArrowManager != null)
     {
-        // モナーク攻撃：紫
         attackArrowManager.SetPlayerArrowColor(
             new Color(0.8f, 0.2f, 1f)
         );
     }
     else if(attackArrowManager != null)
     {
-        // 通常攻撃：緑
         attackArrowManager.SetPlayerArrowColor(
             new Color(0.55f, 1f, 0.55f, 1f)
         );
     }
-
 
     SetEnemyWallClickable(true);
 
