@@ -42,39 +42,61 @@ public class TitleManager : MonoBehaviour
 
     [Header("UI")]
     public GameObject playerResourceUI;
-    int moonTapCount = 0;
-
-    bool isSecretUnlocked = false;
-
-    bool isTransitioning = false;
 
     public GameObject easyButton;
     public GameObject normalButton;
     public GameObject hardButton;
-
-    public static bool isAdvancedRule = false;
 
     [Header("BGM")]
     public AudioSource bgmAudioSource;
     public AudioClip normalBgm;
     public AudioClip secretBgm;
 
+    int moonTapCount = 0;
+
+    // Secretは最初から解放済み
+    bool isSecretUnlocked = true;
+
+    bool isTransitioning = false;
+
+    public static bool isAdvancedRule = false;
+
     void Start()
     {
-        titleScreen.SetActive(true);
-        difficultyScreen.SetActive(false);
-        loadingScreen.SetActive(false);
-        gameScreen.SetActive(false);
+        if(titleScreen != null)
+            titleScreen.SetActive(true);
+
+        if(difficultyScreen != null)
+            difficultyScreen.SetActive(false);
+
+        if(loadingScreen != null)
+            loadingScreen.SetActive(false);
+
+        if(gameScreen != null)
+            gameScreen.SetActive(false);
 
         if(playerResourceUI != null)
-        playerResourceUI.SetActive(false);
+            playerResourceUI.SetActive(false);
 
+        // Secretボタンを最初から表示
         if(secretButton != null)
-            secretButton.SetActive(false);
+            secretButton.SetActive(true);
 
-        // 通常難易度画面
-        if(difficultyBackgroundImage &&
-        normalDifficultyImage)
+        // 通常難易度ボタンも表示
+        if(easyButton != null)
+            easyButton.SetActive(true);
+
+        if(normalButton != null)
+            normalButton.SetActive(true);
+
+        if(hardButton != null)
+            hardButton.SetActive(true);
+
+        // 通常難易度背景を表示
+        if(
+            difficultyBackgroundImage != null &&
+            normalDifficultyImage != null
+        )
         {
             difficultyBackgroundImage.sprite =
                 normalDifficultyImage;
@@ -92,15 +114,13 @@ public class TitleManager : MonoBehaviour
             StartGameRoutine()
         );
     }
+
     IEnumerator StartGameRoutine()
     {
-        Button startButton =
-            GetComponent<Button>();
-
-        if (bgmSource != null)
+        if(bgmSource != null)
             bgmSource.Stop();
 
-        if (startSE != null)
+        if(startSE != null)
         {
             startSE.volume = 1f;
             startSE.Play();
@@ -109,7 +129,7 @@ public class TitleManager : MonoBehaviour
 
             float t = 0f;
 
-            while (t < voiceFadeTime)
+            while(t < voiceFadeTime)
             {
                 t += Time.deltaTime;
 
@@ -127,10 +147,13 @@ public class TitleManager : MonoBehaviour
             startSE.volume = 1f;
         }
 
-        titleScreen.SetActive(false);
-        difficultyScreen.SetActive(true);
+        if(titleScreen != null)
+            titleScreen.SetActive(false);
 
-        if (difficultyBGM != null)
+        if(difficultyScreen != null)
+            difficultyScreen.SetActive(true);
+
+        if(difficultyBGM != null)
             difficultyBGM.Play();
 
         isTransitioning = false;
@@ -138,6 +161,11 @@ public class TitleManager : MonoBehaviour
 
     public void SelectDifficulty()
     {
+        if(isTransitioning)
+            return;
+
+        isTransitioning = true;
+
         StartCoroutine(
             SelectDifficultyRoutine()
         );
@@ -145,39 +173,47 @@ public class TitleManager : MonoBehaviour
 
     IEnumerator SelectDifficultyRoutine()
     {
-        if (difficultyBGM != null)
+        if(difficultyBGM != null)
             difficultyBGM.Stop();
 
-        if (difficultySE != null)
+        if(difficultySE != null)
         {
             difficultySE.volume = 1f;
             difficultySE.Play();
 
-            yield return new WaitForSeconds(
-                0.8f
-            );
+            yield return new WaitForSeconds(0.8f);
         }
 
-        difficultyScreen.SetActive(false);
-        gameScreen.SetActive(true);
+        if(difficultyScreen != null)
+            difficultyScreen.SetActive(false);
+
+        if(gameScreen != null)
+            gameScreen.SetActive(true);
+
         Debug.Log("GameScreen ON");
-        if (playerResourceUI != null)
+
+        if(playerResourceUI != null)
         {
             playerResourceUI.SetActive(true);
             Debug.Log("PlayerResourceUI ON");
         }
         else
         {
-            Debug.LogError("playerResourceUI が未設定");
+            Debug.LogError(
+                "playerResourceUI が未設定"
+            );
         }
+
+        isTransitioning = false;
     }
 
     public void SelectEasy()
     {
-            if(isTransitioning)
-        return;
+        if(isTransitioning)
+            return;
 
         isAdvancedRule = false;
+
         StartCoroutine(
             SelectRoutine(
                 easyVoice,
@@ -188,9 +224,11 @@ public class TitleManager : MonoBehaviour
 
     public void SelectNormal()
     {
-            if(isTransitioning)
-        return;
+        if(isTransitioning)
+            return;
+
         isAdvancedRule = false;
+
         StartCoroutine(
             SelectRoutine(
                 normalVoice,
@@ -201,9 +239,11 @@ public class TitleManager : MonoBehaviour
 
     public void SelectHard()
     {
-            if(isTransitioning)
-        return;
+        if(isTransitioning)
+            return;
+
         isAdvancedRule = false;
+
         StartCoroutine(
             SelectRoutine(
                 hardVoice,
@@ -214,8 +254,9 @@ public class TitleManager : MonoBehaviour
 
     public void SelectSecret()
     {
-            if(isTransitioning)
-        return;
+        if(isTransitioning)
+            return;
+
         isAdvancedRule = true;
 
         StartCoroutine(
@@ -225,128 +266,160 @@ public class TitleManager : MonoBehaviour
             )
         );
     }
+
     IEnumerator SelectRoutine(
         AudioClip clip,
         Sprite loadingImage
     )
     {
-        if (difficultyBGM != null)
+        isTransitioning = true;
+
+        if(difficultyBGM != null)
             difficultyBGM.Stop();
 
-        if (
-            difficultySE != null &&
-            clip != null
+        if(
+            loadingBackground != null &&
+            loadingImage != null
         )
         {
+            loadingBackground.sprite =
+                loadingImage;
+        }
+
+        if(difficultySE != null && clip != null)
+        {
+            difficultySE.Stop();
             difficultySE.clip = clip;
             difficultySE.volume = 1f;
             difficultySE.Play();
 
-            difficultySE.clip = clip;
-            difficultySE.volume = 1f;
-            difficultySE.Play();
+            float waitTime =
+                Mathf.Max(
+                    0f,
+                    clip.length - 0.2f
+                );
 
             yield return new WaitForSeconds(
-                clip.length - 0.2f
+                waitTime
             );
         }
 
-        difficultyScreen.SetActive(false);
-        loadingScreen.SetActive(false);
-        gameScreen.SetActive(true);
+        if(difficultyScreen != null)
+            difficultyScreen.SetActive(false);
+
+        if(loadingScreen != null)
+            loadingScreen.SetActive(false);
+
+        if(gameScreen != null)
+            gameScreen.SetActive(true);
 
         if(isAdvancedRule)
         {
             ChangeToSecretBgm();
         }
+
         Debug.Log("GameScreen ON");
-        if (playerResourceUI != null)
+
+        if(playerResourceUI != null)
         {
             playerResourceUI.SetActive(true);
             Debug.Log("PlayerResourceUI ON");
         }
         else
         {
-            Debug.LogError("playerResourceUI が未設定");
+            Debug.LogError(
+                "playerResourceUI が未設定"
+            );
         }
+
+        isTransitioning = false;
     }
+
     void ChangeToSecretBgm()
     {
-        if(bgmAudioSource == null || secretBgm == null)
+        if(
+            bgmAudioSource == null ||
+            secretBgm == null
+        )
+        {
             return;
+        }
 
         bgmAudioSource.Stop();
         bgmAudioSource.clip = secretBgm;
         bgmAudioSource.loop = true;
         bgmAudioSource.Play();
     }
-public void TapMoon()
-{
-    if(isSecretUnlocked)
-        return;
 
-    if(moonSE != null)
-        moonSE.Play();
-
-    moonTapCount++;
-
-    Debug.Log(
-        "Moon Tap : " +
-        moonTapCount
-    );
-
-    if(moonTapCount < 5)
-        return;
-
-    isSecretUnlocked = true;
-
-    StopAllCoroutines();
-
-    Debug.Log("SECRET解放");
-
-    // Easy / Normal / Hard を完全無効
-    if(easyButton != null)
-        easyButton.SetActive(false);
-
-    if(normalButton != null)
-        normalButton.SetActive(false);
-
-    if(hardButton != null)
-        hardButton.SetActive(false);
-
-    // SECRET表示
-    if(secretButton != null)
-        secretButton.SetActive(true);
-
-    // 背景差し替え
-    if(
-        difficultyBackgroundImage != null &&
-        secretUnlockedDifficultyImage != null
-    )
+    public void TapMoon()
     {
-        difficultyBackgroundImage.sprite =
-            secretUnlockedDifficultyImage;
+        // Secretは常時解放済みなので何もしない
+        if(isSecretUnlocked)
+            return;
+
+        if(moonSE != null)
+            moonSE.Play();
+
+        moonTapCount++;
+
+        Debug.Log(
+            "Moon Tap : " +
+            moonTapCount
+        );
+
+        if(moonTapCount < 5)
+            return;
+
+        isSecretUnlocked = true;
+
+        StopAllCoroutines();
+
+        Debug.Log("SECRET解放");
+
+        if(easyButton != null)
+            easyButton.SetActive(false);
+
+        if(normalButton != null)
+            normalButton.SetActive(false);
+
+        if(hardButton != null)
+            hardButton.SetActive(false);
+
+        if(secretButton != null)
+            secretButton.SetActive(true);
+
+        if(
+            difficultyBackgroundImage != null &&
+            secretUnlockedDifficultyImage != null
+        )
+        {
+            difficultyBackgroundImage.sprite =
+                secretUnlockedDifficultyImage;
+        }
+
+        if(bgmSource != null)
+            bgmSource.Stop();
+
+        if(
+            difficultyBGM != null &&
+            !difficultyBGM.isPlaying
+        )
+        {
+            difficultyBGM.Play();
+        }
+
+        if(titleScreen != null)
+            titleScreen.SetActive(false);
+
+        if(loadingScreen != null)
+            loadingScreen.SetActive(false);
+
+        if(gameScreen != null)
+            gameScreen.SetActive(false);
+
+        if(difficultyScreen != null)
+            difficultyScreen.SetActive(true);
+
+        isTransitioning = false;
     }
-
-    // 必要ならBGM変更
-    if(bgmSource != null)
-        bgmSource.Stop();
-
-    if(
-        difficultyBGM != null &&
-        !difficultyBGM.isPlaying
-    )
-    {
-        difficultyBGM.Play();
-    }
-
-    // 難易度画面で停止
-    titleScreen.SetActive(false);
-
-    loadingScreen.SetActive(false);
-
-    gameScreen.SetActive(false);
-
-    difficultyScreen.SetActive(true);
-}
 }
