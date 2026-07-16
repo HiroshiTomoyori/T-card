@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.UI;
 using UnityEngine.EventSystems;
 
 public class MenuButtonHover : MonoBehaviour,
@@ -11,132 +10,115 @@ public class MenuButtonHover : MonoBehaviour,
     public GameObject shadow2;
     public GameObject shadow3;
 
-    [Header("Suit")]
-    public Image suitImage;
-
-    [Header("Suit Alpha")]
-    [Range(0f,1f)]
-    public float normalAlpha = 0.18f;
-
-    [Range(0f,1f)]
-    public float hoverAlpha = 0.55f;
-
     [Header("Rotation")]
     public float normalRotationZ = -2f;
     public float hoverRotationZ = 0f;
+    public float rotateSpeed = 8f;
 
-    [Header("Animation")]
-    public float rotateSpeed = 5f;
+    [Header("Text Object")]
+    [Tooltip("PlayText、CustomText、OptionText、CreditsTextなどを入れる")]
+    public RectTransform textObject;
 
-    [Header("Suit Animation")]
-    public float alphaSpeed = 2f;
+    [Header("Text Scale")]
+    [Tooltip("通常時の文字サイズ")]
+    public float normalTextScale = 1f;
 
-    RectTransform rectTransform;
+    [Tooltip("カーソルを乗せた時の文字サイズ")]
+    public float hoverTextScale = 1.1f;
 
-    float targetRotation;
-    float targetAlpha;
+    [Tooltip("文字サイズが変化する速さ")]
+    public float textScaleSpeed = 6f;
+
+    RectTransform buttonRectTransform;
+
+    float targetRotationZ;
+    Vector3 targetTextScale;
 
     void Awake()
     {
-        rectTransform = GetComponent<RectTransform>();
+        buttonRectTransform = GetComponent<RectTransform>();
     }
 
     void Start()
     {
-        targetRotation = normalRotationZ;
-        targetAlpha = normalAlpha;
+        targetRotationZ = normalRotationZ;
+        targetTextScale = Vector3.one * normalTextScale;
 
-        rectTransform.localRotation =
-            Quaternion.Euler(
-                0,
-                0,
-                normalRotationZ
-            );
+        if (buttonRectTransform != null)
+        {
+            buttonRectTransform.localRotation =
+                Quaternion.Euler(0f, 0f, normalRotationZ);
+        }
 
-        SetShadowVisible(false);
-        SetSuitAlpha(normalAlpha);
+        if (textObject != null)
+        {
+            textObject.localScale =
+                Vector3.one * normalTextScale;
+        }
+
+        SetShadows(false);
     }
 
     void Update()
     {
-        Quaternion target =
-            Quaternion.Euler(
-                0,
-                0,
-                targetRotation
-            );
-
-        rectTransform.localRotation =
-            Quaternion.Lerp(
-                rectTransform.localRotation,
-                target,
-                Time.deltaTime * rotateSpeed
-            );
-
-        if(
-            Quaternion.Angle(
-                rectTransform.localRotation,
-                target
-            ) < 0.05f
-        )
-        {
-            rectTransform.localRotation =
-                target;
-        }
-
-        if(suitImage != null)
-        {
-            Color c = suitImage.color;
-
-            c.a = Mathf.Lerp(
-                c.a,
-                targetAlpha,
-                Time.deltaTime * alphaSpeed
-            );
-
-            suitImage.color = c;
-        }
+        UpdateRotation();
+        UpdateTextScale();
     }
 
-    public void OnPointerEnter(
-        PointerEventData eventData
-    )
+    void UpdateRotation()
     {
-        targetRotation = hoverRotationZ;
-        targetAlpha = hoverAlpha;
-
-        SetShadowVisible(true);
-    }
-
-    public void OnPointerExit(
-        PointerEventData eventData
-    )
-    {
-        targetRotation = normalRotationZ;
-        targetAlpha = normalAlpha;
-
-        SetShadowVisible(false);
-    }
-
-    void SetShadowVisible(bool visible)
-    {
-        if(shadow != null)
-            shadow.SetActive(visible);
-
-        if(shadow2 != null)
-            shadow2.SetActive(visible);
-
-        if(shadow3 != null)
-            shadow3.SetActive(visible);
-    }
-
-    void SetSuitAlpha(float alpha)
-    {
-        if(suitImage == null)
+        if (buttonRectTransform == null)
             return;
 
-        Color c = suitImage.color;
-        c.a = alpha;
-        suitImage.color = c;
+        Quaternion targetRotation =
+            Quaternion.Euler(0f, 0f, targetRotationZ);
+
+        buttonRectTransform.localRotation =
+            Quaternion.Lerp(
+                buttonRectTransform.localRotation,
+                targetRotation,
+                Time.deltaTime * rotateSpeed
+            );
+    }
+
+    void UpdateTextScale()
+    {
+        if (textObject == null)
+            return;
+
+        textObject.localScale =
+            Vector3.Lerp(
+                textObject.localScale,
+                targetTextScale,
+                Time.deltaTime * textScaleSpeed
+            );
+    }
+
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        targetRotationZ = hoverRotationZ;
+        targetTextScale = Vector3.one * hoverTextScale;
+
+        SetShadows(true);
+    }
+
+    public void OnPointerExit(PointerEventData eventData)
+    {
+        targetRotationZ = normalRotationZ;
+        targetTextScale = Vector3.one * normalTextScale;
+
+        SetShadows(false);
+    }
+
+    void SetShadows(bool isVisible)
+    {
+        if (shadow != null)
+            shadow.SetActive(isVisible);
+
+        if (shadow2 != null)
+            shadow2.SetActive(isVisible);
+
+        if (shadow3 != null)
+            shadow3.SetActive(isVisible);
     }
 }

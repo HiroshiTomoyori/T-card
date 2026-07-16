@@ -2955,7 +2955,7 @@ GameObject:
   - component: {fileID: 369618023}
   - component: {fileID: 369618022}
   m_Layer: 0
-  m_Name: CreButtonParent
+  m_Name: CreditsButtonParent
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -11818,7 +11818,7 @@ GameObject:
   - component: {fileID: 1745568805}
   - component: {fileID: 1745568804}
   m_Layer: 0
-  m_Name: CreText
+  m_Name: CreditsText
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -11863,7 +11863,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: -3447338431889018165, guid: 8aa72aae69615114ea31a8c2d0bfb4ea, type: 3}
+  m_Sprite: {fileID: -5126997244862415840, guid: 5fd3a4348cd0e1647a02c779a24def15, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
