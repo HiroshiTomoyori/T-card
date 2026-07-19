@@ -1,16 +1,19 @@
 fileFormatVersion: 2
-guid: 5bf67e1b2c9093940afc0889e5a7f994
+guid: fdec6430482602848a00f8c9902a4581
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 5516585743885540285
-    second: Customize_Text_0
+      213: -2986818500251847579
+    second: Main menu_0
   - first:
-      213: 8654374594523919003
-    second: Customize_Text_1
+      213: -9197904816170755652
+    second: Main menu_1
   - first:
-      213: -5659924162420633003
-    second: Customize_Text_2
+      213: -3160397305440190666
+    second: Main menu_2
+  - first:
+      213: 8784170157948912044
+    second: Main menu_3
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -52,7 +55,7 @@ TextureImporter:
   nPOTScale: 0
   lightmap: 0
   compressionQuality: 50
-  spriteMode: 2
+  spriteMode: 1
   spriteExtrude: 1
   spriteMeshType: 1
   alignment: 0
@@ -119,13 +122,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Customize_Text_0
+      name: Main menu_0
       rect:
         serializedVersion: 2
-        x: 0
-        y: 0
-        width: 594
-        height: 156
+        x: 49
+        y: 168
+        width: 146
+        height: 85
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -134,20 +137,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: dbb18458189de8c40800000000000000
-      internalID: 5516585743885540285
+      spriteID: 5647ceb1660bc86d0800000000000000
+      internalID: -2986818500251847579
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Customize_Text_1
+      name: Main menu_1
       rect:
         serializedVersion: 2
-        x: 570
-        y: 0
-        width: 106
-        height: 78
+        x: 170
+        y: 174
+        width: 125
+        height: 46
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -156,19 +159,19 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: b9273c347d38a1870800000000000000
-      internalID: 8654374594523919003
+      spriteID: cb999426d4a7a5080800000000000000
+      internalID: -9197904816170755652
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Customize_Text_2
+      name: Main menu_2
       rect:
         serializedVersion: 2
-        x: 573
-        y: 77
-        width: 29
+        x: 235
+        y: 213
+        width: 16
         height: 14
       alignment: 0
       pivot: {x: 0, y: 0}
@@ -178,8 +181,30 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 552944b36f8e371b0800000000000000
-      internalID: -5659924162420633003
+      spriteID: 63fb22c25630424d0800000000000000
+      internalID: -3160397305440190666
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Main menu_3
+      rect:
+        serializedVersion: 2
+        x: 306
+        y: 168
+        width: 251
+        height: 85
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ca1c127d734a7e970800000000000000
+      internalID: 8784170157948912044
       vertices: []
       indices: 
       edges: []
@@ -188,7 +213,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 
+    spriteID: 5e97eb03825dee720800000000000000
     internalID: 0
     vertices: []
     indices: 
@@ -198,9 +223,10 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Customize_Text_0: 5516585743885540285
-      Customize_Text_1: 8654374594523919003
-      Customize_Text_2: -5659924162420633003
+      Main menu_0: -2986818500251847579
+      Main menu_1: -9197904816170755652
+      Main menu_2: -3160397305440190666
+      Main menu_3: 8784170157948912044
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

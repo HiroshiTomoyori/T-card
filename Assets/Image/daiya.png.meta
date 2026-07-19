@@ -1,0 +1,1924 @@
+fileFormatVersion: 2
+guid: cf2837b32ed4bd1438372b62c90aec81
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: 4130165799613837305
+    second: daiya_0
+  - first:
+      213: 6084284056593103573
+    second: daiya_1
+  - first:
+      213: -8165318285703877421
+    second: daiya_2
+  - first:
+      213: -6817275488283759978
+    second: daiya_3
+  - first:
+      213: -5506521381387827625
+    second: daiya_4
+  - first:
+      213: 3260974701915268402
+    second: daiya_5
+  - first:
+      213: 880103802332692359
+    second: daiya_6
+  - first:
+      213: -5638483416853923386
+    second: daiya_7
+  - first:
+      213: -9179047381012857753
+    second: daiya_8
+  - first:
+      213: 2022164383495730196
+    second: daiya_9
+  - first:
+      213: -1204403691209136773
+    second: daiya_10
+  - first:
+      213: 3528019116155125480
+    second: daiya_11
+  - first:
+      213: 4152915959419172457
+    second: daiya_12
+  - first:
+      213: -8764059378588791182
+    second: daiya_13
+  - first:
+      213: -2643381576803895561
+    second: daiya_14
+  - first:
+      213: -115302943769650774
+    second: daiya_15
+  - first:
+      213: 4557836988827811051
+    second: daiya_16
+  - first:
+      213: 4931534373556853159
+    second: daiya_17
+  - first:
+      213: 8843303035918938270
+    second: daiya_18
+  - first:
+      213: -6052776100094012423
+    second: daiya_19
+  - first:
+      213: 3181060789593792511
+    second: daiya_20
+  - first:
+      213: 9126286032372705736
+    second: daiya_21
+  - first:
+      213: 8367094398521552053
+    second: daiya_22
+  - first:
+      213: -4375157495512412910
+    second: daiya_23
+  - first:
+      213: 3543416812379317168
+    second: daiya_24
+  - first:
+      213: 8443741243860615845
+    second: daiya_25
+  - first:
+      213: -1491279451014156968
+    second: daiya_26
+  - first:
+      213: 1275399163546875020
+    second: daiya_27
+  - first:
+      213: 4071920606637874690
+    second: daiya_28
+  - first:
+      213: -4219951037467742473
+    second: daiya_29
+  - first:
+      213: -5385111146902572990
+    second: daiya_30
+  - first:
+      213: 3813316168034713640
+    second: daiya_31
+  - first:
+      213: 8538247164480558414
+    second: daiya_32
+  - first:
+      213: 5770838439048632102
+    second: daiya_33
+  - first:
+      213: -1595839558123523846
+    second: daiya_34
+  - first:
+      213: -7071298720950310888
+    second: daiya_35
+  - first:
+      213: 1588462065166184673
+    second: daiya_36
+  - first:
+      213: -4174860735002031423
+    second: daiya_37
+  - first:
+      213: 5954567069132618210
+    second: daiya_38
+  - first:
+      213: -8419112972738237650
+    second: daiya_39
+  - first:
+      213: 6789990830300168342
+    second: daiya_40
+  - first:
+      213: 5287283030068692679
+    second: daiya_41
+  - first:
+      213: -5075216431562477581
+    second: daiya_42
+  - first:
+      213: 7542512944893228399
+    second: daiya_43
+  - first:
+      213: 1440467235564890734
+    second: daiya_44
+  - first:
+      213: -973503419836536847
+    second: daiya_45
+  - first:
+      213: -2387262450714730841
+    second: daiya_46
+  - first:
+      213: -8563642101792820915
+    second: daiya_47
+  - first:
+      213: 1069232327895881880
+    second: daiya_48
+  - first:
+      213: 8130742529332063822
+    second: daiya_49
+  - first:
+      213: -41913112229354030
+    second: daiya_50
+  - first:
+      213: -8987729857714233733
+    second: daiya_51
+  - first:
+      213: -147352638395772112
+    second: daiya_52
+  - first:
+      213: -3620421952256761528
+    second: daiya_53
+  - first:
+      213: -629146779788349899
+    second: daiya_54
+  - first:
+      213: -4383806153040095285
+    second: daiya_55
+  - first:
+      213: -3765909765982992906
+    second: daiya_56
+  - first:
+      213: 3554672060849422442
+    second: daiya_57
+  - first:
+      213: 4159865210412720129
+    second: daiya_58
+  - first:
+      213: -6131006864867698063
+    second: daiya_59
+  - first:
+      213: -8922947348927320086
+    second: daiya_60
+  - first:
+      213: -6245794971443853642
+    second: daiya_61
+  - first:
+      213: -6144673427256636357
+    second: daiya_62
+  - first:
+      213: -3563303192472980123
+    second: daiya_63
+  - first:
+      213: 377944896987859459
+    second: daiya_64
+  - first:
+      213: -5737985116146165844
+    second: daiya_65
+  - first:
+      213: -6480165415887108621
+    second: daiya_66
+  - first:
+      213: -8916122671253832493
+    second: daiya_67
+  - first:
+      213: 3167820327739711132
+    second: daiya_68
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: daiya_0
+      rect:
+        serializedVersion: 2
+        x: 11
+        y: 0
+        width: 291
+        height: 1024
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9ff237589eb415930800000000000000
+      internalID: 4130165799613837305
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_1
+      rect:
+        serializedVersion: 2
+        x: 308
+        y: 0
+        width: 677
+        height: 1024
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5dafdc11d18bf6450800000000000000
+      internalID: 6084284056593103573
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_2
+      rect:
+        serializedVersion: 2
+        x: 987
+        y: 992
+        width: 14
+        height: 32
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3dc6e96e746feae80800000000000000
+      internalID: -8165318285703877421
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_3
+      rect:
+        serializedVersion: 2
+        x: 1011
+        y: 856
+        width: 36
+        height: 168
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 69a6ed8101c2461a0800000000000000
+      internalID: -6817275488283759978
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_4
+      rect:
+        serializedVersion: 2
+        x: 1038
+        y: 975
+        width: 10
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 756094a7af7e493b0800000000000000
+      internalID: -5506521381387827625
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_5
+      rect:
+        serializedVersion: 2
+        x: 1060
+        y: 0
+        width: 476
+        height: 1024
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 235e139c63f414d20800000000000000
+      internalID: 3260974701915268402
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_6
+      rect:
+        serializedVersion: 2
+        x: 989
+        y: 971
+        width: 12
+        height: 19
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 78fb287ceb1c63c00800000000000000
+      internalID: 880103802332692359
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_7
+      rect:
+        serializedVersion: 2
+        x: 990
+        y: 960
+        width: 11
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6c9bd72d43510c1b0800000000000000
+      internalID: -5638483416853923386
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_8
+      rect:
+        serializedVersion: 2
+        x: 82
+        y: 807
+        width: 7
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 76cbf362a097d9080800000000000000
+      internalID: -9179047381012857753
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_9
+      rect:
+        serializedVersion: 2
+        x: 83
+        y: 772
+        width: 6
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 414b5bbfacb201c10800000000000000
+      internalID: 2022164383495730196
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_10
+      rect:
+        serializedVersion: 2
+        x: 988
+        y: 768
+        width: 37
+        height: 192
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b756f4b5939194fe0800000000000000
+      internalID: -1204403691209136773
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_11
+      rect:
+        serializedVersion: 2
+        x: 995
+        y: 768
+        width: 6
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8eeb633a1ba06f030800000000000000
+      internalID: 3528019116155125480
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_12
+      rect:
+        serializedVersion: 2
+        x: 1035
+        y: 775
+        width: 12
+        height: 89
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 966fa3fdf0f12a930800000000000000
+      internalID: 4152915959419172457
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_13
+      rect:
+        serializedVersion: 2
+        x: 1039
+        y: 745
+        width: 8
+        height: 31
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 27ec8ccdd6ecf5680800000000000000
+      internalID: -8764059378588791182
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_14
+      rect:
+        serializedVersion: 2
+        x: 1041
+        y: 877
+        width: 6
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7f6bacc0672d05bd0800000000000000
+      internalID: -2643381576803895561
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_15
+      rect:
+        serializedVersion: 2
+        x: 81
+        y: 735
+        width: 8
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: aa99d03659c566ef0800000000000000
+      internalID: -115302943769650774
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_16
+      rect:
+        serializedVersion: 2
+        x: 81
+        y: 707
+        width: 8
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: becb737c790b04f30800000000000000
+      internalID: 4557836988827811051
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_17
+      rect:
+        serializedVersion: 2
+        x: 81
+        y: 654
+        width: 7
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7a91c756264507440800000000000000
+      internalID: 4931534373556853159
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_18
+      rect:
+        serializedVersion: 2
+        x: 82
+        y: 620
+        width: 7
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e90f411e149b9ba70800000000000000
+      internalID: 8843303035918938270
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_19
+      rect:
+        serializedVersion: 2
+        x: 990
+        y: 538
+        width: 40
+        height: 229
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9f31ce8b438300ca0800000000000000
+      internalID: -6052776100094012423
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_20
+      rect:
+        serializedVersion: 2
+        x: 1039
+        y: 655
+        width: 8
+        height: 77
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fff59a42fe5652c20800000000000000
+      internalID: 3181060789593792511
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_21
+      rect:
+        serializedVersion: 2
+        x: 1039
+        y: 457
+        width: 8
+        height: 87
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8c92f261bc417ae70800000000000000
+      internalID: 9126286032372705736
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_22
+      rect:
+        serializedVersion: 2
+        x: 1041
+        y: 731
+        width: 6
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5bca9025604ed1470800000000000000
+      internalID: 8367094398521552053
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_23
+      rect:
+        serializedVersion: 2
+        x: 1041
+        y: 544
+        width: 7
+        height: 112
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 21d489b30715843c0800000000000000
+      internalID: -4375157495512412910
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_24
+      rect:
+        serializedVersion: 2
+        x: 81
+        y: 430
+        width: 8
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0b3240921debc2130800000000000000
+      internalID: 3543416812379317168
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_25
+      rect:
+        serializedVersion: 2
+        x: 81
+        y: 390
+        width: 8
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5a280a7ace13e2570800000000000000
+      internalID: 8443741243860615845
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_26
+      rect:
+        serializedVersion: 2
+        x: 81
+        y: 323
+        width: 8
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 85d267d8d39ed4be0800000000000000
+      internalID: -1491279451014156968
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_27
+      rect:
+        serializedVersion: 2
+        x: 81
+        y: 220
+        width: 8
+        height: 18
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c84ba0a28c023b110800000000000000
+      internalID: 1275399163546875020
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_28
+      rect:
+        serializedVersion: 2
+        x: 81
+        y: 84
+        width: 8
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 20e5e30c73e528830800000000000000
+      internalID: 4071920606637874690
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_29
+      rect:
+        serializedVersion: 2
+        x: 82
+        y: 398
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7fea132c3e8bf65c0800000000000000
+      internalID: -4219951037467742473
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_30
+      rect:
+        serializedVersion: 2
+        x: 82
+        y: 348
+        width: 7
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 24030e481fd3445b0800000000000000
+      internalID: -5385111146902572990
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_31
+      rect:
+        serializedVersion: 2
+        x: 82
+        y: 247
+        width: 7
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 82086fbd9de9be430800000000000000
+      internalID: 3813316168034713640
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_32
+      rect:
+        serializedVersion: 2
+        x: 82
+        y: 140
+        width: 7
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e45995bfe82fd7670800000000000000
+      internalID: 8538247164480558414
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_33
+      rect:
+        serializedVersion: 2
+        x: 82
+        y: 95
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 627d9af2cf2261050800000000000000
+      internalID: 5770838439048632102
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_34
+      rect:
+        serializedVersion: 2
+        x: 82
+        y: 62
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: af0f78380607ad9e0800000000000000
+      internalID: -1595839558123523846
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_35
+      rect:
+        serializedVersion: 2
+        x: 82
+        y: 30
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 81825155743bddd90800000000000000
+      internalID: -7071298720950310888
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_36
+      rect:
+        serializedVersion: 2
+        x: 83
+        y: 406
+        width: 6
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1e0f96d05d95b0610800000000000000
+      internalID: 1588462065166184673
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_37
+      rect:
+        serializedVersion: 2
+        x: 987
+        y: 1
+        width: 46
+        height: 534
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1ca4a77e74aef06c0800000000000000
+      internalID: -4174860735002031423
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_38
+      rect:
+        serializedVersion: 2
+        x: 987
+        y: 193
+        width: 14
+        height: 21
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2e973e2633fd2a250800000000000000
+      internalID: 5954567069132618210
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_39
+      rect:
+        serializedVersion: 2
+        x: 990
+        y: 97
+        width: 11
+        height: 14
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e2bed009b5d492b80800000000000000
+      internalID: -8419112972738237650
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_40
+      rect:
+        serializedVersion: 2
+        x: 994
+        y: 400
+        width: 7
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 690833c6fa4ea3e50800000000000000
+      internalID: 6789990830300168342
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_41
+      rect:
+        serializedVersion: 2
+        x: 994
+        y: 153
+        width: 7
+        height: 15
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7c6023217e3306940800000000000000
+      internalID: 5287283030068692679
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_42
+      rect:
+        serializedVersion: 2
+        x: 994
+        y: 39
+        width: 7
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3ff2e7e8b853199b0800000000000000
+      internalID: -5075216431562477581
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_43
+      rect:
+        serializedVersion: 2
+        x: 995
+        y: 449
+        width: 6
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f65752abf836ca860800000000000000
+      internalID: 7542512944893228399
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_44
+      rect:
+        serializedVersion: 2
+        x: 995
+        y: 374
+        width: 6
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e6a2f6e91519df310800000000000000
+      internalID: 1440467235564890734
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_45
+      rect:
+        serializedVersion: 2
+        x: 995
+        y: 320
+        width: 6
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1f7e3092ccb6d72f0800000000000000
+      internalID: -973503419836536847
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_46
+      rect:
+        serializedVersion: 2
+        x: 995
+        y: 281
+        width: 6
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7ae1587037dbeded0800000000000000
+      internalID: -2387262450714730841
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_47
+      rect:
+        serializedVersion: 2
+        x: 995
+        y: 184
+        width: 6
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d413f0b61e4d72980800000000000000
+      internalID: -8563642101792820915
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_48
+      rect:
+        serializedVersion: 2
+        x: 995
+        y: 169
+        width: 6
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 898199e132da6de00800000000000000
+      internalID: 1069232327895881880
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_49
+      rect:
+        serializedVersion: 2
+        x: 1036
+        y: 368
+        width: 11
+        height: 72
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e4eaffc704336d070800000000000000
+      internalID: 8130742529332063822
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_50
+      rect:
+        serializedVersion: 2
+        x: 1036
+        y: 159
+        width: 13
+        height: 57
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2d5632a1f381b6ff0800000000000000
+      internalID: -41913112229354030
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_51
+      rect:
+        serializedVersion: 2
+        x: 1038
+        y: 239
+        width: 11
+        height: 41
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b7e55cd305b254380800000000000000
+      internalID: -8987729857714233733
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_52
+      rect:
+        serializedVersion: 2
+        x: 1038
+        y: 216
+        width: 17
+        height: 24
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 03314bb5e8f74fdf0800000000000000
+      internalID: -147352638395772112
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_53
+      rect:
+        serializedVersion: 2
+        x: 1038
+        y: 143
+        width: 9
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 841a5be8a6da1cdc0800000000000000
+      internalID: -3620421952256761528
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_54
+      rect:
+        serializedVersion: 2
+        x: 1038
+        y: 71
+        width: 9
+        height: 15
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 53e622f4652d447f0800000000000000
+      internalID: -629146779788349899
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_55
+      rect:
+        serializedVersion: 2
+        x: 1038
+        y: 39
+        width: 9
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bc79fdbb7879923c0800000000000000
+      internalID: -4383806153040095285
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_56
+      rect:
+        serializedVersion: 2
+        x: 1038
+        y: 32
+        width: 9
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6f5c86e350dccbbc0800000000000000
+      internalID: -3765909765982992906
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_57
+      rect:
+        serializedVersion: 2
+        x: 1039
+        y: 447
+        width: 8
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a608fe7e76bb45130800000000000000
+      internalID: 3554672060849422442
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_58
+      rect:
+        serializedVersion: 2
+        x: 1039
+        y: 440
+        width: 8
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 100e7247e5fcab930800000000000000
+      internalID: 4159865210412720129
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_59
+      rect:
+        serializedVersion: 2
+        x: 1039
+        y: 344
+        width: 8
+        height: 24
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 17a54186db94aeaa0800000000000000
+      internalID: -6131006864867698063
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_60
+      rect:
+        serializedVersion: 2
+        x: 1039
+        y: 312
+        width: 8
+        height: 32
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: aef6ca579a25b2480800000000000000
+      internalID: -8922947348927320086
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_61
+      rect:
+        serializedVersion: 2
+        x: 1039
+        y: 279
+        width: 8
+        height: 33
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6b60b2ba09a7259a0800000000000000
+      internalID: -6245794971443853642
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_62
+      rect:
+        serializedVersion: 2
+        x: 1039
+        y: 135
+        width: 8
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b3c0693e21cb9baa0800000000000000
+      internalID: -6144673427256636357
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_63
+      rect:
+        serializedVersion: 2
+        x: 1039
+        y: 113
+        width: 8
+        height: 23
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 565f1a920aa9c8ec0800000000000000
+      internalID: -3563303192472980123
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_64
+      rect:
+        serializedVersion: 2
+        x: 1039
+        y: 85
+        width: 9
+        height: 19
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 30a02a1a1eabe3500800000000000000
+      internalID: 377944896987859459
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_65
+      rect:
+        serializedVersion: 2
+        x: 1039
+        y: 51
+        width: 8
+        height: 21
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ca711a120f49e50b0800000000000000
+      internalID: -5737985116146165844
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_66
+      rect:
+        serializedVersion: 2
+        x: 1039
+        y: 5
+        width: 8
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3f5074c33e3d116a0800000000000000
+      internalID: -6480165415887108621
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_67
+      rect:
+        serializedVersion: 2
+        x: 1041
+        y: 103
+        width: 7
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3dcbb1e8ba1934480800000000000000
+      internalID: -8916122671253832493
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: daiya_68
+      rect:
+        serializedVersion: 2
+        x: 1041
+        y: 0
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c9edf23edcb56fb20800000000000000
+      internalID: 3167820327739711132
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      daiya_0: 4130165799613837305
+      daiya_1: 6084284056593103573
+      daiya_10: -1204403691209136773
+      daiya_11: 3528019116155125480
+      daiya_12: 4152915959419172457
+      daiya_13: -8764059378588791182
+      daiya_14: -2643381576803895561
+      daiya_15: -115302943769650774
+      daiya_16: 4557836988827811051
+      daiya_17: 4931534373556853159
+      daiya_18: 8843303035918938270
+      daiya_19: -6052776100094012423
+      daiya_2: -8165318285703877421
+      daiya_20: 3181060789593792511
+      daiya_21: 9126286032372705736
+      daiya_22: 8367094398521552053
+      daiya_23: -4375157495512412910
+      daiya_24: 3543416812379317168
+      daiya_25: 8443741243860615845
+      daiya_26: -1491279451014156968
+      daiya_27: 1275399163546875020
+      daiya_28: 4071920606637874690
+      daiya_29: -4219951037467742473
+      daiya_3: -6817275488283759978
+      daiya_30: -5385111146902572990
+      daiya_31: 3813316168034713640
+      daiya_32: 8538247164480558414
+      daiya_33: 5770838439048632102
+      daiya_34: -1595839558123523846
+      daiya_35: -7071298720950310888
+      daiya_36: 1588462065166184673
+      daiya_37: -4174860735002031423
+      daiya_38: 5954567069132618210
+      daiya_39: -8419112972738237650
+      daiya_4: -5506521381387827625
+      daiya_40: 6789990830300168342
+      daiya_41: 5287283030068692679
+      daiya_42: -5075216431562477581
+      daiya_43: 7542512944893228399
+      daiya_44: 1440467235564890734
+      daiya_45: -973503419836536847
+      daiya_46: -2387262450714730841
+      daiya_47: -8563642101792820915
+      daiya_48: 1069232327895881880
+      daiya_49: 8130742529332063822
+      daiya_5: 3260974701915268402
+      daiya_50: -41913112229354030
+      daiya_51: -8987729857714233733
+      daiya_52: -147352638395772112
+      daiya_53: -3620421952256761528
+      daiya_54: -629146779788349899
+      daiya_55: -4383806153040095285
+      daiya_56: -3765909765982992906
+      daiya_57: 3554672060849422442
+      daiya_58: 4159865210412720129
+      daiya_59: -6131006864867698063
+      daiya_6: 880103802332692359
+      daiya_60: -8922947348927320086
+      daiya_61: -6245794971443853642
+      daiya_62: -6144673427256636357
+      daiya_63: -3563303192472980123
+      daiya_64: 377944896987859459
+      daiya_65: -5737985116146165844
+      daiya_66: -6480165415887108621
+      daiya_67: -8916122671253832493
+      daiya_68: 3167820327739711132
+      daiya_7: -5638483416853923386
+      daiya_8: -9179047381012857753
+      daiya_9: 2022164383495730196
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
