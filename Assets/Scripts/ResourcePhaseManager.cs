@@ -6,6 +6,7 @@ public class ResourcePhaseManager : MonoBehaviour
 {
     [Header("Drop Highlight")]
     public GameObject resourceGlow;
+
     [Header("Drop Area")]
     public Image resourceAreaImage;
 
@@ -29,35 +30,28 @@ public class ResourcePhaseManager : MonoBehaviour
         if(resourceGlow != null)
             resourceGlow.SetActive(false);
     }
-public void ShowDropHighlight()
-{
-    Debug.Log("ResourceGlow 表示");
 
-    if(resourceGlow != null)
+    public void ShowDropHighlight()
     {
-        resourceGlow.SetActive(true);
-        resourceGlow.transform.SetAsLastSibling();
-
-        Image img = resourceGlow.GetComponent<Image>();
-        if(img != null)
+        if(resourceGlow != null)
         {
-            img.enabled = true;
-            img.color = new Color(1f, 1f, 1f, 1f);
+            resourceGlow.SetActive(true);
+            resourceGlow.transform.SetAsLastSibling();
         }
     }
-}
 
     public void HideDropHighlight()
     {
         if(resourceGlow != null)
             resourceGlow.SetActive(false);
     }
+
     public void StartResourcePhase()
     {
         isRunning = true;
         hasCharged = false;
 
-        EnableResourceDrop();
+        DisableResourceDrop();
 
         Debug.Log("=== Resource Phase 開始 ===");
     }
@@ -70,6 +64,7 @@ public void ShowDropHighlight()
     public void TryChargeResource(CardDrag card)
     {
         HideDropHighlight();
+
         if(!isRunning)
         {
             Debug.Log("今はリソースフェイズではありません");
@@ -91,7 +86,9 @@ public void ShowDropHighlight()
         hasCharged = true;
         card.MarkDroppedSuccessfully();
 
-        StartCoroutine(ChargeRoutine(card.gameObject));
+        StartCoroutine(
+            ChargeRoutine(card.gameObject)
+        );
     }
 
     IEnumerator ChargeRoutine(GameObject cardObj)
@@ -100,26 +97,45 @@ public void ShowDropHighlight()
 
         if(resourceArea != null)
         {
-            cardObj.transform.SetParent(resourceArea, false);
+            cardObj.transform.SetParent(
+                resourceArea,
+                false
+            );
 
             RectTransform rt =
                 cardObj.GetComponent<RectTransform>();
 
             if(rt != null)
             {
-                rt.anchoredPosition = Vector2.zero;
-                rt.localScale = Vector3.one;
+                rt.anchoredPosition =
+                    Vector2.zero;
+
+                rt.localScale =
+                    Vector3.one;
             }
         }
 
-        if(seSource != null && chargeSE != null)
+        // ★ ドロップしたカードをすぐ非表示
+        CanvasGroup cg =
+            cardObj.GetComponent<CanvasGroup>();
+
+        if(cg != null)
+        {
+            cg.alpha = 0f;
+            cg.blocksRaycasts = false;
+            cg.interactable = false;
+        }
+
+        if(seSource != null &&
+           chargeSE != null)
         {
             seSource.PlayOneShot(chargeSE);
         }
 
         GameObject effectObj = null;
 
-        if(chargeLightEffectPrefab != null && resourceArea != null)
+        if(chargeLightEffectPrefab != null &&
+           resourceArea != null)
         {
             effectObj =
                 Instantiate(
@@ -132,8 +148,11 @@ public void ShowDropHighlight()
 
             if(effectRt != null)
             {
-                effectRt.anchoredPosition = Vector2.zero;
-                effectRt.localScale = Vector3.one;
+                effectRt.anchoredPosition =
+                    Vector2.zero;
+
+                effectRt.localScale =
+                    Vector3.one;
             }
         }
 
@@ -145,7 +164,9 @@ public void ShowDropHighlight()
         }
         else
         {
-            Debug.LogError("ResourceManager が未設定です");
+            Debug.LogError(
+                "ResourceManager が未設定です"
+            );
         }
 
         Destroy(cardObj);
@@ -176,7 +197,9 @@ public void ShowDropHighlight()
         }
         else
         {
-            Debug.LogError("TurnManager が見つかりません");
+            Debug.LogError(
+                "TurnManager が見つかりません"
+            );
         }
     }
 
@@ -188,12 +211,22 @@ public void ShowDropHighlight()
         Debug.Log("=== Resource Phase 終了 ===");
     }
 
+    public void SetResourceAreaRaycast(bool enabled)
+    {
+        if(resourceAreaImage == null)
+            return;
+
+        resourceAreaImage.raycastTarget =
+            enabled;
+    }
+
     void EnableResourceDrop()
     {
         if(resourceAreaImage == null)
             return;
 
-        resourceAreaImage.raycastTarget = true;
+        resourceAreaImage.raycastTarget =
+            true;
     }
 
     void DisableResourceDrop()
@@ -201,6 +234,7 @@ public void ShowDropHighlight()
         if(resourceAreaImage == null)
             return;
 
-        resourceAreaImage.raycastTarget = false;
+        resourceAreaImage.raycastTarget =
+            false;
     }
 }

@@ -88,3 +88,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f0d6cac7c8039a443bd68ec07c7999a1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  draggingScale: 3
+  dragScaleMultiplier: 1
+  battleScale: 1.2

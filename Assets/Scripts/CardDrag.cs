@@ -6,33 +6,47 @@ public class CardDrag : MonoBehaviour,
     IDragHandler,
     IEndDragHandler
 {
-    [Header("ドラッグ中サイズ")]
-    public float draggingScale = 3.0f;
+    [Header("ドラッグ中サイズ（ピクセル）")]
+    [Tooltip("ドラッグ中のカード幅")]
+    public float dragWidth = 190f;
+
+    [Tooltip("ドラッグ中のカード高さ")]
+    public float dragHeight = 285f;
 
     [Header("バトルエリアサイズ")]
     public float battleScale = 1.2f;
 
     Transform originalParent;
+
     Vector3 originalPosition;
     Quaternion originalRotation;
     Vector3 originalScale;
+
+    Vector2 originalSizeDelta;
 
     bool droppedSuccessfully = false;
     bool canDrag = false;
 
     Canvas canvas;
     CanvasGroup canvasGroup;
+    RectTransform rectTransform;
 
     void Awake()
     {
         canvas = GetComponentInParent<Canvas>();
         canvasGroup = GetComponent<CanvasGroup>();
+        rectTransform = GetComponent<RectTransform>();
 
         if(canvasGroup == null)
-            canvasGroup = gameObject.AddComponent<CanvasGroup>();
+        {
+            canvasGroup =
+                gameObject.AddComponent<CanvasGroup>();
+        }
     }
 
-    public void OnBeginDrag(PointerEventData eventData)
+    public void OnBeginDrag(
+        PointerEventData eventData
+    )
     {
         // バトルエリア上のカードはドラッグ禁止
         if(IsInBattleArea())
@@ -43,8 +57,27 @@ public class CardDrag : MonoBehaviour,
         HandController hand =
             GetComponentInParent<HandController>();
 
+        // 収納中の手札はドラッグ禁止
         if(hand != null && hand.IsIdle)
             return;
+
+        if(canvas == null)
+        {
+            canvas =
+                GetComponentInParent<Canvas>();
+
+            if(canvas == null)
+                return;
+        }
+
+        if(rectTransform == null)
+        {
+            rectTransform =
+                GetComponent<RectTransform>();
+
+            if(rectTransform == null)
+                return;
+        }
 
         canDrag = true;
         droppedSuccessfully = false;
@@ -53,13 +86,21 @@ public class CardDrag : MonoBehaviour,
         originalPosition = transform.localPosition;
         originalRotation = transform.localRotation;
         originalScale = transform.localScale;
+        originalSizeDelta = rectTransform.sizeDelta;
 
-        transform.SetParent(canvas.transform, true);
+        // Canvas直下へ移動
+        transform.SetParent(
+            canvas.transform,
+            true
+        );
+
         transform.SetAsLastSibling();
 
-        transform.localRotation = Quaternion.identity;
+        // ドラッグ中は縦向き
+        transform.localRotation =
+            Quaternion.identity;
 
-        ApplyDraggingScale();
+        ApplyDraggingSize();
 
         canvasGroup.blocksRaycasts = false;
 
@@ -67,21 +108,30 @@ public class CardDrag : MonoBehaviour,
             FindFirstObjectByType<ResourcePhaseManager>();
 
         if(rpm != null)
+        {
             rpm.ShowDropHighlight();
+            rpm.SetResourceAreaRaycast(true);
+        }
     }
 
-    public void OnDrag(PointerEventData eventData)
+    public void OnDrag(
+        PointerEventData eventData
+    )
     {
         if(!canDrag)
             return;
 
         transform.position = eventData.position;
 
-        transform.localRotation = Quaternion.identity;
-        ApplyDraggingScale();
+        transform.localRotation =
+            Quaternion.identity;
+
+        ApplyDraggingSize();
     }
 
-    public void OnEndDrag(PointerEventData eventData)
+    public void OnEndDrag(
+        PointerEventData eventData
+    )
     {
         if(!canDrag)
             return;
@@ -92,67 +142,139 @@ public class CardDrag : MonoBehaviour,
             FindFirstObjectByType<ResourcePhaseManager>();
 
         if(rpm != null)
+        {
             rpm.HideDropHighlight();
+            rpm.SetResourceAreaRaycast(false);
+        }
 
         canvasGroup.blocksRaycasts = true;
 
         if(droppedSuccessfully)
             return;
 
-        transform.SetParent(originalParent, false);
-        transform.localPosition = originalPosition;
-        transform.localRotation = originalRotation;
-        transform.localScale = originalScale;
+        // ドロップ失敗時は元の手札へ戻す
+        transform.SetParent(
+            originalParent,
+            false
+        );
+
+        transform.localPosition =
+            originalPosition;
+
+        transform.localRotation =
+            originalRotation;
+
+        transform.localScale =
+            originalScale;
+
+        if(rectTransform != null)
+        {
+            rectTransform.sizeDelta =
+                originalSizeDelta;
+        }
     }
 
-void ApplyDraggingScale()
-{
-    float canvasScale = 1f;
+    void ApplyDraggingSize()
+    {
+        if(rectTransform == null)
+            return;
 
-    if(canvas != null)
-        canvasScale = canvas.transform.lossyScale.x;
+        // Scaleは1に固定し、
+        // 幅・高さを直接指定
+        transform.localScale =
+            Vector3.one;
 
-    if(canvasScale <= 0f)
-        canvasScale = 1f;
+        rectTransform.SetSizeWithCurrentAnchors(
+            RectTransform.Axis.Horizontal,
+            dragWidth
+        );
 
-    // 1.15倍大きく表示
-    transform.localScale =
-        Vector3.one * ((draggingScale * 1.6f) / canvasScale);
-}
+        rectTransform.SetSizeWithCurrentAnchors(
+            RectTransform.Axis.Vertical,
+            dragHeight
+        );
+    }
 
     public void MarkDroppedSuccessfully()
     {
         droppedSuccessfully = true;
     }
 
-    public void DropToBattleArea(Transform battleArea)
+    public void DropToBattleArea(
+        Transform battleArea
+    )
     {
+        if(battleArea == null)
+            return;
+
         droppedSuccessfully = true;
 
-        transform.SetParent(battleArea, false);
-        transform.localPosition = Vector3.zero;
-        transform.localRotation = Quaternion.identity;
+        transform.SetParent(
+            battleArea,
+            false
+        );
 
-        transform.localScale = Vector3.one * battleScale;
+        transform.localPosition =
+            Vector3.zero;
+
+        transform.localRotation =
+            Quaternion.identity;
+
+        transform.localScale =
+            Vector3.one * battleScale;
+
+        // バトルエリアでは元のカードサイズへ戻す
+        if(rectTransform != null)
+        {
+            rectTransform.sizeDelta =
+                originalSizeDelta;
+        }
 
         canvasGroup.blocksRaycasts = true;
+
+        ResourcePhaseManager rpm =
+            FindFirstObjectByType<ResourcePhaseManager>();
+
+        if(rpm != null)
+        {
+            rpm.HideDropHighlight();
+            rpm.SetResourceAreaRaycast(false);
+        }
     }
 
     bool IsInBattleArea()
     {
-        Transform t = transform.parent;
+        Transform current =
+            transform.parent;
 
-        while(t != null)
+        while(current != null)
         {
-            if(t.name == "PlayerBattleArea" ||
-            t.name == "EnemyBattleArea")
+            if(current.name == "PlayerBattleArea" ||
+               current.name == "EnemyBattleArea")
             {
                 return true;
             }
 
-            t = t.parent;
+            current = current.parent;
         }
 
         return false;
+    }
+
+    void OnDisable()
+    {
+        if(canvasGroup != null)
+        {
+            canvasGroup.blocksRaycasts = true;
+        }
+
+        ResourcePhaseManager rpm =
+            FindFirstObjectByType<ResourcePhaseManager>();
+
+        if(rpm != null)
+        {
+            rpm.HideDropHighlight();
+            rpm.SetResourceAreaRaycast(false);
+        }
     }
 }

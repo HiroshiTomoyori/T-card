@@ -10,20 +10,34 @@ public class BattleCardClick : MonoBehaviour, IPointerClickHandler
         card = GetComponent<CardController>();
     }
 
-public void OnPointerClick(PointerEventData eventData)
-{
-    TurnManager turnManager =
-        FindFirstObjectByType<TurnManager>();
-
-    if(turnManager == null)
-        return;
-
-    if(turnManager.IsWaitingBlockSelect())
+    public void OnPointerClick(PointerEventData eventData)
     {
-        turnManager.SelectBlocker(gameObject);
-        return;
-    }
+        // 左クリック以外は無視
+        if(eventData.button != PointerEventData.InputButton.Left)
+            return;
 
-    turnManager.StartBattleByAttackSelect(gameObject);
-}
+        GameObject playerBattleArea =
+            GameObject.Find("PlayerBattleArea");
+
+        // プレイヤーのバトルエリアにないカードは無視
+        if(playerBattleArea == null ||
+           !transform.IsChildOf(playerBattleArea.transform))
+        {
+            return;
+        }
+
+        TurnManager turnManager =
+            FindFirstObjectByType<TurnManager>();
+
+        if(turnManager == null)
+            return;
+
+        if(turnManager.IsWaitingBlockSelect())
+        {
+            turnManager.SelectBlocker(gameObject);
+            return;
+        }
+
+        turnManager.StartBattleByAttackSelect(gameObject);
+    }
 }
