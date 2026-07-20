@@ -524,10 +524,19 @@ MonoBehaviour:
   normalRotationZ: -2.5
   hoverRotationZ: 0
   rotateSpeed: 16
+  normalButtonScale: 1
+  hoverButtonScale: 1.05
+  buttonScaleSpeed: 6
+  hoverMoveY: 10
+  buttonMoveSpeed: 6
   textObject: {fileID: 689010050}
   normalTextScale: 1
   hoverTextScale: 1.1
   textScaleSpeed: 16
+  suitImage: {fileID: 489432784}
+  normalSuitAlpha: 0.15
+  hoverSuitAlpha: 0.55
+  suitFadeSpeed: 1.5
 --- !u!114 &62932573
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -803,10 +812,19 @@ MonoBehaviour:
   normalRotationZ: 2.5
   hoverRotationZ: 0
   rotateSpeed: 16
+  normalButtonScale: 1
+  hoverButtonScale: 1.05
+  buttonScaleSpeed: 6
+  hoverMoveY: 10
+  buttonMoveSpeed: 6
   textObject: {fileID: 1013344898}
   normalTextScale: 2
   hoverTextScale: 2.15
   textScaleSpeed: 16
+  suitImage: {fileID: 1408916652}
+  normalSuitAlpha: 0.15
+  hoverSuitAlpha: 0.55
+  suitFadeSpeed: 1.5
 --- !u!1 &86075742
 GameObject:
   m_ObjectHideFlags: 0
@@ -2680,10 +2698,19 @@ MonoBehaviour:
   normalRotationZ: 2
   hoverRotationZ: 0
   rotateSpeed: 16
+  normalButtonScale: 1
+  hoverButtonScale: 1.05
+  buttonScaleSpeed: 6
+  hoverMoveY: 10
+  buttonMoveSpeed: 6
   textObject: {fileID: 1303257951}
   normalTextScale: 1
   hoverTextScale: 1.1
   textScaleSpeed: 16
+  suitImage: {fileID: 843122309}
+  normalSuitAlpha: 0.15
+  hoverSuitAlpha: 0.55
+  suitFadeSpeed: 1.5
 --- !u!114 &348242705
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3004,10 +3031,19 @@ MonoBehaviour:
   normalRotationZ: -2
   hoverRotationZ: 0
   rotateSpeed: 16
+  normalButtonScale: 1
+  hoverButtonScale: 1.05
+  buttonScaleSpeed: 6
+  hoverMoveY: 10
+  buttonMoveSpeed: 6
   textObject: {fileID: 1745568803}
   normalTextScale: 1
   hoverTextScale: 1.1
   textScaleSpeed: 16
+  suitImage: {fileID: 213210790}
+  normalSuitAlpha: 0.15
+  hoverSuitAlpha: 0.55
+  suitFadeSpeed: 1.5
 --- !u!114 &369618023
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7733,7 +7769,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_RaycastTarget: 1
+  m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
@@ -7808,7 +7844,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_RaycastTarget: 1
+  m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
