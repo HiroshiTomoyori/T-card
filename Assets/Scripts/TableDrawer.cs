@@ -20,14 +20,15 @@ public class TableDrawer : MonoBehaviour,
 
     void Update()
     {
-        if(isOpen)
-{
-    tablePanel.SetAsLastSibling();
-}
-        if(isDragging)
+        if(tablePanel == null)
             return;
 
-        if(tablePanel == null)
+        if(isOpen)
+        {
+            tablePanel.SetAsLastSibling();
+        }
+
+        if(isDragging)
             return;
 
         float targetX =
@@ -45,40 +46,48 @@ public class TableDrawer : MonoBehaviour,
         tablePanel.anchoredPosition = pos;
     }
 
-public void OnBeginDrag(PointerEventData eventData)
-{
-    if(tablePanel == null)
-        return;
-
-    // 最前面へ
-    tablePanel.SetAsLastSibling();
-
-    isDragging = true;
-
-    RectTransformUtility.ScreenPointToLocalPointInRectangle(
-        tablePanel.parent as RectTransform,
-        eventData.position,
-        eventData.pressEventCamera,
-        out dragStartPos
-    );
-
-    panelStartX = tablePanel.anchoredPosition.x;
-}
-
-    public void OnDrag(PointerEventData eventData)
+    public void OnBeginDrag(
+        PointerEventData eventData
+    )
     {
-        Debug.Log("TableHandle Drag中");
+        if(tablePanel == null)
+            return;
+
+        isDragging = true;
+
+        RectTransformUtility
+            .ScreenPointToLocalPointInRectangle(
+                tablePanel.parent as RectTransform,
+                eventData.position,
+                eventData.pressEventCamera,
+                out dragStartPos
+            );
+
+        panelStartX =
+            tablePanel.anchoredPosition.x;
+
+        tablePanel.SetAsLastSibling();
+    }
+
+    public void OnDrag(
+        PointerEventData eventData
+    )
+    {
+        if(!isDragging)
+            return;
+
         if(tablePanel == null)
             return;
 
         Vector2 currentPos;
 
-        RectTransformUtility.ScreenPointToLocalPointInRectangle(
-            tablePanel.parent as RectTransform,
-            eventData.position,
-            eventData.pressEventCamera,
-            out currentPos
-        );
+        RectTransformUtility
+            .ScreenPointToLocalPointInRectangle(
+                tablePanel.parent as RectTransform,
+                eventData.position,
+                eventData.pressEventCamera,
+                out currentPos
+            );
 
         float deltaX =
             currentPos.x - dragStartPos.x;
@@ -95,17 +104,41 @@ public void OnBeginDrag(PointerEventData eventData)
         tablePanel.anchoredPosition = pos;
     }
 
-    public void OnEndDrag(PointerEventData eventData)
+    public void OnEndDrag(
+        PointerEventData eventData
+    )
     {
-        if(tablePanel == null)
+        if(!isDragging)
             return;
 
         isDragging = false;
 
-        float currentX =
-            tablePanel.anchoredPosition.x;
+        if(tablePanel == null)
+            return;
 
-        isOpen =
-            currentX < closedX - threshold;
+        float movedDistance =
+            tablePanel.anchoredPosition.x -
+            panelStartX;
+
+        if(Mathf.Abs(movedDistance) >= threshold)
+        {
+            if(movedDistance < 0f)
+            {
+                isOpen = true;
+            }
+            else
+            {
+                isOpen = false;
+            }
+        }
+        else
+        {
+            float centerX =
+                (openedX + closedX) * 0.5f;
+
+            isOpen =
+                tablePanel.anchoredPosition.x <
+                centerX;
+        }
     }
 }

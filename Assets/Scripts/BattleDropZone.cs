@@ -8,167 +8,217 @@ public class BattleDropZone : MonoBehaviour, IDropHandler
     [Header("Cost Debug")]
     public bool useCostCheck = true;
 
-public void OnDrop(PointerEventData eventData)
-{
-    Debug.Log("BattleDropZone OnDrop 呼ばれた");
-
-    CardDrag cardDrag =
-        eventData.pointerDrag.GetComponent<CardDrag>();
-
-    if(cardDrag == null)
+    public void OnDrop(PointerEventData eventData)
     {
-        Debug.Log("CardDrag が見つからない");
-        return;
-    }
+        Debug.Log("BattleDropZone OnDrop 呼ばれた");
 
-    CardController card =
-        eventData.pointerDrag.GetComponent<CardController>();
-
-    if(card == null || card.data == null)
-    {
-        Debug.Log("CardController または CardData がない");
-        return;
-    }
-
-    if(battleArea == null)
-        battleArea = transform;
-
-    card.data.SetPowerFromName();
-
-    if(card.data.name.Contains("Joker"))
-        card.data.cost = 13;
-    else if(card.data.power == 1)
-        card.data.cost = 4;
-    else
-        card.data.cost = card.data.power;
-
-    int summonCost = card.data.cost;
-    CardController selectedBaseCard = null;
-
-    if(useCostCheck)
-    {
-        ResourceManager resourceManager =
-            FindFirstObjectByType<ResourceManager>();
-
-        if(resourceManager == null)
+        if(eventData.pointerDrag == null)
         {
-            Debug.LogWarning("ResourceManager が見つからない");
+            Debug.Log("ドラッグ中のオブジェクトがない");
             return;
         }
 
-        CardController baseCard =
-            FindKSpecialSummonBase();
+        CardDrag cardDrag =
+            eventData.pointerDrag.GetComponent<CardDrag>();
 
-        if(IsSpecialSummonK(card) && baseCard != null)
+        if(cardDrag == null)
         {
-            selectedBaseCard = baseCard;
+            Debug.Log("CardDrag が見つからない");
+            return;
+        }
 
-            baseCard.data.SetPowerFromName();
+        CardController card =
+            eventData.pointerDrag.GetComponent<CardController>();
 
-            int basePower =
-                baseCard.data.power;
+        if(card == null || card.data == null)
+        {
+            Debug.Log("CardController または CardData がない");
+            return;
+        }
 
-            summonCost =
-                card.data.cost - basePower;
+        if(battleArea == null)
+        {
+            battleArea = transform;
+        }
 
-            if(summonCost < 0)
-                summonCost = 0;
+        card.data.SetPowerFromName();
+
+        if(card.data.name.Contains("Joker"))
+        {
+            card.data.cost = 13;
+        }
+        else if(card.data.power == 1)
+        {
+            card.data.cost = 4;
+        }
+        else
+        {
+            card.data.cost = card.data.power;
+        }
+
+        int summonCost = card.data.cost;
+        CardController selectedBaseCard = null;
+
+        if(useCostCheck)
+        {
+            ResourceManager resourceManager =
+                FindFirstObjectByType<ResourceManager>();
+
+            if(resourceManager == null)
+            {
+                Debug.LogWarning(
+                    "ResourceManager が見つからない"
+                );
+
+                return;
+            }
+
+            CardController baseCard =
+                FindKSpecialSummonBase();
+
+            if(IsSpecialSummonK(card) && baseCard != null)
+            {
+                selectedBaseCard = baseCard;
+
+                baseCard.data.SetPowerFromName();
+
+                int basePower =
+                    baseCard.data.power;
+
+                summonCost =
+                    card.data.cost - basePower;
+
+                if(summonCost < 0)
+                {
+                    summonCost = 0;
+                }
+
+                Debug.Log(
+                    "K特殊召喚：土台 " +
+                    baseCard.data.name +
+                    " / 差分コスト " +
+                    summonCost
+                );
+            }
+
+            if(resourceManager.currentResource < summonCost)
+            {
+                Debug.Log(
+                    "リソース不足：必要 " +
+                    summonCost +
+                    " / 現在 " +
+                    resourceManager.currentResource
+                );
+
+                return;
+            }
+
+            resourceManager.UseResource(summonCost);
 
             Debug.Log(
-                "K特殊召喚：土台 " +
-                baseCard.data.name +
-                " / 差分コスト " +
+                "召喚コスト支払い：" +
                 summonCost
             );
         }
-
-        if(resourceManager.currentResource < summonCost)
+        else
         {
             Debug.Log(
-                "リソース不足：必要 " +
-                summonCost +
-                " / 現在 " +
-                resourceManager.currentResource
+                "コストチェックOFF：無料召喚"
             );
-
-            return;
         }
 
-        resourceManager.UseResource(summonCost);
+        // カードをバトルエリアへ移動
+        cardDrag.DropToBattleArea(battleArea);
 
-        Debug.Log("召喚コスト支払い：" + summonCost);
-    }
-    else
-    {
-        Debug.Log("コストチェックOFF：無料召喚");
-    }
+        // 手札の扇形回転をリセット
+        RectTransform rt =
+            card.GetComponent<RectTransform>();
 
-    cardDrag.DropToBattleArea(battleArea);
+        if(rt != null)
+        {
+            rt.localRotation =
+                Quaternion.identity;
+        }
 
-    // ★追加ここから
-    RectTransform rt =
-    card.GetComponent<RectTransform>();
+        // K特殊召喚時、土台カードをKの下へ重ねる
+        if(selectedBaseCard != null)
+        {
+            StackBaseCardUnderK(
+                card,
+                selectedBaseCard
+            );
+        }
 
-    if(rt != null)
-    {
-        rt.localRotation = Quaternion.identity;
-        //rt.localScale = Vector3.one;
-    }
-    // ★追加ここまで
-    BattleAreaLayout layout =
-        battleArea.GetComponent<BattleAreaLayout>();
+        // バトルエリアを整列
+        BattleAreaLayout layout =
+            battleArea.GetComponent<BattleAreaLayout>();
 
-    if(layout != null)
-    {
-        layout.Refresh();
-    }
-    ResourcePhaseManager resourcePhase =
-    FindFirstObjectByType<ResourcePhaseManager>();
+        if(layout != null)
+        {
+            layout.Refresh();
+        }
 
-if(resourcePhase != null)
-{
-    resourcePhase.EndResourcePhase();
-}
-
-    if(selectedBaseCard != null)
-    {
-        StackBaseCardUnderK(
-            card,
-            selectedBaseCard
-        );
-    }
-
-    Debug.Log("カードをバトルエリアに出した");
-
-    bool noSummonSickness =
-        card.data.effectTypes != null &&
-        System.Array.Exists(
-            card.data.effectTypes,
-            x => x == EffectType.NoSummonSickness
+        Debug.Log(
+            "カードをバトルエリアに出した"
         );
 
-    if(noSummonSickness)
-    {
-        card.SetSummonSickness(false);
-    }
-    else
-    {
-        card.SetSummonSickness(true);
-        card.SetAttackable(false);
-    }
+        // 召喚酔い判定
+        bool noSummonSickness =
+            card.data.effectTypes != null &&
+            System.Array.Exists(
+                card.data.effectTypes,
+                x => x ==
+                    EffectType.NoSummonSickness
+            );
 
-    if(CardEffectManager.I != null)
-    {
-        CardEffectManager.I.ActivateOnSummon(card);
-        //CardEffectManager.I.ActivateOnSummon(card, true);
+        if(noSummonSickness)
+        {
+            card.SetSummonSickness(false);
+        }
+        else
+        {
+            card.SetSummonSickness(true);
+            card.SetAttackable(false);
+        }
 
-        Debug.Log("召喚時効果発動：" + card.data.name);
+        // 召喚時効果
+        if(CardEffectManager.I != null)
+        {
+            CardEffectManager.I
+                .ActivateOnSummon(card);
+
+            Debug.Log(
+                "召喚時効果発動：" +
+                card.data.name
+            );
+        }
+        else
+        {
+            Debug.LogWarning(
+                "CardEffectManager が未配置"
+            );
+        }
+
+        // 召喚完了後にリソースフェイズ終了
+        ResourcePhaseManager resourcePhaseManager =
+            FindFirstObjectByType<ResourcePhaseManager>();
+
+        if(resourcePhaseManager != null)
+        {
+            resourcePhaseManager
+                .EndResourcePhase();
+        }
+
+        // メインフェイズ開始
+        TurnManager turnManager =
+            FindFirstObjectByType<TurnManager>();
+
+        if(turnManager != null)
+        {
+            turnManager
+                .OnResourcePhaseComplete();
+        }
     }
-    else
-    {
-        Debug.LogWarning("CardEffectManager が未配置");
-    }
-}
 
     bool IsSpecialSummonK(CardController card)
     {

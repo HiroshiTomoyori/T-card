@@ -8298,6 +8298,7 @@ MonoBehaviour:
   battlePhaseManager: {fileID: 0}
   handDealer: {fileID: 1517969137}
   attackArrowManager: {fileID: 654367053}
+  enemyAIBrain: {fileID: 0}
   playerTurnLogo: {fileID: 2038596549}
   enemyTurnLogo: {fileID: 21910769}
   seSource: {fileID: 1632339834}
@@ -8561,6 +8562,69 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1168728411}
   m_CullTransparentMesh: 1
+--- !u!1 &1181382272
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1181382273}
+  - component: {fileID: 1181382275}
+  - component: {fileID: 1181382274}
+  m_Layer: 0
+  m_Name: TCardAI
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1181382273
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1181382272}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1879408758}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 100, y: 100}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1181382274
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1181382272}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 56369ccb70bc88742861974cf9ba2525, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  showDecisionLog: 1
+--- !u!114 &1181382275
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1181382272}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 87fb8d167666d234287d9d82b66f6835, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  resourcePath: AI/TCardAIConfig
 --- !u!1 &1199314275
 GameObject:
   m_ObjectHideFlags: 0
@@ -13171,6 +13235,7 @@ RectTransform:
   - {fileID: 164383209}
   - {fileID: 1336849810}
   - {fileID: 658780956}
+  - {fileID: 1181382273}
   m_Father: {fileID: 1814554351}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}

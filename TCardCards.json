@@ -1,0 +1,624 @@
+{
+    "cards": [
+        {
+            "assetName": "Club_2",
+            "cardName": "Club_2",
+            "suit": "Club",
+            "power": 2,
+            "cost": 2,
+            "effects": [
+                "BlockOnly",
+                "CannotAttack",
+                "ShieldTrigger"
+            ]
+        },
+        {
+            "assetName": "Club_3",
+            "cardName": "Club_3",
+            "suit": "Club",
+            "power": 3,
+            "cost": 3,
+            "effects": [
+                "BlockOnly",
+                "BreakableJoker",
+                "CannotAttack"
+            ]
+        },
+        {
+            "assetName": "Club_4",
+            "cardName": "Club_4",
+            "suit": "Club",
+            "power": 4,
+            "cost": 4,
+            "effects": [
+                "None",
+                "BlockOnly"
+            ]
+        },
+        {
+            "assetName": "Club_5",
+            "cardName": "Club_5",
+            "suit": "Club",
+            "power": 5,
+            "cost": 5,
+            "effects": [
+                "ChargeTopDeck"
+            ]
+        },
+        {
+            "assetName": "Club_6",
+            "cardName": "Club_6",
+            "suit": "Club",
+            "power": 6,
+            "cost": 6,
+            "effects": [
+                "Draw1"
+            ]
+        },
+        {
+            "assetName": "Club_7",
+            "cardName": "Club_7",
+            "suit": "Club",
+            "power": 7,
+            "cost": 7,
+            "effects": [
+                "BreakableJack",
+                "NoSummonSickness"
+            ]
+        },
+        {
+            "assetName": "Club_8",
+            "cardName": "Club_8",
+            "suit": "Club",
+            "power": 8,
+            "cost": 8,
+            "effects": [
+                "BlockOnly",
+                "BreakableJack",
+                "CannotAttack",
+                "ShieldTrigger"
+            ]
+        },
+        {
+            "assetName": "Club_9",
+            "cardName": "Club_9",
+            "suit": "Club",
+            "power": 9,
+            "cost": 9,
+            "effects": [
+                "InstantDestroySelf",
+                "TapAllEnemyBattle",
+                "ShieldTrigger"
+            ]
+        },
+        {
+            "assetName": "Club_10",
+            "cardName": "Club_10",
+            "suit": "Club",
+            "power": 10,
+            "cost": 10,
+            "effects": [
+                "DiscardEnemyHand",
+                "BreakableJack"
+            ]
+        },
+        {
+            "assetName": "Club_A",
+            "cardName": "Club_A",
+            "suit": "Club",
+            "power": 1,
+            "cost": 4,
+            "effects": [
+                "None",
+                "DestroyOneEnemyBattle",
+                "ShieldTrigger"
+            ]
+        },
+        {
+            "assetName": "Club_J",
+            "cardName": "Club_Jack",
+            "suit": "Club",
+            "power": 11,
+            "cost": 11,
+            "effects": [
+                "BreakableFace",
+                "BlockOnly"
+            ]
+        },
+        {
+            "assetName": "Club_K",
+            "cardName": "Club_K",
+            "suit": "Club",
+            "power": 13,
+            "cost": 13,
+            "effects": [
+                "RecoverWall",
+                "SpecialSummonK",
+                "DoubleWallBreak"
+            ]
+        },
+        {
+            "assetName": "Club_Q",
+            "cardName": "Club_Q",
+            "suit": "Club",
+            "power": 12,
+            "cost": 12,
+            "effects": [
+                "DoubleWallBreak",
+                "ShieldTrigger"
+            ]
+        },
+        {
+            "assetName": "Diamond_2",
+            "cardName": "Diamond_2",
+            "suit": "Diamond",
+            "power": 2,
+            "cost": 2,
+            "effects": [
+                "BlockOnly",
+                "CannotAttack",
+                "ShieldTrigger"
+            ]
+        },
+        {
+            "assetName": "Diamond_3",
+            "cardName": "Diamond_3",
+            "suit": "Diamond",
+            "power": 3,
+            "cost": 3,
+            "effects": [
+                "BlockOnly",
+                "BreakableJoker",
+                "CannotAttack"
+            ]
+        },
+        {
+            "assetName": "Diamond_4",
+            "cardName": "Diamond_4",
+            "suit": "Diamond",
+            "power": 4,
+            "cost": 4,
+            "effects": [
+                "None",
+                "BlockOnly"
+            ]
+        },
+        {
+            "assetName": "Diamond_5",
+            "cardName": "Diamond_5",
+            "suit": "Diamond",
+            "power": 5,
+            "cost": 5,
+            "effects": [
+                "ChargeTopDeck"
+            ]
+        },
+        {
+            "assetName": "Diamond_6",
+            "cardName": "Diamond_6",
+            "suit": "Diamond",
+            "power": 6,
+            "cost": 6,
+            "effects": [
+                "Draw1"
+            ]
+        },
+        {
+            "assetName": "Diamond_7",
+            "cardName": "Diamond_7",
+            "suit": "Diamond",
+            "power": 7,
+            "cost": 7,
+            "effects": [
+                "BreakableJack",
+                "NoSummonSickness"
+            ]
+        },
+        {
+            "assetName": "Diamond_8",
+            "cardName": "Diamond_8",
+            "suit": "Diamond",
+            "power": 8,
+            "cost": 8,
+            "effects": [
+                "BreakableJack",
+                "BlockOnly",
+                "CannotAttack",
+                "ShieldTrigger"
+            ]
+        },
+        {
+            "assetName": "Diamond_9",
+            "cardName": "Diamond_9",
+            "suit": "Diamond",
+            "power": 9,
+            "cost": 9,
+            "effects": [
+                "InstantDestroySelf",
+                "TapAllEnemyBattle",
+                "ShieldTrigger"
+            ]
+        },
+        {
+            "assetName": "Diamond_10",
+            "cardName": "Diamond_10",
+            "suit": "Diamond",
+            "power": 10,
+            "cost": 10,
+            "effects": [
+                "DiscardEnemyHand",
+                "BreakableJack"
+            ]
+        },
+        {
+            "assetName": "Diamond_A",
+            "cardName": "Diamond_A",
+            "suit": "Diamond",
+            "power": 1,
+            "cost": 4,
+            "effects": [
+                "None",
+                "DestroyOneEnemyBattle",
+                "ShieldTrigger"
+            ]
+        },
+        {
+            "assetName": "Diamond_J",
+            "cardName": "Diamond_Jack",
+            "suit": "Diamond",
+            "power": 11,
+            "cost": 11,
+            "effects": [
+                "BreakableFace",
+                "BlockOnly"
+            ]
+        },
+        {
+            "assetName": "Diamond_K",
+            "cardName": "Diamond_K",
+            "suit": "Diamond",
+            "power": 13,
+            "cost": 13,
+            "effects": [
+                "RecoverWall",
+                "SpecialSummonK",
+                "DoubleWallBreak"
+            ]
+        },
+        {
+            "assetName": "Diamond_Q",
+            "cardName": "Diamond_Q",
+            "suit": "Diamond",
+            "power": 12,
+            "cost": 12,
+            "effects": [
+                "DoubleWallBreak",
+                "ShieldTrigger"
+            ]
+        },
+        {
+            "assetName": "Heart_2",
+            "cardName": "Heart_2",
+            "suit": "Heart",
+            "power": 2,
+            "cost": 2,
+            "effects": [
+                "BlockOnly",
+                "CannotAttack",
+                "ShieldTrigger"
+            ]
+        },
+        {
+            "assetName": "Heart_3",
+            "cardName": "Heart_3",
+            "suit": "Heart",
+            "power": 3,
+            "cost": 3,
+            "effects": [
+                "BlockOnly",
+                "BreakableJoker",
+                "CannotAttack"
+            ]
+        },
+        {
+            "assetName": "Heart_4",
+            "cardName": "Heart_4",
+            "suit": "Heart",
+            "power": 4,
+            "cost": 4,
+            "effects": [
+                "None",
+                "BlockOnly"
+            ]
+        },
+        {
+            "assetName": "Heart_5",
+            "cardName": "Heart_5",
+            "suit": "Heart",
+            "power": 5,
+            "cost": 5,
+            "effects": [
+                "ChargeTopDeck"
+            ]
+        },
+        {
+            "assetName": "Heart_6",
+            "cardName": "Heart_6",
+            "suit": "Heart",
+            "power": 6,
+            "cost": 6,
+            "effects": [
+                "Draw1"
+            ]
+        },
+        {
+            "assetName": "Heart_7",
+            "cardName": "Heart_7",
+            "suit": "Heart",
+            "power": 7,
+            "cost": 7,
+            "effects": [
+                "BreakableJack",
+                "NoSummonSickness"
+            ]
+        },
+        {
+            "assetName": "Heart_8",
+            "cardName": "Heart_8",
+            "suit": "Heart",
+            "power": 8,
+            "cost": 8,
+            "effects": [
+                "BlockOnly",
+                "BreakableJack",
+                "CannotAttack",
+                "ShieldTrigger"
+            ]
+        },
+        {
+            "assetName": "Heart_9",
+            "cardName": "Heart_9",
+            "suit": "Heart",
+            "power": 9,
+            "cost": 9,
+            "effects": [
+                "InstantDestroySelf",
+                "TapAllEnemyBattle",
+                "ShieldTrigger"
+            ]
+        },
+        {
+            "assetName": "Heart_10",
+            "cardName": "Heart_10",
+            "suit": "Heart",
+            "power": 10,
+            "cost": 10,
+            "effects": [
+                "DiscardEnemyHand",
+                "BreakableJack"
+            ]
+        },
+        {
+            "assetName": "Heart_A",
+            "cardName": "Heart_A",
+            "suit": "Heart",
+            "power": 1,
+            "cost": 4,
+            "effects": [
+                "None",
+                "DestroyOneEnemyBattle",
+                "ShieldTrigger"
+            ]
+        },
+        {
+            "assetName": "Heart_J",
+            "cardName": "Heart_Jack",
+            "suit": "Heart",
+            "power": 11,
+            "cost": 11,
+            "effects": [
+                "BreakableFace",
+                "BlockOnly"
+            ]
+        },
+        {
+            "assetName": "Heart_K",
+            "cardName": "Heart_K",
+            "suit": "Heart",
+            "power": 13,
+            "cost": 13,
+            "effects": [
+                "RecoverWall",
+                "SpecialSummonK",
+                "DoubleWallBreak"
+            ]
+        },
+        {
+            "assetName": "Heart_Q",
+            "cardName": "Heart_Q",
+            "suit": "Heart",
+            "power": 12,
+            "cost": 12,
+            "effects": [
+                "DoubleWallBreak",
+                "ShieldTrigger"
+            ]
+        },
+        {
+            "assetName": "Joker_1",
+            "cardName": "Joker",
+            "suit": "Joker",
+            "power": 11,
+            "cost": 13,
+            "effects": [
+                "JokerClearBattleArea",
+                "NoSummonSickness",
+                "BlockOnly",
+                "ShieldTrigger",
+                "JokerExtraTurn"
+            ]
+        },
+        {
+            "assetName": "Joker_2",
+            "cardName": "Joker",
+            "suit": "Joker",
+            "power": 11,
+            "cost": 13,
+            "effects": [
+                "JokerClearBattleArea",
+                "NoSummonSickness",
+                "BlockOnly",
+                "ShieldTrigger",
+                "JokerExtraTurn"
+            ]
+        },
+        {
+            "assetName": "Spade_2",
+            "cardName": "Spade_2",
+            "suit": "Spade",
+            "power": 2,
+            "cost": 2,
+            "effects": [
+                "BlockOnly",
+                "CannotAttack",
+                "ShieldTrigger"
+            ]
+        },
+        {
+            "assetName": "Spade_3",
+            "cardName": "Spade_3",
+            "suit": "Spade",
+            "power": 3,
+            "cost": 3,
+            "effects": [
+                "BlockOnly",
+                "BreakableJoker",
+                "CannotAttack"
+            ]
+        },
+        {
+            "assetName": "Spade_4",
+            "cardName": "Spade_4",
+            "suit": "Spade",
+            "power": 4,
+            "cost": 4,
+            "effects": [
+                "None",
+                "BlockOnly"
+            ]
+        },
+        {
+            "assetName": "Spade_5",
+            "cardName": "Spade_5",
+            "suit": "Spade",
+            "power": 5,
+            "cost": 5,
+            "effects": [
+                "ChargeTopDeck"
+            ]
+        },
+        {
+            "assetName": "Spade_6",
+            "cardName": "Spade_6",
+            "suit": "Spade",
+            "power": 6,
+            "cost": 6,
+            "effects": [
+                "Draw1"
+            ]
+        },
+        {
+            "assetName": "Spade_7",
+            "cardName": "Spade_7",
+            "suit": "Spade",
+            "power": 7,
+            "cost": 7,
+            "effects": [
+                "BreakableJack",
+                "NoSummonSickness"
+            ]
+        },
+        {
+            "assetName": "Spade_8",
+            "cardName": "Spade_8",
+            "suit": "Spade",
+            "power": 8,
+            "cost": 8,
+            "effects": [
+                "BlockOnly",
+                "BreakableJack",
+                "CannotAttack",
+                "ShieldTrigger"
+            ]
+        },
+        {
+            "assetName": "Spade_9",
+            "cardName": "Spade_9",
+            "suit": "Spade",
+            "power": 9,
+            "cost": 9,
+            "effects": [
+                "InstantDestroySelf",
+                "TapAllEnemyBattle",
+                "ShieldTrigger"
+            ]
+        },
+        {
+            "assetName": "Spade_10",
+            "cardName": "Spade_10",
+            "suit": "Spade",
+            "power": 10,
+            "cost": 10,
+            "effects": [
+                "DiscardEnemyHand",
+                "BreakableJack"
+            ]
+        },
+        {
+            "assetName": "Spade_A",
+            "cardName": "Spade_A",
+            "suit": "Spade",
+            "power": 1,
+            "cost": 4,
+            "effects": [
+                "None",
+                "DestroyOneEnemyBattle",
+                "ShieldTrigger"
+            ]
+        },
+        {
+            "assetName": "Spade_J",
+            "cardName": "Spade_Jack",
+            "suit": "Spade",
+            "power": 11,
+            "cost": 11,
+            "effects": [
+                "BreakableFace",
+                "BlockOnly"
+            ]
+        },
+        {
+            "assetName": "Spade_K",
+            "cardName": "Spade_K",
+            "suit": "Spade",
+            "power": 13,
+            "cost": 13,
+            "effects": [
+                "RecoverWall",
+                "SpecialSummonK",
+                "DoubleWallBreak"
+            ]
+        },
+        {
+            "assetName": "Spade_Q",
+            "cardName": "Spade_Q",
+            "suit": "Spade",
+            "power": 12,
+            "cost": 12,
+            "effects": [
+                "DoubleWallBreak",
+                "ShieldTrigger"
+            ]
+        }
+    ]
+}

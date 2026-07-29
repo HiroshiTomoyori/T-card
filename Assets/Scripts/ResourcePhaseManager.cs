@@ -20,6 +20,9 @@ public class ResourcePhaseManager : MonoBehaviour
     public AudioClip chargeSE;
     public float effectTime = 0.6f;
 
+    [Header("Resource Drop Raycast")]
+    public CanvasGroup resourceDropArea;
+
     bool isRunning = false;
     bool hasCharged = false;
 
@@ -51,9 +54,10 @@ public class ResourcePhaseManager : MonoBehaviour
         isRunning = true;
         hasCharged = false;
 
-        DisableResourceDrop();
+        // 見た目は表示したまま、当たり判定だけOFF
+        SetResourceDropRaycast(false);
 
-        Debug.Log("=== Resource Phase 開始 ===");
+        Debug.Log("リソースフェイズ開始");
     }
 
     public bool IsRunning()
@@ -206,9 +210,13 @@ public class ResourcePhaseManager : MonoBehaviour
     public void EndResourcePhase()
     {
         isRunning = false;
-        DisableResourceDrop();
 
-        Debug.Log("=== Resource Phase 終了 ===");
+        // リソースエリアの当たり判定をOFF
+        SetResourceDropRaycast(false);
+
+        HideDropHighlight();
+
+        Debug.Log("リソースフェイズ終了");
     }
 
     public void SetResourceAreaRaycast(bool enabled)
@@ -236,5 +244,33 @@ public class ResourcePhaseManager : MonoBehaviour
 
         resourceAreaImage.raycastTarget =
             false;
+    }
+
+    public void SetResourceDropRaycast(bool enabled)
+    {
+        if(resourceDropArea != null)
+        {
+            // 表示状態は変更しない
+            resourceDropArea.alpha = 1f;
+
+            // リソースフェイズ中かつドラッグ中だけ有効
+            resourceDropArea.blocksRaycasts =
+                isRunning && enabled;
+
+            resourceDropArea.interactable =
+                isRunning && enabled;
+        }
+
+        if(resourceAreaImage != null)
+        {
+            // Image自体の当たり判定も同時に切り替える
+            resourceAreaImage.raycastTarget =
+                isRunning && enabled;
+        }
+    }
+
+    public bool IsResourcePhase()
+    {
+        return isRunning;
     }
 }

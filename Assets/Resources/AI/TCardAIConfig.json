@@ -1,0 +1,84 @@
+{
+  "configVersion": "1.0",
+  "lookaheadDepth": 2,
+  "maxSummonsPerTurn": 2,
+  "attackOrderMode": "Adaptive",
+  "jokerClearBias": -9.0418,
+  "reverseBias": 18.4918,
+  "multiSummonBonus": 182.9679,
+  "kStackBonus": 411.6259,
+  "aggressionBonus": 174.5401,
+  "lowWallAttackBonus": 239.7266,
+  "rankWeights": [
+    {
+      "rank": "2",
+      "value": 450.0,
+      "chargePenalty": 0.0
+    },
+    {
+      "rank": "3",
+      "value": 550.0,
+      "chargePenalty": 0.0
+    },
+    {
+      "rank": "4",
+      "value": 650.0,
+      "chargePenalty": 0.0
+    },
+    {
+      "rank": "5",
+      "value": 700.0,
+      "chargePenalty": 0.0
+    },
+    {
+      "rank": "6",
+      "value": 800.0,
+      "chargePenalty": 0.0
+    },
+    {
+      "rank": "7",
+      "value": 1050.0,
+      "chargePenalty": 40.0
+    },
+    {
+      "rank": "8",
+      "value": 1200.0,
+      "chargePenalty": 40.0
+    },
+    {
+      "rank": "9",
+      "value": 1850.0,
+      "chargePenalty": 90.0
+    },
+    {
+      "rank": "10",
+      "value": 1500.0,
+      "chargePenalty": 50.0
+    },
+    {
+      "rank": "J",
+      "value": 1700.0,
+      "chargePenalty": 70.0
+    },
+    {
+      "rank": "Q",
+      "value": 2050.0,
+      "chargePenalty": 110.0
+    },
+    {
+      "rank": "K",
+      "value": 2300.0,
+      "chargePenalty": 140.0
+    },
+    {
+      "rank": "A",
+      "value": 1450.0,
+      "chargePenalty": 90.0
+    },
+    {
+      "rank": "Joker",
+      "value": 2900.0,
+      "chargePenalty": 180.0
+    }
+  ]
+}

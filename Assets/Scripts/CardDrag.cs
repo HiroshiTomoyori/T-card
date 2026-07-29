@@ -102,15 +102,19 @@ public class CardDrag : MonoBehaviour,
 
         ApplyDraggingSize();
 
+        // ドラッグ中のカード自身が
+        // ドロップ判定を邪魔しないようにする
         canvasGroup.blocksRaycasts = false;
 
         ResourcePhaseManager rpm =
             FindFirstObjectByType<ResourcePhaseManager>();
 
-        if(rpm != null)
+        // リソースフェイズ中のドラッグ時だけ
+        // リソースエリアの当たり判定を有効化
+        if(rpm != null && rpm.IsRunning())
         {
             rpm.ShowDropHighlight();
-            rpm.SetResourceAreaRaycast(true);
+            rpm.SetResourceDropRaycast(true);
         }
     }
 
@@ -121,7 +125,8 @@ public class CardDrag : MonoBehaviour,
         if(!canDrag)
             return;
 
-        transform.position = eventData.position;
+        transform.position =
+            eventData.position;
 
         transform.localRotation =
             Quaternion.identity;
@@ -144,7 +149,7 @@ public class CardDrag : MonoBehaviour,
         if(rpm != null)
         {
             rpm.HideDropHighlight();
-            rpm.SetResourceAreaRaycast(false);
+            rpm.SetResourceDropRaycast(false);
         }
 
         canvasGroup.blocksRaycasts = true;
@@ -238,7 +243,7 @@ public class CardDrag : MonoBehaviour,
         if(rpm != null)
         {
             rpm.HideDropHighlight();
-            rpm.SetResourceAreaRaycast(false);
+            rpm.SetResourceDropRaycast(false);
         }
     }
 
@@ -274,7 +279,7 @@ public class CardDrag : MonoBehaviour,
         if(rpm != null)
         {
             rpm.HideDropHighlight();
-            rpm.SetResourceAreaRaycast(false);
+            rpm.SetResourceDropRaycast(false);
         }
     }
 }

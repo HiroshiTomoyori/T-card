@@ -107,6 +107,7 @@ public class HandDealer : MonoBehaviour
 public Transform playerWallArea;
     public void DealStart()
     {
+        IsRedrawSelecting = true;
         if (cardPrefab == null)
         {
             Debug.LogError("HandDealer: CardPrefab が未設定です");
@@ -143,12 +144,26 @@ public Transform playerWallArea;
     {
         ApplyRuleBGMClipOnly();
 
-        if (enemyHandCountText != null)
+        if(enemyHandCountText != null)
+        {
             enemyHandCountText.gameObject.SetActive(false);
+        }
 
-        if (enemyDeckImage != null)
+        if(enemyDeckImage != null)
+        {
             enemyDeckImage.gameObject.SetActive(true);
-    }void ApplyRuleBGMClipOnly()
+        }
+
+        // コイントス・初期手札確認が終わるまで非表示
+        if(endTurnButton != null)
+        {
+            endTurnButton.gameObject.SetActive(false);
+        }
+
+        IsRedrawSelecting = true;
+    }
+    
+    void ApplyRuleBGMClipOnly()
     {
         if(bgmSource == null)
             return;
@@ -776,6 +791,8 @@ void ShowButtons()
             btn.interactable = value;
     }
 
+    public static bool IsRedrawSelecting = false;
+
     public void RedrawHand()
     {
         if(!canRedraw)
@@ -783,6 +800,8 @@ void ShowButtons()
 
         if(hasRedrawn)
             return;
+
+        IsRedrawSelecting = true;
 
         hasRedrawn = true;
         canRedraw = false;
@@ -831,6 +850,7 @@ void ShowButtons()
     }
     public void ConfirmHand()
     {
+        IsRedrawSelecting = false;
         HideButtons();
         canRedraw = false;
 

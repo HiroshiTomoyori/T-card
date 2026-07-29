@@ -41,6 +41,9 @@ public class TurnManager : MonoBehaviour
     public HandDealer handDealer;
     public AttackArrowManager attackArrowManager;
 
+    [Header("T-card AI 1.0")]
+    public TCardEnemyAIBrain enemyAIBrain;
+
     [Header("Turn Logo")]
     public GameObject playerTurnLogo;
     public GameObject enemyTurnLogo;
@@ -110,6 +113,28 @@ public class TurnManager : MonoBehaviour
     //bool playerExtraTurnRequested = false;
 
     public float resultWaitTime = 1.5f;
+
+    void Awake()
+    {
+        if(enemyAIBrain == null)
+        {
+            enemyAIBrain =
+                FindFirstObjectByType<TCardEnemyAIBrain>();
+        }
+
+        if(enemyAIBrain == null)
+        {
+            Debug.LogWarning(
+                "TCardEnemyAIBrain が見つかりません"
+            );
+        }
+        else
+        {
+            Debug.Log(
+                "T-card AI 1.0 接続完了"
+            );
+        }
+    }
 
     public void StartFirstTurn(bool playerFirst)
     {
@@ -455,46 +480,76 @@ CardController SelectEnemyBlocker(
     CardController attacker
 )
 {
-    if(attacker == null || attacker.data == null)
+    if(attacker == null ||
+       attacker.data == null)
+    {
         return null;
+    }
 
     int enemyWallCount =
         GetAliveEnemyWallCount();
+
+    List<CardController> blockers =
+        new List<CardController>();
+
+    if(enemyBattleArea != null)
+    {
+        for(int i = 0;
+            i < enemyBattleArea.childCount;
+            i++)
+        {
+            CardController card =
+                enemyBattleArea
+                .GetChild(i)
+                .GetComponent<CardController>();
+
+            if(card == null ||
+               card.data == null)
+            {
+                continue;
+            }
+
+            if(card.isTapped)
+                continue;
+
+            if(!IsGuardCard(card.data))
+                continue;
+
+            blockers.Add(card);
+        }
+    }
+
+    if(enemyAIBrain != null)
+    {
+        return enemyAIBrain
+            .SelectBestBlocker(
+                attacker,
+                blockers,
+                enemyWallCount
+            );
+    }
+
+    //=========================
+    // AI Brainがない場合の旧処理
+    //=========================
 
     bool dangerousAttack =
         IsMonarchCard(attacker.data) ||
         attacker.data.name.Contains("K") ||
         attacker.data.name.Contains("Joker");
 
-        // Wallが5枚なら弱い攻撃だけ通す
-        if(enemyWallCount >= 5 &&
-        !dangerousAttack &&
-        attacker.data.power <= 4)
-        {
-            return null;
-        }
+    if(enemyWallCount >= 5 &&
+       !dangerousAttack &&
+       attacker.data.power <= 4)
+    {
+        return null;
+    }
 
     CardController bestBlocker = null;
     int bestScore = -999;
 
-    for(int i = 0; i < enemyBattleArea.childCount; i++)
+    foreach(CardController card in blockers)
     {
-        CardController card =
-            enemyBattleArea.GetChild(i)
-            .GetComponent<CardController>();
-
-        if(card == null)
-            continue;
-
-        if(card.isTapped)
-            continue;
-
-        if(card.data == null)
-            continue;
-
-        if(!IsGuardCard(card.data))
-            continue;
-
         card.data.SetPowerFromName();
 
         int score = 0;
@@ -756,14 +811,21 @@ if(handDealer != null)
 
     public void OnResourcePhaseComplete()
     {
-        Debug.Log("Resource完了 → Main開始");
+        Debug.Log("Resource完了");
+
+        if (ShouldAutoEndEarlyTurn())
+        {
+            Debug.Log("最初の5ターン・行動不能のため自動ターン終了");
+            EndPlayerTurn();
+            return;
+        }
 
         StartMainPhase();
     }
     public bool IsSelectingTarget()
-{
-    return selectingTarget;
-}
+    {
+        return selectingTarget;
+    }
 
 public GameObject GetCurrentAttacker()
 {
@@ -811,14 +873,22 @@ public void HideAttackArrow()
 }
 
     public void EndPlayerTurn()
+    {    
+    
+    if(HandDealer.IsRedrawSelecting)
     {
-        ResourcePhaseManager resourcePhase =
+        Debug.Log("引き直し選択中のためターン終了不可");
+        return;
+    }
+
+
+    ResourcePhaseManager resourcePhase =
     FindFirstObjectByType<ResourcePhaseManager>();
 
-if(resourcePhase != null)
-{
-    resourcePhase.EndResourcePhase();
-}
+    if(resourcePhase != null)
+    {
+        resourcePhase.EndResourcePhase();
+    }
         if(isEndingTurn)
             return;
 
@@ -1180,11 +1250,52 @@ CardData SelectEnemyResourceChargeCard()
     if(handDealer.enemyHandCards.Count == 0)
         return null;
 
-    // リソース13以上なら消極的
+    // AI Brainがある場合は、新AIで選択
+    if(enemyAIBrain != null)
+    {
+        int enemyWallCount =
+            GetAliveEnemyWallCount();
+
+        int playerFieldCount =
+            playerBattleArea != null
+            ? playerBattleArea.childCount
+            : 0;
+
+        CardData aiSelectedCard =
+            enemyAIBrain.SelectResourceCard(
+                handDealer.enemyHandCards,
+                enemyResourceManager != null
+                    ? enemyResourceManager.maxResource
+                    : 0,
+                enemyWallCount,
+                playerFieldCount
+            );
+
+        if(aiSelectedCard != null)
+        {
+            Debug.Log(
+                "AI 1.0 リソース選択：" +
+                GetCardName(aiSelectedCard)
+            );
+        }
+        else
+        {
+            Debug.Log(
+                "AI 1.0 リソースチャージ見送り"
+            );
+        }
+
+        return aiSelectedCard;
+    }
+
+    //=========================
+    // AI Brainがない場合の旧処理
+    //=========================
+
     bool lowPriorityCharge = false;
 
     if(enemyResourceManager != null &&
-    enemyResourceManager.currentResource >= 13)
+       enemyResourceManager.currentResource >= 13)
     {
         lowPriorityCharge = true;
     }
@@ -1216,8 +1327,7 @@ CardData SelectEnemyResourceChargeCard()
                 score += 35;
         }
 
-        if(GetCardName(card).Contains("K")
-)
+        if(GetCardName(card).Contains("K"))
             score -= 80;
 
         if(card.power == 1)
@@ -1226,8 +1336,11 @@ CardData SelectEnemyResourceChargeCard()
         if(GetCardName(card).Contains("Joker"))
             score -= 100;
 
-        if(card.power >= 2 && card.power <= 6)
+        if(card.power >= 2 &&
+           card.power <= 6)
+        {
             score += 10;
+        }
 
         if(score > bestScore)
         {
@@ -1236,36 +1349,35 @@ CardData SelectEnemyResourceChargeCard()
         }
     }
 
-// リソース13未満なら、最低1枚はチャージする
-if(!lowPriorityCharge)
-{
-    if(bestCard != null)
+    // リソース13未満なら最低1枚チャージ
+    if(!lowPriorityCharge)
     {
-        Debug.Log(
-            "CPUリソースチャージ：" +
-            GetCardName(bestCard)
-        );
+        if(bestCard != null)
+        {
+            Debug.Log(
+                "旧CPUリソースチャージ：" +
+                GetCardName(bestCard)
+            );
 
-        return bestCard;
+            return bestCard;
+        }
+
+        return handDealer.enemyHandCards[
+            Random.Range(
+                0,
+                handDealer.enemyHandCards.Count
+            )
+        ];
     }
 
-    // 念のため
-    return handDealer.enemyHandCards[
-        Random.Range(
-            0,
-            handDealer.enemyHandCards.Count
-        )
-    ];
-}
+    // 13以降は慎重
+    if(bestScore < 20)
+    {
+        Debug.Log("旧CPUリソース温存");
+        return null;
+    }
 
-// 13以降は慎重
-if(bestScore < 20)
-{
-    Debug.Log("CPUリソース温存");
-    return null;
-}
-
-return bestCard;
+    return bestCard;
 }
 
 IEnumerator EnemyResourcePhase()
@@ -1311,197 +1423,233 @@ IEnumerator EnemyMainPhase()
         yield break;
     }
 
-    if(handDealer.enemyHandCards == null ||
-    handDealer.enemyHandCards.Count == 0)
-    {
-        Debug.Log("敵手札なし：召喚スキップ");
-        yield break;
-    }
-
     if(enemyResourceManager == null)
     {
-        Debug.LogWarning("EnemyResourceManager が未設定");
+        Debug.LogWarning(
+            "EnemyResourceManager が未設定"
+        );
+
         yield break;
     }
 
     if(enemyBattleArea == null)
     {
-        Debug.LogWarning("enemyBattleArea が未設定");
+        Debug.LogWarning(
+            "enemyBattleArea が未設定"
+        );
+
         yield break;
     }
 
     if(cardPrefab == null)
     {
-        Debug.LogWarning("cardPrefab が未設定");
-        yield break;
-    }
-
-    List<CardData> summonableCards =
-        new List<CardData>();
-
-    foreach(CardData card in handDealer.enemyHandCards)
-    {
-        if(card == null)
-            continue;
-
-        card.SetPowerFromName();
-
-        if(card.name.Contains("Joker"))
-        {
-            card.cost = 13;
-        }
-        else if(card.power == 1)
-        {
-            card.cost = 4;
-        }
-        else
-        {
-            card.cost = card.power;
-        }
-
-        Debug.Log(
-            "敵手札コスト確認：" +
-            GetCardName(card) +
-            " cost=" +
-            card.cost +
-            " / enemyResource=" +
-            enemyResourceManager.currentResource
-        );
-
-        if(card.cost <=
-        enemyResourceManager.currentResource)
-        {
-            summonableCards.Add(card);
-        }
-    }
-
-    if(summonableCards.Count == 0)
-    {
-        Debug.Log(
-            "召喚可能カードなし：敵メイン終了"
+        Debug.LogWarning(
+            "cardPrefab が未設定"
         );
 
         yield break;
     }
 
-    CardData selectedCard =
-        SelectEnemySummonCard(
-        summonableCards
-    );
+    int maxSummons = 1;
 
-    if(selectedCard == null)
+    if(enemyAIBrain != null)
     {
-        Debug.Log("CPU召喚：selectedCard が null");
-        yield break;
+        maxSummons =
+            enemyAIBrain.GetMaxSummonsPerTurn();
     }
 
-    enemyResourceManager.UseResource(
-        selectedCard.cost
-    );
+    int summonCount = 0;
 
-    handDealer.enemyHandCards.Remove(
-        selectedCard
-    );
-
-    handDealer.enemyHandCount--;
-
-    GameObject obj =
-        Instantiate(
-            cardPrefab,
-            enemyBattleArea
-        );
-
-    CardController controller =
-        obj.GetComponent<CardController>();
-
-    if(controller != null)
+    while(summonCount < maxSummons)
     {
-        controller.SetData(
+        if(handDealer.enemyHandCards == null ||
+           handDealer.enemyHandCards.Count == 0)
+        {
+            Debug.Log(
+                "敵手札なし：メインフェイズ終了"
+            );
+
+            yield break;
+        }
+
+        List<CardData> summonableCards =
+            new List<CardData>();
+
+        foreach(CardData card
+            in handDealer.enemyHandCards)
+        {
+            if(card == null)
+                continue;
+
+            card.SetPowerFromName();
+            card.SetCostFromName();
+
+            Debug.Log(
+                "敵手札コスト確認：" +
+                GetCardName(card) +
+                " cost=" +
+                card.cost +
+                " / enemyResource=" +
+                enemyResourceManager.currentResource
+            );
+
+            if(card.cost <=
+               enemyResourceManager.currentResource)
+            {
+                summonableCards.Add(card);
+            }
+        }
+
+        if(summonableCards.Count == 0)
+        {
+            Debug.Log(
+                "召喚可能カードなし：敵メイン終了"
+            );
+
+            yield break;
+        }
+
+        CardData selectedCard =
+            SelectEnemySummonCard(
+                summonableCards
+            );
+
+        if(selectedCard == null)
+        {
+            Debug.Log(
+                "AI判断：これ以上召喚しない"
+            );
+
+            yield break;
+        }
+
+        bool usedResource =
+            enemyResourceManager.UseResource(
+                selectedCard.cost
+            );
+
+        if(!usedResource)
+        {
+            Debug.LogWarning(
+                "敵リソース不足：" +
+                GetCardName(selectedCard)
+            );
+
+            yield break;
+        }
+
+        handDealer.enemyHandCards.Remove(
             selectedCard
         );
 
-        bool noSummonSickness =
-            controller.data.effectTypes != null &&
-            System.Array.Exists(
-                controller.data.effectTypes,
-                x => x ==
-                EffectType.NoSummonSickness
+        handDealer.enemyHandCount--;
+
+        GameObject obj =
+            Instantiate(
+                cardPrefab,
+                enemyBattleArea
             );
 
-        if(noSummonSickness)
+        CardController controller =
+            obj.GetComponent<CardController>();
+
+        if(controller != null)
         {
+            controller.SetData(
+                selectedCard
+            );
+
+            bool noSummonSickness =
+                controller.data.effectTypes != null &&
+                System.Array.Exists(
+                    controller.data.effectTypes,
+                    x =>
+                        x ==
+                        EffectType.NoSummonSickness
+                );
+
             controller.SetSummonSickness(
-                false
+                !noSummonSickness
             );
+
+            if(!noSummonSickness)
+            {
+                controller.SetAttackable(false);
+            }
+
+            if(CardEffectManager.I != null)
+            {
+                CardEffectManager.I
+                    .ActivateOnSummon(
+                        controller,
+                        false,
+                        true
+                    );
+            }
+            else
+            {
+                Debug.LogWarning(
+                    "CardEffectManager が未配置"
+                );
+            }
         }
-        else
+
+        if(obj.GetComponent<
+            EnemyBattleCardTargetClick>() == null)
         {
-            controller.SetSummonSickness(
-                true
-            );
-
-            controller.SetAttackable(
-                false
-            );
+            obj.AddComponent<
+                EnemyBattleCardTargetClick>();
         }
 
-        if(CardEffectManager.I != null)
+        RectTransform rt =
+            obj.GetComponent<RectTransform>();
+
+        if(rt != null)
         {
-            CardEffectManager.I
-            .ActivateOnSummon(
-                controller,
-                false,
-                true
-            );
+            rt.localScale =
+                Vector3.one * 0.7f;
+
+            rt.sizeDelta =
+                new Vector2(
+                    160f,
+                    230f
+                );
+
+            rt.anchoredPosition =
+                Vector2.zero;
         }
-        else
+
+        handDealer.UpdateEnemyHandCountText();
+
+        if(enemyBattleLayout != null)
         {
-            Debug.LogWarning(
-                "CardEffectManager が未配置"
-            );
+            enemyBattleLayout.Refresh();
         }
-    }
 
-    if(obj.GetComponent<
-        EnemyBattleCardTargetClick>()
-        == null)
-    {
-        obj.AddComponent<
-            EnemyBattleCardTargetClick>();
-    }
+        summonCount++;
 
-    RectTransform rt =
-        obj.GetComponent<RectTransform>();
+        Debug.Log(
+            "敵が召喚：" +
+            selectedCard.cardName +
+            " (" +
+            summonCount +
+            "/" +
+            maxSummons +
+            ")"
+        );
 
-    if(rt != null)
-    {
-        rt.localScale =
-            Vector3.one * 0.7f;
+        yield return new WaitForSeconds(0.5f);
 
-        rt.sizeDelta =
-            new Vector2(
-                160f,
-                230f
-            );
-
-        rt.anchoredPosition =
-            Vector2.zero;
-    }
-
-    handDealer.UpdateEnemyHandCountText();
-
-    if(enemyBattleLayout != null)
-    {
-        enemyBattleLayout.Refresh();
+        /*
+         * A・9・Jokerなどの効果でゲーム状態や
+         * 手札・リソースが変わるため、次のwhileで
+         * 召喚候補を最初から作り直す。
+         */
     }
 
     Debug.Log(
-        "敵が召喚：" +
-        selectedCard.cardName
-    );
-
-    yield return new WaitForSeconds(
-        0.5f
+        "敵の召喚回数上限：" +
+        summonCount
     );
 }
 
@@ -1509,6 +1657,55 @@ CardData SelectEnemySummonCard(
     List<CardData> summonableCards
 )
 {
+        if(summonableCards == null ||
+       summonableCards.Count == 0)
+    {
+        return null;
+    }
+
+    if(enemyAIBrain != null)
+    {
+        List<CardController> playerCards =
+            TCardAIUnityBridge.GetCards(
+                playerBattleArea
+            );
+
+        List<CardController> enemyCards =
+            TCardAIUnityBridge.GetCards(
+                enemyBattleArea
+            );
+
+        int playerWallCount =
+            GetAlivePlayerWallCount();
+
+        int enemyWallCount =
+            GetAliveEnemyWallCount();
+
+        CardData aiSelectedCard =
+            enemyAIBrain.SelectSummonCard(
+                summonableCards,
+                enemyWallCount,
+                playerWallCount,
+                playerCards,
+                enemyCards
+            );
+
+        if(aiSelectedCard != null)
+        {
+            Debug.Log(
+                "AI 1.0 召喚選択：" +
+                GetCardName(aiSelectedCard)
+            );
+        }
+        else
+        {
+            Debug.Log(
+                "AI 1.0 召喚候補なし"
+            );
+        }
+
+        return aiSelectedCard;
+    }
     CardData bestCard = null;
     int bestScore = -999;
 
@@ -1750,27 +1947,55 @@ IEnumerator EnemyBattlePhase()
 {
     Debug.Log("=== Enemy Battle Phase ===");
 
-    if(enemyBattleArea == null || playerWallArea == null)
-        yield break;
-
-    for(int i = 0; i < enemyBattleArea.childCount; i++)
+    if(enemyBattleArea == null ||
+       playerWallArea == null)
     {
-        CardController attacker =
-            enemyBattleArea.GetChild(i)
-            .GetComponent<CardController>();
+        yield break;
+    }
 
+    // 現在の敵バトルカードをリスト化
+    List<CardController> attackers =
+        TCardAIUnityBridge.GetCards(
+            enemyBattleArea
+        );
+
+    int playerWallCount =
+        GetAlivePlayerWallCount();
+
+    // AIが攻撃順を決定
+    if(enemyAIBrain != null)
+    {
+        attackers =
+            enemyAIBrain.OrderAttackers(
+                attackers,
+                playerWallCount
+            );
+    }
+
+    foreach(CardController attacker in attackers)
+    {
+        // 攻撃途中で墓地へ送られた場合
         if(attacker == null)
+            continue;
+
+        if(attacker.gameObject == null)
+            continue;
+
+        // すでに敵場から離れている場合
+        if(attacker.transform.parent != enemyBattleArea)
             continue;
 
         if(attacker.isTapped)
             continue;
 
-        if(attacker.data != null &&
-        attacker.data.effectTypes != null &&
-        System.Array.Exists(
-            attacker.data.effectTypes,
-            x => x == EffectType.CannotAttack
-        ))
+        if(attacker.data == null)
+            continue;
+
+        if(attacker.data.effectTypes != null &&
+           System.Array.Exists(
+               attacker.data.effectTypes,
+               x => x == EffectType.CannotAttack
+           ))
         {
             Debug.Log(
                 "敵の攻撃不可カードなので攻撃しない：" +
@@ -1803,7 +2028,9 @@ IEnumerator EnemyBattlePhase()
         List<RectTransform> targets =
             new List<RectTransform>();
 
-        for(int w = 0; w < playerWallArea.childCount; w++)
+        for(int w = 0;
+            w < playerWallArea.childCount;
+            w++)
         {
             RectTransform wall =
                 playerWallArea.GetChild(w)
@@ -1815,25 +2042,34 @@ IEnumerator EnemyBattlePhase()
             CanvasGroup cg =
                 wall.GetComponent<CanvasGroup>();
 
-            if(cg != null && cg.alpha <= 0.01f)
+            if(cg != null &&
+               cg.alpha <= 0.01f)
+            {
                 continue;
+            }
 
             targets.Add(wall);
         }
 
+        // Wallがない場合は直接攻撃
         if(targets.Count == 0)
         {
-            Debug.Log("プレイヤーWallなし。敵が直接攻撃");
+            Debug.Log(
+                "プレイヤーWallなし。敵が直接攻撃"
+            );
 
             RectTransform attackerRt =
                 attacker.GetComponent<RectTransform>();
 
             RectTransform targetRt =
-                playerBattleArea.GetComponent<RectTransform>();
+                playerBattleArea != null
+                ? playerBattleArea
+                    .GetComponent<RectTransform>()
+                : null;
 
             if(attackArrowManager != null &&
-            attackerRt != null &&
-            targetRt != null)
+               attackerRt != null &&
+               targetRt != null)
             {
                 attackArrowManager.ShowEnemyArrow(
                     attackerRt,
@@ -1845,7 +2081,10 @@ IEnumerator EnemyBattlePhase()
 
             HideAttackArrow();
 
-            attacker.Tap();
+            if(attacker != null)
+            {
+                attacker.Tap();
+            }
 
             if(handDealer != null)
             {
@@ -1857,9 +2096,13 @@ IEnumerator EnemyBattlePhase()
             yield break;
         }
 
+        // 現状は攻撃対象Wallをランダム選択
         RectTransform targetWall =
             targets[
-                Random.Range(0, targets.Count)
+                Random.Range(
+                    0,
+                    targets.Count
+                )
             ];
 
         if(attackArrowManager != null)
@@ -1873,7 +2116,9 @@ IEnumerator EnemyBattlePhase()
         }
 
         pendingEnemyAttacker = attacker;
-        pendingEnemyTargetWall = targetWall.gameObject;
+        pendingEnemyTargetWall =
+            targetWall.gameObject;
+
         enemyAttackBlocked = false;
 
         if(HasUntappedPlayerBlocker())
@@ -1886,7 +2131,9 @@ IEnumerator EnemyBattlePhase()
                 attacker.GetComponent<RectTransform>()
             );
 
-            Debug.Log("ブロックするカードを選んでください");
+            Debug.Log(
+                "ブロックするカードを選んでください"
+            );
 
             while(waitingBlockSelect)
             {
@@ -1898,33 +2145,53 @@ IEnumerator EnemyBattlePhase()
 
             if(enemyAttackBlocked)
             {
-                attacker.Tap();
+                // 戦闘解決で攻撃カードが
+                // 墓地へ送られている可能性がある
+                if(attacker != null &&
+                   attacker.transform.parent ==
+                   enemyBattleArea)
+                {
+                    attacker.Tap();
+                }
 
                 enemyAttackBlocked = false;
 
-                yield return new WaitForSeconds(0.4f);
+                yield return new WaitForSeconds(
+                    0.4f
+                );
+
                 continue;
             }
         }
         else
         {
-            Debug.Log("ブロッカーなし：Wallを自動破壊");
+            Debug.Log(
+                "ブロッカーなし：Wallを自動破壊"
+            );
 
             HideNoBlockButton();
             HideAttackArrow();
         }
 
         if(handDealer != null &&
-        pendingEnemyTargetWall != null)
+           pendingEnemyTargetWall != null)
         {
             yield return StartCoroutine(
-                handDealer.DamagePlayerWallAndWait(
+                handDealer
+                .DamagePlayerWallAndWait(
                     pendingEnemyTargetWall
                 )
             );
         }
 
-        attacker.Tap();
+        // Shield Triggerなどで攻撃カードが
+        // 墓地へ送られた可能性を考慮
+        if(attacker != null &&
+           attacker.transform.parent ==
+           enemyBattleArea)
+        {
+            attacker.Tap();
+        }
 
         pendingEnemyAttacker = null;
         pendingEnemyTargetWall = null;
@@ -1935,25 +2202,51 @@ IEnumerator EnemyBattlePhase()
     }
 }
 
-bool ShouldEnemyAttack(CardController attacker)
+bool ShouldEnemyAttack(
+    CardController attacker
+)
 {
-    if(attacker == null || attacker.data == null)
+    if(attacker == null ||
+       attacker.data == null)
+    {
         return false;
+    }
+
+    int playerWallCount =
+        GetAlivePlayerWallCount();
+
+    if(enemyAIBrain != null)
+    {
+        List<CardController> playerCards =
+            TCardAIUnityBridge.GetCards(
+                playerBattleArea
+            );
+
+        List<CardController> enemyCards =
+            TCardAIUnityBridge.GetCards(
+                enemyBattleArea
+            );
+
+        return enemyAIBrain.ShouldAttack(
+            attacker,
+            playerWallCount,
+            playerCards,
+            enemyCards
+        );
+    }
+
+    //=========================
+    // AI Brainがない場合の旧処理
+    //=========================
 
     attacker.data.SetPowerFromName();
 
-    int aliveWallCount =
-        GetAlivePlayerWallCount();
-
-    // Wallが無いなら直接攻撃
-    if(aliveWallCount <= 0)
+    if(playerWallCount <= 0)
         return true;
 
-    // とどめが近いなら攻撃
-    if(aliveWallCount <= 1)
+    if(playerWallCount <= 1)
         return true;
 
-    // Monarch / King / Joker は積極攻撃
     if(IsMonarchCard(attacker.data))
         return true;
 
@@ -1963,18 +2256,15 @@ bool ShouldEnemyAttack(CardController attacker)
     if(attacker.data.name.Contains("Joker"))
         return true;
 
-    // Wallが4枚以上あるなら、弱い攻撃は控える
-    if(aliveWallCount >= 4)
+    if(playerWallCount >= 4 &&
+       attacker.data.power < 9)
     {
-        if(attacker.data.power < 9)
-            return false;
+        return false;
     }
 
-    // 9以上なら攻撃してよい
     if(attacker.data.power >= 9)
         return true;
 
-    // それ以外は控えめ
     return false;
 }
 
@@ -3277,5 +3567,91 @@ void OnSelectJokerClear()
     {
         Debug.Log("敵エクストラターン予約");
         enemyExtraTurnRequested = true;
+    }
+
+    bool ShouldAutoEndEarlyTurn()
+    {
+        // 最初の5ターンだけ
+        if (turnCount > 5)
+            return false;
+
+        // 召喚できるカードがあるなら終了しない
+        if (CanPlayerSummonAnything())
+            return false;
+
+        // 攻撃できるカードがあるなら終了しない
+        if (CanPlayerAttackAnything())
+            return false;
+
+        return true;
+    }
+
+    bool CanPlayerSummonAnything()
+    {
+        ResourceManager rm =
+            FindFirstObjectByType<ResourceManager>();
+
+        if(rm == null)
+            return false;
+
+        if(handDealer == null)
+            return false;
+
+        if(handDealer.handArea == null)
+            return false;
+
+        for(int i = 0; i < handDealer.handArea.childCount; i++)
+        {
+            CardController card =
+                handDealer.handArea
+                .GetChild(i)
+                .GetComponent<CardController>();
+
+            if(card == null || card.data == null)
+                continue;
+
+            card.data.SetCostFromName();
+
+            if(card.data.cost <= rm.currentResource)
+                return true;
+        }
+
+        return false;
+    }
+
+    bool CanPlayerAttackAnything()
+    {
+        if(playerBattleArea == null)
+            return false;
+
+        for(int i = 0; i < playerBattleArea.childCount; i++)
+        {
+            CardController card =
+                playerBattleArea
+                .GetChild(i)
+                .GetComponent<CardController>();
+
+            if(card == null)
+                continue;
+
+            if(card.isTapped)
+                continue;
+
+            if(card.hasSummonSickness)
+                continue;
+
+            if(card.data != null &&
+            card.data.effectTypes != null &&
+            System.Array.Exists(
+                card.data.effectTypes,
+                x => x == EffectType.CannotAttack))
+            {
+                continue;
+            }
+
+            return true;
+        }
+
+        return false;
     }
 }

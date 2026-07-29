@@ -83,36 +83,48 @@ case EffectType.JokerClearBattleArea:
             Debug.Log("シールドトリガーJOKER：選択なしで一掃");
             turnManager.JokerClearBattleArea(card);
         }
-        else if(isEnemy &&
-        GameSettings.IsAdvancedRule &&
-        HasEffect(card, EffectType.JokerExtraTurn))
-        {
-            int choice = Random.Range(0, 2);
+else if(isEnemy &&
+GameSettings.IsAdvancedRule &&
+HasEffect(card, EffectType.JokerExtraTurn))
+{
+    TCardEnemyAIBrain brain =
+        FindFirstObjectByType<TCardEnemyAIBrain>();
 
-            if(choice == 0)
-            {
-                Debug.Log("敵JOKER：ランダム選択 → 一掃");
-                turnManager.JokerClearBattleArea(card);
-            }
-            else
-            {
-                Debug.Log("敵JOKER：ランダム選択 → 追加ターン");
-                turnManager.RequestEnemyExtraTurn();
+    bool chooseClear = true;
 
-                turnManager.SendCardToOwnGraveyard(card);
-            }
-        }
-        else if(GameSettings.IsAdvancedRule &&
-        HasEffect(card, EffectType.JokerExtraTurn))
-        {
-            Debug.Log("JOKER効果選択パネル表示");
-            turnManager.ShowJokerEffectSelectPanel(card);
-        }
-        else
-        {
-            Debug.Log("効果発動：JOKER 全体墓地送り");
-            turnManager.JokerClearBattleArea(card);
-        }
+    if(brain != null &&
+       turnManager != null)
+    {
+        chooseClear =
+            brain.ChooseJokerClear(
+                TCardAIUnityBridge.GetCards(
+                    turnManager.playerBattleArea
+                ),
+                TCardAIUnityBridge.GetCards(
+                    turnManager.enemyBattleArea
+                )
+            );
+    }
+
+    if(chooseClear)
+    {
+        Debug.Log(
+            "敵JOKER：AI選択 → 一掃"
+        );
+
+        turnManager.JokerClearBattleArea(card);
+    }
+    else
+    {
+        Debug.Log(
+            "敵JOKER：AI選択 → 追加ターン"
+        );
+
+        turnManager.RequestEnemyExtraTurn();
+
+        turnManager.SendCardToOwnGraveyard(card);
+    }
+}
     }
     break;
 
