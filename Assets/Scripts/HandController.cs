@@ -6,7 +6,8 @@ public class HandController : MonoBehaviour
     public Vector3 idlePosition = Vector3.zero;
 
     [Header("展開位置")]
-    public Vector3 expandPosition = new Vector3(0f, 520f, 0f);
+    public Vector3 expandPosition =
+        new Vector3(0f, 520f, 0f);
 
     [Header("収納サイズ")]
     public float idleScale = 0.6f;
@@ -25,7 +26,12 @@ public class HandController : MonoBehaviour
     public float expandArcHeight = 12f;
     public float expandAngleStep = 8f;
 
+    [Header("ダブルクリック")]
+    public float doubleClickTime = 0.6f;
+
     bool isIdle = true;
+
+    float lastHandClickTime = -1f;
 
     public bool IsIdle
     {
@@ -40,9 +46,13 @@ public class HandController : MonoBehaviour
     void LateUpdate()
     {
         if(isIdle)
+        {
             ApplyIdleLayout();
+        }
         else
+        {
             ApplyExpandLayout();
+        }
     }
 
     public void Toggle()
@@ -54,17 +64,49 @@ public class HandController : MonoBehaviour
     {
         isIdle = toIdle;
 
-        transform.localEulerAngles = Vector3.zero;
+        transform.localEulerAngles =
+            Vector3.zero;
 
         if(isIdle)
         {
-            transform.localPosition = idlePosition;
+            transform.localPosition =
+                idlePosition;
         }
         else
         {
             transform.SetAsLastSibling();
-            transform.localPosition = expandPosition;
+
+            transform.localPosition =
+                expandPosition;
         }
+
+        ResetDoubleClick();
+    }
+
+    /// <summary>
+    /// 手札内のカードがクリックされたときに呼ぶ。
+    /// カードが違っても、同じ手札内ならダブルクリックとして扱う。
+    /// </summary>
+    public void RegisterHandCardClick()
+    {
+        float now = Time.unscaledTime;
+
+        if(lastHandClickTime >= 0f &&
+           now - lastHandClickTime <= doubleClickTime)
+        {
+            lastHandClickTime = -1f;
+
+            Toggle();
+
+            return;
+        }
+
+        lastHandClickTime = now;
+    }
+
+    public void ResetDoubleClick()
+    {
+        lastHandClickTime = -1f;
     }
 
     void ApplyIdleLayout()
@@ -98,39 +140,55 @@ public class HandController : MonoBehaviour
     )
     {
         int count = transform.childCount;
-        if(count == 0) return;
+
+        if(count == 0)
+            return;
 
         float spacing = maxSpacing;
-        float totalWidth = spacing * (count - 1);
 
-        if(count > 1 && totalWidth > maxWidth)
+        float totalWidth =
+            spacing * (count - 1);
+
+        if(count > 1 &&
+           totalWidth > maxWidth)
         {
-            spacing = maxWidth / (count - 1);
+            spacing =
+                maxWidth / (count - 1);
+
             totalWidth = maxWidth;
         }
 
-        float startX = -totalWidth * 0.5f;
-        float center = (count - 1) * 0.5f;
+        float startX =
+            -totalWidth * 0.5f;
+
+        float center =
+            (count - 1) * 0.5f;
 
         for(int i = 0; i < count; i++)
         {
-            Transform card = transform.GetChild(i);
+            Transform card =
+                transform.GetChild(i);
 
-            float offset = i - center;
+            float offset =
+                i - center;
 
-            card.localPosition = new Vector3(
-                startX + spacing * i,
-                -Mathf.Abs(offset) * arcHeight,
-                0f
-            );
+            card.localPosition =
+                new Vector3(
+                    startX + spacing * i,
+                    -Mathf.Abs(offset) *
+                    arcHeight,
+                    0f
+                );
 
-            card.localEulerAngles = new Vector3(
-                0f,
-                0f,
-                -offset * angleStep
-            );
+            card.localEulerAngles =
+                new Vector3(
+                    0f,
+                    0f,
+                    -offset * angleStep
+                );
 
-            card.localScale = Vector3.one * scale;
+            card.localScale =
+                Vector3.one * scale;
         }
     }
 }

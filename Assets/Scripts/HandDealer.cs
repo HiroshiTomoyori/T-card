@@ -108,6 +108,11 @@ public Transform playerWallArea;
     public void DealStart()
     {
         IsRedrawSelecting = true;
+
+        if(InputLockManager.I != null)
+        {
+            InputLockManager.I.LockInput();
+        }
         if (cardPrefab == null)
         {
             Debug.LogError("HandDealer: CardPrefab が未設定です");
@@ -132,7 +137,7 @@ public Transform playerWallArea;
         if (enemyDeckImage != null)
             enemyDeckImage.gameObject.SetActive(true);
 
-        StartCoroutine(DealRoutine());
+        StartCoroutine(DealRoutine(true));
 /*
         if (enemyHandCountText != null)
             enemyHandCountText.gameObject.SetActive(true);
@@ -185,9 +190,15 @@ public Transform playerWallArea;
     }
 
 
-    IEnumerator DealRoutine()
+    IEnumerator DealRoutine(bool showButtonsAfterDeal)
     {
         SetOpeningLock(true);
+
+        if(InputLockManager.I != null)
+        {
+            InputLockManager.I.LockInput();
+        }
+
         ClearHand();
         ClearWall();
         HideButtons();
@@ -244,9 +255,17 @@ public Transform playerWallArea;
 
         CreateWallCards();
         CreateEnemyWallCards();
-        ShowButtons();
 
-        SetOpeningLock(false);
+        if(showButtonsAfterDeal)
+        {
+            ShowButtons();
+        }
+        else
+        {
+            HideButtons();
+        }
+
+        // 初期手札を確定するまで入力ロックを維持する
     }
 
     CardData DrawRandomCardData()
@@ -822,6 +841,11 @@ void ShowButtons()
             endTurnButton.gameObject.SetActive(false);
         }
 
+        if(InputLockManager.I != null)
+        {
+            InputLockManager.I.LockInput();
+        }
+
         SetOpeningLock(true);
 
         currentDeck = new List<CardData>(cardList);
@@ -830,29 +854,30 @@ void ShowButtons()
     }
     IEnumerator RedrawRoutine()
     {
-        yield return StartCoroutine(DealRoutine());
+        // 引き直し後はボタンを再表示しない
+        yield return StartCoroutine(DealRoutine(false));
 
-        SetOpeningLock(false);
-
-        if(confirmButton != null)
-        {
-            Button confirmBtn =
-                confirmButton.GetComponent<Button>();
-
-            if(confirmBtn != null)
-                confirmBtn.interactable = true;
-        }
-
-        if(endTurnButton != null)
-        {
-            endTurnButton.gameObject.SetActive(false);
-        }
+        // 引き直し完了と同時に、そのまま最初のターンを開始
+        CompleteOpeningSelection();
     }
+
     public void ConfirmHand()
+    {
+        CompleteOpeningSelection();
+    }
+
+    void CompleteOpeningSelection()
     {
         IsRedrawSelecting = false;
         HideButtons();
         canRedraw = false;
+
+        SetOpeningLock(false);
+
+        if(InputLockManager.I != null)
+        {
+            InputLockManager.I.UnlockInput();
+        }
 
         if(endTurnButton != null)
         {
@@ -874,7 +899,7 @@ void ShowButtons()
             turnManager.StartFirstTurn(playerFirst);
 
             Debug.Log(
-                "ConfirmHand PlayerFirst = " +
+                "Opening selection completed. PlayerFirst = " +
                 playerFirst
             );
         }
