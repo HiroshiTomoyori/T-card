@@ -11060,6 +11060,9 @@ MonoBehaviour:
   redrawButton: {fileID: 1727495664}
   confirmButton: {fileID: 2128218466}
   redrawChoicePanel: {fileID: 1666355973}
+  handController: {fileID: 1560023923}
+  openingHandScale: 2
+  openingHandYOffset: 300
   enemyHandCountText: {fileID: 418615351}
   enemyHandArea: {fileID: 1204880913}
   enemyWallArea: {fileID: 1310096523}
@@ -11290,11 +11293,13 @@ MonoBehaviour:
   expandScale: 1.6
   idleMaxWidth: 500
   idleMaxSpacing: 50
-  idleMinSpacing: 20
+  idleMinSpacing: 50
   expandMaxWidth: 760
   expandMaxSpacing: 65
   expandArcHeight: 12
   expandAngleStep: 10
+  openingMaxWidth: 600
+  openingMaxSpacing: 80
   doubleClickTime: 0.6
 --- !u!1 &1569006930
 GameObject:

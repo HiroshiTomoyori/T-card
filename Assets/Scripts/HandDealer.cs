@@ -34,6 +34,11 @@ public class HandDealer : MonoBehaviour
     public GameObject confirmButton;
     public GameObject redrawChoicePanel;
 
+    [Header("Opening Hand Display")]
+    public HandController handController;
+    public float openingHandScale = 0.85f;
+    public float openingHandYOffset = 180f;
+
     [Header("Enemy")]
     public TMPro.TextMeshProUGUI enemyHandCountText;
     public Transform enemyHandArea;
@@ -204,6 +209,9 @@ public Transform playerWallArea;
         {
             InputLockManager.I.LockInput();
         }
+
+        // 1枚目を配る前から、初期手札用の位置とサイズにする
+        ApplyOpeningHandLook();
 
         ClearHand();
         ClearWall();
@@ -764,14 +772,18 @@ IEnumerator AnimateCardToHand(RectTransform cardRect)
 
 void ShowButtons()
 {
-    
     if(redrawChoicePanel != null)
     {
         redrawChoicePanel.SetActive(true);
         redrawChoicePanel.transform.SetAsLastSibling();
     }
 
-if(redrawButton != null)
+    if(handController != null)
+    {
+        handController.transform.SetAsLastSibling();
+    }
+
+    if(redrawButton != null)
     {
         redrawButton.SetActive(true);
 
@@ -779,8 +791,7 @@ if(redrawButton != null)
             redrawButton.GetComponent<CanvasGroup>();
 
         if(cg == null)
-            cg =
-                redrawButton.AddComponent<CanvasGroup>();
+            cg = redrawButton.AddComponent<CanvasGroup>();
 
         cg.alpha = 1f;
         cg.blocksRaycasts = true;
@@ -795,8 +806,7 @@ if(redrawButton != null)
             confirmButton.GetComponent<CanvasGroup>();
 
         if(cg == null)
-            cg =
-                confirmButton.AddComponent<CanvasGroup>();
+            cg = confirmButton.AddComponent<CanvasGroup>();
 
         cg.alpha = 1f;
         cg.blocksRaycasts = true;
@@ -817,6 +827,31 @@ if (redrawButton != null)
 
         if (confirmButton != null)
             confirmButton.SetActive(false);
+    }
+
+
+    void ApplyOpeningHandLook()
+    {
+        if(handController == null)
+        {
+            Debug.LogWarning(
+                "HandDealer: HandController が未設定です"
+            );
+            return;
+        }
+
+        handController.ApplyOpeningIdleLook(
+            openingHandScale,
+            openingHandYOffset
+        );
+    }
+
+    void RestoreOpeningHandLook()
+    {
+        if(handController == null)
+            return;
+
+        handController.RestoreNormalIdleLook();
     }
 
     void SetRedrawButtonInteractable(bool value)
@@ -940,6 +975,8 @@ if (redrawButton != null)
         // Destroy反映待ち
         yield return null;
 
+        ApplyOpeningHandLook();
+
         // 新しい手札を配布アニメーション付きで生成
         for(int i = 0;
             i < dealCount;
@@ -1014,7 +1051,8 @@ if (redrawButton != null)
                     dealInterval
                 );
         }
-
+        // 引き直した手札を1秒見せる
+        yield return new WaitForSeconds(1f);
         CompleteOpeningSelection();
     }
 
@@ -1025,6 +1063,8 @@ if (redrawButton != null)
 
     void CompleteOpeningSelection()
     {
+        RestoreOpeningHandLook();
+
         IsRedrawSelecting = false;
         HideButtons();
         canRedraw = false;

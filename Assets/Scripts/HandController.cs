@@ -26,6 +26,10 @@ public class HandController : MonoBehaviour
     public float expandArcHeight = 12f;
     public float expandAngleStep = 8f;
 
+    [Header("初期手札確認レイアウト")]
+    public float openingMaxWidth = 760f;
+    public float openingMaxSpacing = 110f;
+
     [Header("ダブルクリック")]
     public float doubleClickTime = 0.6f;
 
@@ -33,9 +37,21 @@ public class HandController : MonoBehaviour
 
     float lastHandClickTime = -1f;
 
+    float normalIdleScale;
+    Vector3 normalIdlePosition;
+    float normalIdleMaxWidth;
+    float normalIdleMaxSpacing;
+
+    bool hasSavedNormalIdle = false;
+
     public bool IsIdle
     {
         get { return isIdle; }
+    }
+
+    void Awake()
+    {
+        SaveNormalIdleSettings();
     }
 
     void Start()
@@ -85,14 +101,16 @@ public class HandController : MonoBehaviour
 
     /// <summary>
     /// 手札内のカードがクリックされたときに呼ぶ。
-    /// カードが違っても、同じ手札内ならダブルクリックとして扱う。
+    /// カードが違っても、同じ手札内なら
+    /// ダブルクリックとして扱う。
     /// </summary>
     public void RegisterHandCardClick()
     {
         float now = Time.unscaledTime;
 
         if(lastHandClickTime >= 0f &&
-           now - lastHandClickTime <= doubleClickTime)
+           now - lastHandClickTime <=
+           doubleClickTime)
         {
             lastHandClickTime = -1f;
 
@@ -107,6 +125,113 @@ public class HandController : MonoBehaviour
     public void ResetDoubleClick()
     {
         lastHandClickTime = -1f;
+    }
+
+    void SaveNormalIdleSettings()
+    {
+        if(hasSavedNormalIdle)
+            return;
+
+        normalIdleScale =
+            idleScale;
+
+        normalIdlePosition =
+            idlePosition;
+
+        normalIdleMaxWidth =
+            idleMaxWidth;
+
+        normalIdleMaxSpacing =
+            idleMaxSpacing;
+
+        hasSavedNormalIdle = true;
+    }
+
+    /// <summary>
+    /// 初期手札確認中だけ、
+    /// 収納状態のままサイズ・位置・間隔を変更する。
+    /// </summary>
+    public void ApplyOpeningIdleLook(
+        float scale,
+        float yOffset
+    )
+    {
+        SaveNormalIdleSettings();
+
+        isIdle = true;
+
+        idleScale =
+            scale;
+
+        idlePosition =
+            normalIdlePosition +
+            new Vector3(
+                0f,
+                yOffset,
+                0f
+            );
+
+        idleMaxWidth =
+            openingMaxWidth;
+
+        idleMaxSpacing =
+            openingMaxSpacing;
+
+        transform.localEulerAngles =
+            Vector3.zero;
+
+        transform.localPosition =
+            idlePosition;
+
+        // 初期手札を前面へ
+        transform.SetAsLastSibling();
+
+        ResetDoubleClick();
+
+        Debug.Log(
+            "初期手札表示ON / Scale：" +
+            idleScale +
+            " / Position：" +
+            idlePosition +
+            " / MaxWidth：" +
+            idleMaxWidth +
+            " / MaxSpacing：" +
+            idleMaxSpacing
+        );
+    }
+
+    /// <summary>
+    /// 初期手札確認終了後、
+    /// 通常の収納状態へ戻す。
+    /// </summary>
+    public void RestoreNormalIdleLook()
+    {
+        if(!hasSavedNormalIdle)
+            return;
+
+        isIdle = true;
+
+        idleScale =
+            normalIdleScale;
+
+        idlePosition =
+            normalIdlePosition;
+
+        idleMaxWidth =
+            normalIdleMaxWidth;
+
+        idleMaxSpacing =
+            normalIdleMaxSpacing;
+
+        transform.localEulerAngles =
+            Vector3.zero;
+
+        transform.localPosition =
+            idlePosition;
+
+        ResetDoubleClick();
+
+        Debug.Log("初期手札表示OFF");
     }
 
     void ApplyIdleLayout()
@@ -139,12 +264,14 @@ public class HandController : MonoBehaviour
         float angleStep
     )
     {
-        int count = transform.childCount;
+        int count =
+            transform.childCount;
 
         if(count == 0)
             return;
 
-        float spacing = maxSpacing;
+        float spacing =
+            maxSpacing;
 
         float totalWidth =
             spacing * (count - 1);
@@ -155,7 +282,8 @@ public class HandController : MonoBehaviour
             spacing =
                 maxWidth / (count - 1);
 
-            totalWidth = maxWidth;
+            totalWidth =
+                maxWidth;
         }
 
         float startX =
@@ -164,7 +292,9 @@ public class HandController : MonoBehaviour
         float center =
             (count - 1) * 0.5f;
 
-        for(int i = 0; i < count; i++)
+        for(int i = 0;
+            i < count;
+            i++)
         {
             Transform card =
                 transform.GetChild(i);
@@ -174,7 +304,8 @@ public class HandController : MonoBehaviour
 
             card.localPosition =
                 new Vector3(
-                    startX + spacing * i,
+                    startX +
+                    spacing * i,
                     -Mathf.Abs(offset) *
                     arcHeight,
                     0f
@@ -184,11 +315,13 @@ public class HandController : MonoBehaviour
                 new Vector3(
                     0f,
                     0f,
-                    -offset * angleStep
+                    -offset *
+                    angleStep
                 );
 
             card.localScale =
-                Vector3.one * scale;
+                Vector3.one *
+                scale;
         }
     }
 }
