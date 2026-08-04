@@ -32,6 +32,7 @@ public class HandDealer : MonoBehaviour
     [Header("UI")]
     public GameObject redrawButton;
     public GameObject confirmButton;
+    public GameObject redrawChoicePanel;
 
     [Header("Enemy")]
     public TMPro.TextMeshProUGUI enemyHandCountText;
@@ -166,6 +167,11 @@ public Transform playerWallArea;
         }
 
         IsRedrawSelecting = true;
+
+        if(redrawChoicePanel != null)
+        {
+            redrawChoicePanel.SetActive(false);
+        }
     }
     
     void ApplyRuleBGMClipOnly()
@@ -758,7 +764,14 @@ IEnumerator AnimateCardToHand(RectTransform cardRect)
 
 void ShowButtons()
 {
-    if(redrawButton != null)
+    
+    if(redrawChoicePanel != null)
+    {
+        redrawChoicePanel.SetActive(true);
+        redrawChoicePanel.transform.SetAsLastSibling();
+    }
+
+if(redrawButton != null)
     {
         redrawButton.SetActive(true);
 
@@ -793,7 +806,13 @@ void ShowButtons()
 
     void HideButtons()
     {
-        if (redrawButton != null)
+        
+        if(redrawChoicePanel != null)
+        {
+            redrawChoicePanel.SetActive(false);
+        }
+
+if (redrawButton != null)
             redrawButton.SetActive(false);
 
         if (confirmButton != null)
@@ -821,7 +840,6 @@ void ShowButtons()
             return;
 
         IsRedrawSelecting = true;
-
         hasRedrawn = true;
         canRedraw = false;
 
@@ -848,16 +866,155 @@ void ShowButtons()
 
         SetOpeningLock(true);
 
-        currentDeck = new List<CardData>(cardList);
-
         StartCoroutine(RedrawRoutine());
     }
+
     IEnumerator RedrawRoutine()
     {
-        // 引き直し後はボタンを再表示しない
-        yield return StartCoroutine(DealRoutine(false));
+        if(handArea == null)
+        {
+            Debug.LogError(
+                "RedrawRoutine: HandArea が未設定です"
+            );
+            yield break;
+        }
 
-        // 引き直し完了と同時に、そのまま最初のターンを開始
+        if(cardPrefab == null)
+        {
+            Debug.LogError(
+                "RedrawRoutine: CardPrefab が未設定です"
+            );
+            yield break;
+        }
+
+        if(currentDeck == null)
+        {
+            currentDeck =
+                new List<CardData>();
+        }
+
+        // 現在の手札を山札へ戻す
+        List<GameObject> oldHandCards =
+            new List<GameObject>();
+
+        for(int i = 0;
+            i < handArea.childCount;
+            i++)
+        {
+            Transform child =
+                handArea.GetChild(i);
+
+            if(child == null)
+                continue;
+
+            CardController controller =
+                child.GetComponent<CardController>();
+
+            if(controller != null &&
+               controller.data != null)
+            {
+                currentDeck.Add(
+                    controller.data
+                );
+            }
+
+            oldHandCards.Add(
+                child.gameObject
+            );
+        }
+
+        // パネルを閉じる
+        HideButtons();
+
+        // 古い手札を消す
+        foreach(GameObject oldCard
+            in oldHandCards)
+        {
+            if(oldCard != null)
+            {
+                oldCard.SetActive(false);
+                Destroy(oldCard);
+            }
+        }
+
+        // Destroy反映待ち
+        yield return null;
+
+        // 新しい手札を配布アニメーション付きで生成
+        for(int i = 0;
+            i < dealCount;
+            i++)
+        {
+            if(currentDeck.Count <= 0)
+            {
+                Debug.LogWarning(
+                    "RedrawRoutine: 山札が足りません"
+                );
+                break;
+            }
+
+            CardData selectedCard =
+                DrawRandomCardData();
+
+            if(selectedCard == null)
+                continue;
+
+            GameObject cardObj =
+                CreateHandCard(
+                    selectedCard
+                );
+
+            RectTransform cardRect =
+                cardObj.GetComponent
+                <RectTransform>();
+
+            if(cardRect == null)
+            {
+                Debug.LogError(
+                    "RedrawRoutine: " +
+                    "CardPrefab に RectTransform がありません"
+                );
+                yield break;
+            }
+
+            Vector2 startPos =
+                Vector2.zero;
+
+            if(deckPosition != null)
+            {
+                startPos =
+                    WorldToLocalPosition(
+                        handArea as RectTransform,
+                        deckPosition.position
+                    );
+            }
+
+            cardRect.anchoredPosition =
+                startPos;
+
+            yield return
+                AnimateCardToHand(
+                    cardRect
+                );
+
+            LayoutElement layout =
+                cardObj.GetComponent
+                <LayoutElement>();
+
+            if(layout != null)
+            {
+                layout.ignoreLayout =
+                    false;
+            }
+
+            SortPlayerHand();
+
+            yield return
+                new WaitForSeconds(
+                    dealInterval
+                );
+        }
+
         CompleteOpeningSelection();
     }
 
