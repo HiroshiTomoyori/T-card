@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
+using System.Collections;
 
 public class BattleDropZone : MonoBehaviour, IDropHandler
 {
@@ -147,6 +148,15 @@ public class BattleDropZone : MonoBehaviour, IDropHandler
         {
             Debug.LogWarning("CardEffectManager が未配置");
         }
+
+        // 召喚スナップ演出が完了するまでフェイズ進行を止める。
+        StartCoroutine(CompleteSummonAfterSnap(cardDrag));
+    }
+
+    IEnumerator CompleteSummonAfterSnap(CardDrag cardDrag)
+    {
+        while(cardDrag != null && cardDrag.IsDropSnapPlaying)
+            yield return null;
 
         ResourcePhaseManager resourcePhaseManager =
             FindFirstObjectByType<ResourcePhaseManager>();

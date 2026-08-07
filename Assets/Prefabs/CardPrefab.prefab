@@ -270,6 +270,11 @@ MonoBehaviour:
   dragWidth: 190
   dragHeight: 285
   battleScale: 1.5
+  dropZoomMultiplier: 1.8
+  dropZoomDuration: 0.8
+  dropSnapSE: {fileID: 8300000, guid: 155c8bb1ed4b6414d8fbf56443d4510b, type: 3}
+  dropSnapSEVolume: 1
+  dropSnapAudioSource: {fileID: 0}
 --- !u!225 &5398876303123097329
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -320,7 +325,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1978f9d5d8e09e0409bd77db1938fabe, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  doubleClickTime: 0.6
 --- !u!1 &6437380531237873154
 GameObject:
   m_ObjectHideFlags: 0

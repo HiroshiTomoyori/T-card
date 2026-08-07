@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
+using System.Collections;
 
 public class CardDrag : MonoBehaviour,
     IBeginDragHandler,
@@ -16,12 +17,27 @@ public class CardDrag : MonoBehaviour,
     [Header("バトルエリアサイズ")]
     public float battleScale = 1.2f;
 
-    Transform originalParent;
+    [Header("召喚スナップ演出")]
+    [Tooltip("場に出る直前の拡大倍率")]
+    public float dropZoomMultiplier = 1.35f;
 
+    [Tooltip("拡大状態を見せる時間")]
+    public float dropZoomDuration = 0.16f;
+
+    [Header("召喚スナップSE")]
+    [Tooltip("スナップ拡大開始時に鳴らすSE")]
+    public AudioClip dropSnapSE;
+
+    [Range(0f, 1f)]
+    public float dropSnapSEVolume = 1f;
+
+    [Tooltip("任意。未設定ならカードにAudioSourceを自動追加")]
+    public AudioSource dropSnapAudioSource;
+
+    Transform originalParent;
     Vector3 originalPosition;
     Quaternion originalRotation;
     Vector3 originalScale;
-
     Vector2 originalSizeDelta;
 
     bool droppedSuccessfully = false;
@@ -30,6 +46,12 @@ public class CardDrag : MonoBehaviour,
     Canvas canvas;
     CanvasGroup canvasGroup;
     RectTransform rectTransform;
+    Coroutine dropSnapCoroutine;
+
+    public bool IsDropSnapPlaying
+    {
+        get { return dropSnapCoroutine != null; }
+    }
 
     void Awake()
     {
@@ -38,43 +60,30 @@ public class CardDrag : MonoBehaviour,
         rectTransform = GetComponent<RectTransform>();
 
         if(canvasGroup == null)
-        {
-            canvasGroup =
-                gameObject.AddComponent<CanvasGroup>();
-        }
+            canvasGroup = gameObject.AddComponent<CanvasGroup>();
     }
 
-    public void OnBeginDrag(
-        PointerEventData eventData
-    )
+    public void OnBeginDrag(PointerEventData eventData)
     {
-        // バトルエリア上のカードはドラッグ禁止
         if(IsInBattleArea())
             return;
 
         canDrag = false;
 
-        HandController hand =
-            GetComponentInParent<HandController>();
-
-        // 収納中の手札はドラッグ禁止
+        HandController hand = GetComponentInParent<HandController>();
         if(hand != null && hand.IsIdle)
             return;
 
         if(canvas == null)
         {
-            canvas =
-                GetComponentInParent<Canvas>();
-
+            canvas = GetComponentInParent<Canvas>();
             if(canvas == null)
                 return;
         }
 
         if(rectTransform == null)
         {
-            rectTransform =
-                GetComponent<RectTransform>();
-
+            rectTransform = GetComponent<RectTransform>();
             if(rectTransform == null)
                 return;
         }
@@ -88,29 +97,16 @@ public class CardDrag : MonoBehaviour,
         originalScale = transform.localScale;
         originalSizeDelta = rectTransform.sizeDelta;
 
-        // Canvas直下へ移動
-        transform.SetParent(
-            canvas.transform,
-            true
-        );
-
+        transform.SetParent(canvas.transform, true);
         transform.SetAsLastSibling();
-
-        // ドラッグ中は縦向き
-        transform.localRotation =
-            Quaternion.identity;
+        transform.localRotation = Quaternion.identity;
 
         ApplyDraggingSize();
-
-        // ドラッグ中のカード自身が
-        // ドロップ判定を邪魔しないようにする
         canvasGroup.blocksRaycasts = false;
 
         ResourcePhaseManager rpm =
             FindFirstObjectByType<ResourcePhaseManager>();
 
-        // リソースフェイズ中のドラッグ時だけ
-        // リソースエリアの当たり判定を有効化
         if(rpm != null && rpm.IsRunning())
         {
             rpm.ShowDropHighlight();
@@ -118,25 +114,17 @@ public class CardDrag : MonoBehaviour,
         }
     }
 
-    public void OnDrag(
-        PointerEventData eventData
-    )
+    public void OnDrag(PointerEventData eventData)
     {
         if(!canDrag)
             return;
 
-        transform.position =
-            eventData.position;
-
-        transform.localRotation =
-            Quaternion.identity;
-
+        transform.position = eventData.position;
+        transform.localRotation = Quaternion.identity;
         ApplyDraggingSize();
     }
 
-    public void OnEndDrag(
-        PointerEventData eventData
-    )
+    public void OnEndDrag(PointerEventData eventData)
     {
         if(!canDrag)
             return;
@@ -157,26 +145,13 @@ public class CardDrag : MonoBehaviour,
         if(droppedSuccessfully)
             return;
 
-        // ドロップ失敗時は元の手札へ戻す
-        transform.SetParent(
-            originalParent,
-            false
-        );
-
-        transform.localPosition =
-            originalPosition;
-
-        transform.localRotation =
-            originalRotation;
-
-        transform.localScale =
-            originalScale;
+        transform.SetParent(originalParent, false);
+        transform.localPosition = originalPosition;
+        transform.localRotation = originalRotation;
+        transform.localScale = originalScale;
 
         if(rectTransform != null)
-        {
-            rectTransform.sizeDelta =
-                originalSizeDelta;
-        }
+            rectTransform.sizeDelta = originalSizeDelta;
     }
 
     void ApplyDraggingSize()
@@ -184,10 +159,7 @@ public class CardDrag : MonoBehaviour,
         if(rectTransform == null)
             return;
 
-        // Scaleは1に固定し、
-        // 幅・高さを直接指定
-        transform.localScale =
-            Vector3.one;
+        transform.localScale = Vector3.one;
 
         rectTransform.SetSizeWithCurrentAnchors(
             RectTransform.Axis.Horizontal,
@@ -205,37 +177,27 @@ public class CardDrag : MonoBehaviour,
         droppedSuccessfully = true;
     }
 
-    public void DropToBattleArea(
-        Transform battleArea
-    )
+    public void DropToBattleArea(Transform battleArea)
     {
         if(battleArea == null)
             return;
 
         droppedSuccessfully = true;
 
-        transform.SetParent(
-            battleArea,
-            false
-        );
+        transform.SetParent(battleArea, false);
+        transform.localPosition = Vector3.zero;
+        transform.localRotation = Quaternion.identity;
 
-        transform.localPosition =
-            Vector3.zero;
-
-        transform.localRotation =
-            Quaternion.identity;
-
-        transform.localScale =
-            Vector3.one * battleScale;
-
-        // バトルエリアでは元のカードサイズへ戻す
         if(rectTransform != null)
-        {
-            rectTransform.sizeDelta =
-                originalSizeDelta;
-        }
+            rectTransform.sizeDelta = originalSizeDelta;
 
-        canvasGroup.blocksRaycasts = true;
+        canvasGroup.blocksRaycasts = false;
+        canvasGroup.interactable = false;
+
+        if(dropSnapCoroutine != null)
+            StopCoroutine(dropSnapCoroutine);
+
+        dropSnapCoroutine = StartCoroutine(DropSnapRoutine());
 
         ResourcePhaseManager rpm =
             FindFirstObjectByType<ResourcePhaseManager>();
@@ -247,10 +209,63 @@ public class CardDrag : MonoBehaviour,
         }
     }
 
+    IEnumerator DropSnapRoutine()
+    {
+        PlayDropSnapSE();
+
+        // まず大きく見せ、短い間を置いてから場のサイズへビタッと戻す。
+        transform.localScale =
+            Vector3.one * battleScale * dropZoomMultiplier;
+
+        // 拡大演出中は召喚酔いが付与されても透過させない。
+        float elapsed = 0f;
+
+        while(elapsed < dropZoomDuration)
+        {
+            canvasGroup.alpha = 1f;
+            elapsed += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        transform.localScale = Vector3.one * battleScale;
+
+        // スナップ後は本来の召喚酔い表示へ戻す。
+        CardController card = GetComponent<CardController>();
+        canvasGroup.alpha =
+            card != null && card.hasSummonSickness
+            ? 0.6f
+            : 1f;
+
+        canvasGroup.blocksRaycasts = true;
+        canvasGroup.interactable = true;
+        dropSnapCoroutine = null;
+    }
+
+    void PlayDropSnapSE()
+    {
+        if(dropSnapSE == null)
+            return;
+
+        if(dropSnapAudioSource == null)
+        {
+            dropSnapAudioSource = GetComponent<AudioSource>();
+
+            if(dropSnapAudioSource == null)
+                dropSnapAudioSource = gameObject.AddComponent<AudioSource>();
+
+            dropSnapAudioSource.playOnAwake = false;
+            dropSnapAudioSource.spatialBlend = 0f;
+        }
+
+        dropSnapAudioSource.PlayOneShot(
+            dropSnapSE,
+            dropSnapSEVolume
+        );
+    }
+
     bool IsInBattleArea()
     {
-        Transform current =
-            transform.parent;
+        Transform current = transform.parent;
 
         while(current != null)
         {
@@ -268,9 +283,16 @@ public class CardDrag : MonoBehaviour,
 
     void OnDisable()
     {
+        if(dropSnapCoroutine != null)
+        {
+            StopCoroutine(dropSnapCoroutine);
+            dropSnapCoroutine = null;
+        }
+
         if(canvasGroup != null)
         {
             canvasGroup.blocksRaycasts = true;
+            canvasGroup.interactable = true;
         }
 
         ResourcePhaseManager rpm =
