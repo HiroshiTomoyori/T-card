@@ -18,18 +18,14 @@ public class BattleDropZone : MonoBehaviour, IDropHandler
             return;
         }
 
-        CardDrag cardDrag =
-            eventData.pointerDrag.GetComponent<CardDrag>();
-
+        CardDrag cardDrag = eventData.pointerDrag.GetComponent<CardDrag>();
         if(cardDrag == null)
         {
             Debug.Log("CardDrag が見つからない");
             return;
         }
 
-        CardController card =
-            eventData.pointerDrag.GetComponent<CardController>();
-
+        CardController card = eventData.pointerDrag.GetComponent<CardController>();
         if(card == null || card.data == null)
         {
             Debug.Log("CardController または CardData がない");
@@ -37,143 +33,104 @@ public class BattleDropZone : MonoBehaviour, IDropHandler
         }
 
         if(battleArea == null)
-        {
             battleArea = transform;
-        }
 
         card.data.SetPowerFromName();
 
         if(card.data.name.Contains("Joker"))
-        {
             card.data.cost = 13;
-        }
         else if(card.data.power == 1)
-        {
             card.data.cost = 4;
-        }
         else
-        {
             card.data.cost = card.data.power;
-        }
 
         int summonCost = card.data.cost;
         CardController selectedBaseCard = null;
 
         if(useCostCheck)
         {
-            ResourceManager resourceManager =
-                FindFirstObjectByType<ResourceManager>();
-
+            ResourceManager resourceManager = FindFirstObjectByType<ResourceManager>();
             if(resourceManager == null)
             {
-                Debug.LogWarning(
-                    "ResourceManager が見つからない"
-                );
-
+                Debug.LogWarning("ResourceManager が見つからない");
                 return;
             }
 
-            CardController baseCard =
-                FindKSpecialSummonBase();
-
+            CardController baseCard = FindKSpecialSummonBase();
             if(IsSpecialSummonK(card) && baseCard != null)
             {
                 selectedBaseCard = baseCard;
-
                 baseCard.data.SetPowerFromName();
 
-                int basePower =
-                    baseCard.data.power;
-
-                summonCost =
-                    card.data.cost - basePower;
-
+                summonCost = card.data.cost - baseCard.data.power;
                 if(summonCost < 0)
-                {
                     summonCost = 0;
-                }
 
                 Debug.Log(
-                    "K特殊召喚：土台 " +
-                    baseCard.data.name +
-                    " / 差分コスト " +
-                    summonCost
+                    "K特殊召喚：土台 " + baseCard.data.name +
+                    " / 差分コスト " + summonCost
                 );
             }
 
             if(resourceManager.currentResource < summonCost)
             {
                 Debug.Log(
-                    "リソース不足：必要 " +
-                    summonCost +
-                    " / 現在 " +
-                    resourceManager.currentResource
+                    "リソース不足：必要 " + summonCost +
+                    " / 現在 " + resourceManager.currentResource
                 );
-
                 return;
             }
 
             resourceManager.UseResource(summonCost);
-
-            Debug.Log(
-                "召喚コスト支払い：" +
-                summonCost
-            );
+            Debug.Log("召喚コスト支払い：" + summonCost);
         }
         else
         {
-            Debug.Log(
-                "コストチェックOFF：無料召喚"
-            );
+            Debug.Log("コストチェックOFF：無料召喚");
         }
 
-        // カードをバトルエリアへ移動
         cardDrag.DropToBattleArea(battleArea);
 
-        // 手札の扇形回転をリセット
-        RectTransform rt =
-            card.GetComponent<RectTransform>();
-
+        RectTransform rt = card.GetComponent<RectTransform>();
         if(rt != null)
-        {
-            rt.localRotation =
-                Quaternion.identity;
-        }
+            rt.localRotation = Quaternion.identity;
 
-        // K特殊召喚時、土台カードをKの下へ重ねる
-        if(selectedBaseCard != null)
-        {
-            StackBaseCardUnderK(
-                card,
-                selectedBaseCard
-            );
-        }
+        // 土台が選ばれている場合だけ、今回のKをレイズ扱いにする。
+        bool isRaisedKing = selectedBaseCard != null;
 
-        // バトルエリアを整列
-        BattleAreaLayout layout =
-            battleArea.GetComponent<BattleAreaLayout>();
+        if(isRaisedKing)
+            StackBaseCardUnderK(card, selectedBaseCard);
 
+        BattleAreaLayout layout = battleArea.GetComponent<BattleAreaLayout>();
         if(layout != null)
-        {
             layout.Refresh();
-        }
 
-        Debug.Log(
-            "カードをバトルエリアに出した"
-        );
+        Debug.Log("カードをバトルエリアに出した");
 
-        // 召喚酔い判定
         bool noSummonSickness =
             card.data.effectTypes != null &&
             System.Array.Exists(
                 card.data.effectTypes,
-                x => x ==
-                    EffectType.NoSummonSickness
+                x => x == EffectType.NoSummonSickness
             );
 
-        if(noSummonSickness)
+        // レイズされたKには召喚酔いを付けない。
+        // SetSummonSickness(false) により透明度も 1 に復元される。
+        if(isRaisedKing || noSummonSickness)
         {
             card.SetSummonSickness(false);
+            card.Untap();
+
+            CanvasGroup raisedCg = card.GetComponent<CanvasGroup>();
+            if(raisedCg != null)
+            {
+                raisedCg.alpha = 1f;
+                raisedCg.blocksRaycasts = true;
+                raisedCg.interactable = true;
+            }
+
+            if(isRaisedKing)
+                Debug.Log("K特殊召喚：召喚酔いなし・透明度を復元");
         }
         else
         {
@@ -181,51 +138,30 @@ public class BattleDropZone : MonoBehaviour, IDropHandler
             card.SetAttackable(false);
         }
 
-        // 召喚時効果
         if(CardEffectManager.I != null)
         {
-            CardEffectManager.I
-                .ActivateOnSummon(card);
-
-            Debug.Log(
-                "召喚時効果発動：" +
-                card.data.name
-            );
+            CardEffectManager.I.ActivateOnSummon(card);
+            Debug.Log("召喚時効果発動：" + card.data.name);
         }
         else
         {
-            Debug.LogWarning(
-                "CardEffectManager が未配置"
-            );
+            Debug.LogWarning("CardEffectManager が未配置");
         }
 
-        // 召喚完了後にリソースフェイズ終了
         ResourcePhaseManager resourcePhaseManager =
             FindFirstObjectByType<ResourcePhaseManager>();
 
         if(resourcePhaseManager != null)
-        {
-            resourcePhaseManager
-                .EndResourcePhase();
-        }
+            resourcePhaseManager.EndResourcePhase();
 
-        // メインフェイズ開始
-        TurnManager turnManager =
-            FindFirstObjectByType<TurnManager>();
-
+        TurnManager turnManager = FindFirstObjectByType<TurnManager>();
         if(turnManager != null)
-        {
-            turnManager
-                .OnResourcePhaseComplete();
-        }
+            turnManager.OnResourcePhaseComplete();
     }
 
     bool IsSpecialSummonK(CardController card)
     {
-        if(card == null || card.data == null)
-            return false;
-
-        if(card.data.effectTypes == null)
+        if(card == null || card.data == null || card.data.effectTypes == null)
             return false;
 
         return System.Array.Exists(
@@ -242,8 +178,7 @@ public class BattleDropZone : MonoBehaviour, IDropHandler
         for(int i = 0; i < battleArea.childCount; i++)
         {
             CardController card =
-                battleArea.GetChild(i)
-                .GetComponent<CardController>();
+                battleArea.GetChild(i).GetComponent<CardController>();
 
             if(card == null || card.data == null)
                 continue;
@@ -261,90 +196,59 @@ public class BattleDropZone : MonoBehaviour, IDropHandler
         return null;
     }
 
-void StackBaseCardUnderK(
-    CardController kCard,
-    CardController baseCard
-)
-{
-    if(kCard == null || baseCard == null)
-        return;
-
-    StackedCard stacked =
-        kCard.GetComponent<StackedCard>();
-
-    if(stacked == null)
-        stacked =
-            kCard.gameObject.AddComponent<StackedCard>();
-
-    stacked.baseCard =
-        baseCard.gameObject;
-    // 追加
-    CanvasGroup kCg =
-        kCard.GetComponent<CanvasGroup>();
-
-    if(kCg == null)
-        kCg =
-            kCard.gameObject.AddComponent<CanvasGroup>();
-
-    kCg.alpha = 1f;
-    kCg.blocksRaycasts = true;
-    kCg.interactable = true;
-    baseCard.SetAttackable(false);
-    baseCard.Untap();
-
-    baseCard.transform.SetParent(
-        kCard.transform,
-        false
-    );
-
-    RectTransform baseRt =
-        baseCard.GetComponent<RectTransform>();
-
-    if(baseRt != null)
+    void StackBaseCardUnderK(CardController kCard, CardController baseCard)
     {
-        baseRt.anchorMin = new Vector2(0.5f, 0.5f);
-        baseRt.anchorMax = new Vector2(0.5f, 0.5f);
-        baseRt.pivot = new Vector2(0.5f, 0.5f);
+        if(kCard == null || baseCard == null)
+            return;
 
-        baseRt.anchoredPosition =
-            new Vector2(0f, -12f);
+        StackedCard stacked = kCard.GetComponent<StackedCard>();
+        if(stacked == null)
+            stacked = kCard.gameObject.AddComponent<StackedCard>();
 
-        baseRt.localScale =
-            Vector3.one * 0.95f;
+        stacked.baseCard = baseCard.gameObject;
+
+        CanvasGroup kCg = kCard.GetComponent<CanvasGroup>();
+        if(kCg == null)
+            kCg = kCard.gameObject.AddComponent<CanvasGroup>();
+
+        kCg.alpha = 1f;
+        kCg.blocksRaycasts = true;
+        kCg.interactable = true;
+
+        baseCard.SetAttackable(false);
+        baseCard.Untap();
+        baseCard.transform.SetParent(kCard.transform, false);
+
+        RectTransform baseRt = baseCard.GetComponent<RectTransform>();
+        if(baseRt != null)
+        {
+            baseRt.anchorMin = new Vector2(0.5f, 0.5f);
+            baseRt.anchorMax = new Vector2(0.5f, 0.5f);
+            baseRt.pivot = new Vector2(0.5f, 0.5f);
+            baseRt.anchoredPosition = new Vector2(0f, -12f);
+            baseRt.localScale = Vector3.one * 0.95f;
+        }
+
+        CanvasGroup cg = baseCard.GetComponent<CanvasGroup>();
+        if(cg == null)
+            cg = baseCard.gameObject.AddComponent<CanvasGroup>();
+
+        cg.alpha = 0.45f;
+        cg.blocksRaycasts = false;
+        cg.interactable = false;
+
+        CardDrag drag = baseCard.GetComponent<CardDrag>();
+        if(drag != null)
+            drag.enabled = false;
+
+        BattleCardClick click = baseCard.GetComponent<BattleCardClick>();
+        if(click != null)
+            click.enabled = false;
+
+        CardActionIcon icon = baseCard.GetComponent<CardActionIcon>();
+        if(icon != null)
+            icon.HideAll();
+
+        Debug.Log("K特殊召喚：土台カードを重ねた → " + baseCard.data.name);
     }
-
-    CanvasGroup cg =
-        baseCard.GetComponent<CanvasGroup>();
-
-    if(cg == null)
-        cg =
-            baseCard.gameObject.AddComponent<CanvasGroup>();
-
-    cg.alpha = 0.45f;
-    cg.blocksRaycasts = false;
-    cg.interactable = false;
-
-    CardDrag drag =
-        baseCard.GetComponent<CardDrag>();
-
-    if(drag != null)
-        drag.enabled = false;
-
-    BattleCardClick click =
-        baseCard.GetComponent<BattleCardClick>();
-
-    if(click != null)
-        click.enabled = false;
-
-    CardActionIcon icon =
-        baseCard.GetComponent<CardActionIcon>();
-
-    if(icon != null)
-        icon.HideAll();
-
-    Debug.Log(
-        "K特殊召喚：土台カードを重ねた → " +
-        baseCard.data.name
-    );
-}
 }

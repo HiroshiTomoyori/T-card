@@ -77,6 +77,8 @@ public class TurnManager : MonoBehaviour
     
     [Header("UI")]
     public Button endTurnButton;
+    [Tooltip("ボタンの背景などを含む表示ルート。未設定なら endTurnButton 本体を使用")]
+    public GameObject endTurnButtonRoot;
 
 
 
@@ -99,6 +101,11 @@ public class TurnManager : MonoBehaviour
 
     bool isEndingTurn = false;
 
+    // プレイヤーターンの唯一の状態フラグ。
+    // ボタン表示・入力可否・二重ターン開始の防止に共通利用する。
+    bool isPlayerTurnActive = false;
+    bool isFirstTurnStarting = false;
+
     bool playerExtraTurnRequested = false;
 
     List<GameObject> pendingWallTargets =
@@ -116,6 +123,9 @@ public class TurnManager : MonoBehaviour
 
     void Awake()
     {
+        // シーン上でボタンが有効になっていても、マッチ開始前は必ず隠す。
+        SetEndTurnButton(false);
+
         if(enemyAIBrain == null)
         {
             enemyAIBrain =
@@ -136,10 +146,26 @@ public class TurnManager : MonoBehaviour
         }
     }
 
+    void LateUpdate()
+    {
+        // Animatorや別UI処理に再表示されても、自ターン以外では必ず隠す。
+        SyncEndTurnButtonVisibility();
+    }
+
     public void StartFirstTurn(bool playerFirst)
     {
+        // StartFirstTurn が複数回呼ばれても、進行中のターンを重ねない。
+        if(isFirstTurnStarting || isPlayerTurnActive || isEndingTurn)
+        {
+            Debug.LogWarning("ターン進行中のため、先攻開始要求を無視しました");
+            return;
+        }
+
         isPlayerFirst = playerFirst;
         turnCount = 1;
+        isFirstTurnStarting = true;
+
+        SetEndTurnButton(false);
 
         StartCoroutine(FirstTurnRoutine());
     }
@@ -163,6 +189,7 @@ IEnumerator FirstTurnRoutine()
     {
         Debug.Log("プレイヤー先攻1ターン目");
 
+        isFirstTurnStarting = false;
         StartPlayerTurn(true);
 
         yield break;
@@ -182,6 +209,7 @@ IEnumerator FirstTurnRoutine()
             playerTurnSE
         );
 
+        isFirstTurnStarting = false;
         StartPlayerTurn();
 
         yield break;
@@ -874,6 +902,12 @@ public void HideAttackArrow()
 
     public void EndPlayerTurn()
     {    
+        // マッチ開始前・敵ターン中・二重クリックからの呼び出しを拒否する。
+        if(!isPlayerTurnActive || isEndingTurn)
+        {
+            Debug.Log("自分のターンではないためターン終了不可");
+            return;
+        }
     
     if(HandDealer.IsRedrawSelecting)
     {
@@ -889,9 +923,8 @@ public void HideAttackArrow()
     {
         resourcePhase.EndResourcePhase();
     }
-        if(isEndingTurn)
-            return;
-
+        // コルーチン開始前に無効化し、同一フレームの連打も遮断する。
+        isPlayerTurnActive = false;
         isEndingTurn = true;
 
         SetEndTurnButton(false);
@@ -960,6 +993,15 @@ isEndingTurn = false;
 
 void StartPlayerTurn(bool firstTurn = false)
 {
+    // 同じターン開始イベントが重複しても、ドロー等を二重実行しない。
+    if(isPlayerTurnActive)
+    {
+        Debug.LogWarning("自ターンは既に開始済みです。重複開始を無視しました");
+        return;
+    }
+
+    isPlayerTurnActive = true;
+
     if(!firstTurn)
     {
         turnCount++;
@@ -1166,7 +1208,10 @@ void SetEnemyWallClickable(bool value)
         if(cg == null)
             cg = child.gameObject.AddComponent<CanvasGroup>();
 
-        cg.alpha = locked ? 0.45f : 1f;
+        // バトル中は操作だけをロックし、手札の見た目は透過させない。
+        // 以前は locked 時に 0.45f にしていたため、ターン終了まで
+        // 手札が透けた状態になっていた。
+        cg.alpha = 1f;
         cg.blocksRaycasts = !locked;
         cg.interactable = !locked;
 
@@ -3030,10 +3075,25 @@ public void StartSelectEnemyBattleToDestroy(
     CardController selfCard
 )
 {
-    pendingDestroySelfCard = selfCard;
-
-    if(selfCard == null)
+    if(selfCard == null || selfCard.data == null)
         return;
+
+    // 破壊効果を持たないカードから選択モードを開始させない。
+    bool hasDestroyEffect =
+        selfCard.data.effectTypes != null &&
+        System.Array.Exists(
+            selfCard.data.effectTypes,
+            x => x == EffectType.DestroyOneEnemyBattle
+        );
+
+    if(!hasDestroyEffect)
+    {
+        Debug.LogWarning("選択破壊効果を持たないカードからの開始要求を拒否");
+        return;
+    }
+
+    pendingDestroySelfCard = selfCard;
+    isSelectingDestroyTarget = true;
 
     Debug.Log(
         "破壊効果発動カード：" +
@@ -3070,8 +3130,6 @@ public void StartSelectEnemyBattleToDestroy(
         TrySelectDestroyTarget(target);
         return;
     }
-
-    isSelectingDestroyTarget = true;
 
     Debug.Log("破壊する敵カードを選択してください");
 }
@@ -3125,8 +3183,46 @@ public bool TrySelectDestroyTarget(
     CardController target
 )
 {
-    if(target == null)
+    // 通常のカードタップから直接呼ばれても破壊しない。
+    if(!isSelectingDestroyTarget)
+    {
+        Debug.Log("選択破壊モードではないため、カードタップを無視");
         return false;
+    }
+
+    if(target == null || target.data == null)
+        return false;
+
+    if(pendingDestroySelfCard == null ||
+       pendingDestroySelfCard.data == null)
+    {
+        Debug.LogWarning("選択破壊の発動元がないため処理を中止");
+        isSelectingDestroyTarget = false;
+        pendingDestroySelfCard = null;
+        return false;
+    }
+
+    bool sourceIsEnemy =
+        enemyBattleArea != null &&
+        pendingDestroySelfCard.transform.IsChildOf(enemyBattleArea);
+
+    bool sourceIsPlayer =
+        playerBattleArea != null &&
+        pendingDestroySelfCard.transform.IsChildOf(playerBattleArea);
+
+    bool targetIsValidOpponent =
+        (sourceIsEnemy &&
+         playerBattleArea != null &&
+         target.transform.IsChildOf(playerBattleArea)) ||
+        (sourceIsPlayer &&
+         enemyBattleArea != null &&
+         target.transform.IsChildOf(enemyBattleArea));
+
+    if(!targetIsValidOpponent || target == pendingDestroySelfCard)
+    {
+        Debug.Log("選択破壊の対象外カードをタップしたため無視");
+        return false;
+    }
 
     Debug.Log(
         "選択破壊：" +
@@ -3141,6 +3237,9 @@ public bool TrySelectDestroyTarget(
             : "NULL"
         )
     );
+
+    // 再入や二重タップを防ぐため、破壊処理より先に選択状態を閉じる。
+    isSelectingDestroyTarget = false;
 
     SendCardToOwnGraveyard(target);
 
@@ -3163,7 +3262,6 @@ public bool TrySelectDestroyTarget(
     }
 
     pendingDestroySelfCard = null;
-    isSelectingDestroyTarget = false;
 
     return true;
 }
@@ -3404,6 +3502,10 @@ public bool IsSelectingDestroyTarget()
     {
         //Debug.LogError("★★ StartBattleEndResult 呼ばれた ★★");
 
+        isPlayerTurnActive = false;
+        isEndingTurn = true;
+        SetEndTurnButton(false);
+
         StartCoroutine(
             BattleEndResultRoutine()
         );
@@ -3414,8 +3516,24 @@ public bool IsSelectingDestroyTarget()
         if(endTurnButton == null)
             return;
 
-        endTurnButton.gameObject.SetActive(true);
-        endTurnButton.interactable = value;
+        isPlayerTurnActive = value;
+        SyncEndTurnButtonVisibility();
+    }
+
+    void SyncEndTurnButtonVisibility()
+    {
+        if(endTurnButton == null)
+            return;
+
+        bool shouldShow = isPlayerTurnActive && !isEndingTurn;
+        GameObject target = endTurnButtonRoot != null
+            ? endTurnButtonRoot
+            : endTurnButton.gameObject;
+
+        if(target.activeSelf != shouldShow)
+            target.SetActive(shouldShow);
+
+        endTurnButton.interactable = shouldShow;
     }
 
 IEnumerator BattleEndResultRoutine()
