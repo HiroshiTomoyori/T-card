@@ -8391,7 +8391,8 @@ MonoBehaviour:
   enemyBattleLayout: {fileID: 564399310}
   noBlockButton: {fileID: 241484980}
   noBlockButtonOffset: {x: 0, y: -90}
-  endTurnButton: {fileID: 0}
+  endTurnButton: {fileID: 619094524}
+  endTurnButtonRoot: {fileID: 0}
   playerGraveyard: {fileID: 883933612}
   enemyGraveyard: {fileID: 682929438}
   blockerSlashPrefab: {fileID: 5066958564772653146, guid: 99b55ab9f55dffc4b9b2996e7f2fc9c6, type: 3}

@@ -233,7 +233,9 @@ public class BattleDropZone : MonoBehaviour, IDropHandler
         if(cg == null)
             cg = baseCard.gameObject.AddComponent<CanvasGroup>();
 
-        cg.alpha = 0.45f;
+        // レイズ土台カードも透過させず、通常の濃さで表示する。
+        // 重なった土台を誤操作しないよう、入力だけは無効のままにする。
+        cg.alpha = 1f;
         cg.blocksRaycasts = false;
         cg.interactable = false;
 
