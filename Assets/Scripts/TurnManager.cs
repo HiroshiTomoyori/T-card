@@ -86,6 +86,11 @@ public class TurnManager : MonoBehaviour
     public Transform playerGraveyard;
     public Transform enemyGraveyard;
 
+    [Header("Graveyard Card Size")]
+    [Tooltip("墓地に置かれるカードの固定サイズ（ピクセル）")]
+    [SerializeField]
+    Vector2 graveyardCardSize = new Vector2(45f, 65f);
+
     [Header("Blocker Slash")]
     public GameObject blockerSlashPrefab;
 
@@ -150,6 +155,10 @@ public class TurnManager : MonoBehaviour
     {
         // Animatorや別UI処理に再表示されても、自ターン以外では必ず隠す。
         SyncEndTurnButtonVisibility();
+
+        // Inspectorでサイズを変更した場合や、別のUI処理に上書きされた場合も
+        // 墓地内のカードへ毎フレーム固定サイズを再適用する。
+        SyncGraveyardCardSizes();
     }
 
     public void StartFirstTurn(bool playerFirst)
@@ -2804,9 +2813,10 @@ void ShowBlockableCards()
 
     void SendToGraveyard(GameObject cardObj, Transform graveyard)
     {
-        Debug.Log("SendToGraveyard 実行：" + cardObj.name);
         if(cardObj == null)
             return;
+
+        Debug.Log("SendToGraveyard 実行：" + cardObj.name);
 
         if(graveyard == null)
         {
@@ -2832,47 +2842,42 @@ void ShowBlockableCards()
         }
 
         cardObj.transform.SetParent(graveyard, false);
+        cardObj.transform.SetAsLastSibling();
 
-RectTransform rt =
-    cardObj.GetComponent<RectTransform>();
+        RectTransform rt =
+            cardObj.GetComponent<RectTransform>();
 
-if(rt != null)
-{
-    rt.anchorMin = new Vector2(0.5f, 0.5f);
-    rt.anchorMax = new Vector2(0.5f, 0.5f);
-    rt.pivot = new Vector2(0.5f, 0.5f);
-    rt.anchoredPosition = Vector2.zero;
-
-    rt.sizeDelta = new Vector2(45f, 65f);
-    rt.localScale = Vector3.one;
-}
-
-LayoutElement layout =
-    cardObj.GetComponent<LayoutElement>();
-
-if(layout == null)
-{
-    layout = cardObj.AddComponent<LayoutElement>();
-}
-
-layout.ignoreLayout = false;
-layout.preferredWidth = 45f;
-layout.preferredHeight = 65f;
-layout.minWidth = 45f;
-layout.minHeight = 65f;
-layout.flexibleWidth = 0f;
-layout.flexibleHeight = 0f;
-
-       /* LayoutElement layout =
-    cardObj.GetComponent<LayoutElement>();*/
-
-        if(layout != null)
+        if(rt != null)
         {
-            layout.ignoreLayout = false;
-            layout.preferredWidth = 120f;
-            layout.preferredHeight = 170f;
+            rt.anchorMin = new Vector2(0.5f, 0.5f);
+            rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = Vector2.zero;
+            rt.localRotation = Quaternion.identity;
+            rt.localScale = Vector3.one;
+
+            rt.SetSizeWithCurrentAnchors(
+                RectTransform.Axis.Horizontal,
+                graveyardCardSize.x
+            );
+
+            rt.SetSizeWithCurrentAnchors(
+                RectTransform.Axis.Vertical,
+                graveyardCardSize.y
+            );
         }
-                CardController card =
+
+        LayoutElement layout =
+            cardObj.GetComponent<LayoutElement>();
+
+        if(layout == null)
+            layout = cardObj.AddComponent<LayoutElement>();
+
+        // 墓地ではカードを同じ位置に重ね、親のLayout Groupによる
+        // サイズ上書きを受けないようにする。
+        layout.ignoreLayout = true;
+
+        CardController card =
             cardObj.GetComponent<CardController>();
 
         if(card != null)
@@ -2909,7 +2914,57 @@ layout.flexibleHeight = 0f;
         if(icon != null)
             icon.HideAll();
 
-        cardObj.transform.SetAsLastSibling();
+    }
+
+    void SyncGraveyardCardSizes()
+    {
+        SyncGraveyardCardSizes(playerGraveyard);
+        SyncGraveyardCardSizes(enemyGraveyard);
+    }
+
+    void SyncGraveyardCardSizes(Transform graveyard)
+    {
+        if(graveyard == null)
+            return;
+
+        for(int i = 0; i < graveyard.childCount; i++)
+        {
+            Transform child = graveyard.GetChild(i);
+
+            if(child == null)
+                continue;
+
+            // GraveBackgroundなど、カード以外の子UIは変更しない。
+            if(child.GetComponent<CardController>() == null)
+                continue;
+
+            RectTransform rt = child as RectTransform;
+
+            if(rt == null)
+                continue;
+
+            LayoutElement layout = child.GetComponent<LayoutElement>();
+
+            if(layout != null)
+                layout.ignoreLayout = true;
+
+            rt.anchorMin = new Vector2(0.5f, 0.5f);
+            rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = Vector2.zero;
+            rt.localRotation = Quaternion.identity;
+            rt.localScale = Vector3.one;
+
+            rt.SetSizeWithCurrentAnchors(
+                RectTransform.Axis.Horizontal,
+                graveyardCardSize.x
+            );
+
+            rt.SetSizeWithCurrentAnchors(
+                RectTransform.Axis.Vertical,
+                graveyardCardSize.y
+            );
+        }
     }
 
 void ResolveCardBattle(CardController attacker, CardController defender)
