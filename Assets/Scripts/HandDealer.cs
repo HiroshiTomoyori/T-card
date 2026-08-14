@@ -2078,10 +2078,93 @@ IEnumerator DamagePlayerWallRoutine(GameObject wall)
         if(CardEffectManager.I != null &&
            triggerController != null)
         {
+            bool isAce =
+                HasEffect(
+                    triggerController,
+                    EffectType.DestroyOneEnemyBattle
+                );
+
+            bool isNine =
+                HasEffect(
+                    triggerController,
+                    EffectType.TapAllEnemyBattle
+                );
+
+            bool isJoker =
+                HasEffect(
+                    triggerController,
+                    EffectType.JokerClearBattleArea
+                );
+
+            Debug.Log(
+                "相手ターン・シールドトリガー発動：" +
+                data.cardName +
+                " / A=" + isAce +
+                " / 9=" + isNine +
+                " / Joker=" + isJoker
+            );
+
             CardEffectManager.I.ActivateOnSummon(
                 triggerController,
-                true
+                true,
+                false
             );
+
+            if(isAce)
+            {
+                CanvasGroup aceCg =
+                    triggerCard.GetComponent<CanvasGroup>();
+
+                if(aceCg == null)
+                {
+                    aceCg =
+                        triggerCard.AddComponent<CanvasGroup>();
+                }
+
+                aceCg.alpha = 0f;
+                aceCg.blocksRaycasts = false;
+                aceCg.interactable = false;
+
+                Debug.Log(
+                    "シールドトリガーA：" +
+                    "敵カードの対象選択待機開始"
+                );
+
+                while(turnManager != null &&
+                      turnManager.IsSelectingDestroyTarget())
+                {
+                    if(aceCg != null)
+                    {
+                        aceCg.alpha = 0f;
+                        aceCg.blocksRaycasts = false;
+                        aceCg.interactable = false;
+                    }
+
+                    yield return null;
+                }
+
+                Debug.Log(
+                    "シールドトリガーA：" +
+                    "対象選択・破壊完了"
+                );
+            }
+            else if(isNine || isJoker)
+            {
+                if(triggerController != null &&
+                   triggerController.transform.IsChildOf(
+                       turnManager.playerBattleArea
+                   ))
+                {
+                    turnManager.SendCardToOwnGraveyard(
+                        triggerController
+                    );
+                }
+
+                Debug.Log(
+                    "シールドトリガー即時効果完了：" +
+                    data.cardName
+                );
+            }
         }
     }
     else
@@ -2279,6 +2362,24 @@ IEnumerator DamagePlayerWallRoutine(GameObject wall)
     {
         yield return StartCoroutine(
             DamagePlayerWallRoutine(wall)
+        );
+    }
+
+    bool HasEffect(
+        CardController card,
+        EffectType effectType
+    )
+    {
+        if(card == null ||
+           card.data == null ||
+           card.data.effectTypes == null)
+        {
+            return false;
+        }
+
+        return System.Array.Exists(
+            card.data.effectTypes,
+            effect => effect == effectType
         );
     }
 
