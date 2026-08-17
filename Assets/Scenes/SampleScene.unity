@@ -7710,11 +7710,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 85717f43aa428de40aa9bc5980c1966b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  coinImage: {fileID: 676032830}
+  coinModel: {fileID: 676032829}
   resultTextObject: {fileID: 1066137999}
   resultText: {fileID: 1066138001}
-  kingdomCoin: {fileID: 5991750934007958987, guid: a4e2d7209a4dd804c9b42b58fb0b0da1, type: 3}
-  fairyCoin: {fileID: -8407745150158192257, guid: fe68c106f4b5e1047843103ccc294131, type: 3}
+  frontLocalEulerAngles: {x: 0, y: 0, z: 0}
+  backLocalEulerAngles: {x: 180, y: 0, z: 0}
   seSource: {fileID: 1632339832}
   gameBgmSource: {fileID: 86075744}
   appearSE: {fileID: 8300000, guid: 6b1ce4bcc854edc4a9333b5aac3201e3, type: 3}
@@ -7722,6 +7722,14 @@ MonoBehaviour:
   stopSE: {fileID: 8300000, guid: dcf095473004cac43aec960717790a0f, type: 3}
   minSpinTime: 2
   maxSpinTime: 5
+  flipRotations: 4
+  flipAxis: {x: 1, y: 0, z: 0}
+  spinRotations: 1
+  jumpHeight: 4
+  zoomScale: 1.5
+  slowMotionStrength: 0.2
+  landingBounceHeight: 0.05
+  landingBounceDuration: 0.08
 --- !u!1 &1004047681
 GameObject:
   m_ObjectHideFlags: 0

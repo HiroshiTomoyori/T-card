@@ -17,4 +17,4 @@ MonoBehaviour:
   artwork: {fileID: 21300000, guid: 5e412fa722c1b864cadc21daeef8939c, type: 3}
   cost: 9
   power: 9
-  effectTypes: 0a0000000b00000011000000
+  effectTypes: 000000000b00000011000000

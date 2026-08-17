@@ -30,10 +30,14 @@ public class HandController : MonoBehaviour
     public float openingMaxWidth = 760f;
     public float openingMaxSpacing = 110f;
 
+    [Tooltip("初期手札の並びの中心軸。Xで左右、Yで上下を調整します")]
+    public Vector2 openingLayoutCenter = Vector2.zero;
+
     [Header("ダブルクリック")]
     public float doubleClickTime = 0.6f;
 
     bool isIdle = true;
+    bool isOpeningLook = false;
 
     float lastHandClickTime = -1f;
 
@@ -47,6 +51,11 @@ public class HandController : MonoBehaviour
     public bool IsIdle
     {
         get { return isIdle; }
+    }
+
+    public bool IsOpeningLook
+    {
+        get { return isOpeningLook; }
     }
 
     void Awake()
@@ -106,7 +115,8 @@ public class HandController : MonoBehaviour
     /// </summary>
     public void RegisterHandCardClick()
     {
-        float now = Time.unscaledTime;
+        float now =
+            Time.unscaledTime;
 
         if(lastHandClickTime >= 0f &&
            now - lastHandClickTime <=
@@ -158,6 +168,7 @@ public class HandController : MonoBehaviour
     {
         SaveNormalIdleSettings();
 
+        isOpeningLook = true;
         isIdle = true;
 
         idleScale =
@@ -193,6 +204,8 @@ public class HandController : MonoBehaviour
             idleScale +
             " / Position：" +
             idlePosition +
+            " / LayoutCenter：" +
+            openingLayoutCenter +
             " / MaxWidth：" +
             idleMaxWidth +
             " / MaxSpacing：" +
@@ -209,6 +222,7 @@ public class HandController : MonoBehaviour
         if(!hasSavedNormalIdle)
             return;
 
+        isOpeningLook = false;
         isIdle = true;
 
         idleScale =
@@ -236,12 +250,18 @@ public class HandController : MonoBehaviour
 
     void ApplyIdleLayout()
     {
+        Vector2 layoutCenter =
+            isOpeningLook
+                ? openingLayoutCenter
+                : Vector2.zero;
+
         ApplyLayout(
             idleMaxWidth,
             idleMaxSpacing,
             idleScale,
             0f,
-            0f
+            0f,
+            layoutCenter
         );
     }
 
@@ -252,7 +272,8 @@ public class HandController : MonoBehaviour
             expandMaxSpacing,
             expandScale,
             expandArcHeight,
-            expandAngleStep
+            expandAngleStep,
+            Vector2.zero
         );
     }
 
@@ -261,7 +282,8 @@ public class HandController : MonoBehaviour
         float maxSpacing,
         float scale,
         float arcHeight,
-        float angleStep
+        float angleStep,
+        Vector2 layoutCenter
     )
     {
         int count =
@@ -287,7 +309,8 @@ public class HandController : MonoBehaviour
         }
 
         float startX =
-            -totalWidth * 0.5f;
+            layoutCenter.x -
+            totalWidth * 0.5f;
 
         float center =
             (count - 1) * 0.5f;
@@ -306,7 +329,8 @@ public class HandController : MonoBehaviour
                 new Vector3(
                     startX +
                     spacing * i,
-                    -Mathf.Abs(offset) *
+                    layoutCenter.y -
+                    Mathf.Abs(offset) *
                     arcHeight,
                     0f
                 );
