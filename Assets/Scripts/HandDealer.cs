@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 
 public class HandDealer : MonoBehaviour
 {
@@ -26,6 +27,7 @@ public class HandDealer : MonoBehaviour
 
     [Header("Deal Settings")]
     public int dealCount = 5;
+    public int maxHandSize = 10;
     public float dealInterval = 0.15f;
     public float flyTime = 0.25f;
 
@@ -38,6 +40,16 @@ public class HandDealer : MonoBehaviour
     public HandController handController;
     public float openingHandScale = 0.85f;
     public float openingHandYOffset = 180f;
+
+    [Header("Hand Limit Display")]
+    public Vector2 handLimitDisplayPosition = new Vector2(0f, 180f);
+    public Vector2 handLimitCardSize = new Vector2(100f, 150f);
+    [Min(0f)] public float handLimitCardOverlap = 30f;
+    public Vector2 handLimitDrawnCardPosition = new Vector2(0f, -40f);
+    public Vector2 handLimitDrawnCardSize = new Vector2(120f, 180f);
+    [Min(1f)] public float handLimitSelectedScale = 1.12f;
+    public string handLimitDiscardConfirmText = "廃棄する";
+    public string handLimitDiscardCancelText = "選び直す";
 
     [Header("Enemy")]
     public TMPro.TextMeshProUGUI enemyHandCountText;
@@ -97,6 +109,17 @@ public class HandDealer : MonoBehaviour
     public RectTransform enemyResourcePosition;
     bool canRedraw = false;
     bool hasRedrawn = false;
+    public bool IsHandLimitSelecting { get; private set; } = false;
+    public CardData HandLimitDrawnCardData { get; private set; }
+    public GameObject HandLimitDrawnCardObject { get; private set; }
+    public GameObject SelectedHandLimitDiscardCard { get; private set; }
+    readonly Dictionary<EventTrigger, List<EventTrigger.Entry>>
+        handLimitSavedTriggers =
+            new Dictionary<EventTrigger, List<EventTrigger.Entry>>();
+    readonly List<MonoBehaviour> handLimitDisabledClickBehaviours =
+        new List<MonoBehaviour>();
+    string savedRedrawButtonText;
+    string savedConfirmButtonText;
 
     List<CardData> currentDeck = new List<CardData>();
     List<CardData> enemyDeck = new List<CardData>();
@@ -868,6 +891,12 @@ if (redrawButton != null)
 
     public void RedrawHand()
     {
+        if (IsHandLimitSelecting)
+        {
+            CancelHandLimitDiscardSelection();
+            return;
+        }
+
         if(!canRedraw)
             return;
 
@@ -1058,6 +1087,12 @@ if (redrawButton != null)
 
     public void ConfirmHand()
     {
+        if (IsHandLimitSelecting)
+        {
+            ConfirmHandLimitDiscard();
+            return;
+        }
+
         CompleteOpeningSelection();
     }
 
@@ -1110,6 +1145,12 @@ if (redrawButton != null)
             return;
         }
 
+        if (handArea != null && handArea.childCount >= maxHandSize)
+        {
+            BeginHandLimitSelection();
+            return;
+        }
+
         CardData selectedCard =
             DrawRandomCardData();
 
@@ -1131,6 +1172,513 @@ if (redrawButton != null)
         SortPlayerHand();
     }
 
+    void BeginHandLimitSelection()
+    {
+        if (IsHandLimitSelecting)
+            return;
+
+        IsHandLimitSelecting = true;
+        SelectedHandLimitDiscardCard = null;
+
+        SetOpeningLock(true);
+
+        if (InputLockManager.I != null)
+        {
+            InputLockManager.I.LockInput();
+        }
+
+        if (endTurnButton != null)
+        {
+            endTurnButton.gameObject.SetActive(false);
+        }
+
+        if (handController != null)
+        {
+            handController.transform.SetAsLastSibling();
+        }
+
+        StartCoroutine(ApplyHandLimitLookRoutine());
+
+        Debug.Log(
+            "手札上限選択開始：既存の" +
+            maxHandSize +
+            "枚を中央に拡大表示"
+        );
+    }
+
+    IEnumerator ApplyHandLimitLookRoutine()
+    {
+        // 初期手札確認と同じ中央表示を適用してから、
+        // 手札上限選択専用のInspector設定で上書きする。
+        ApplyOpeningHandLook();
+        yield return null;
+
+        if (handController != null)
+        {
+            handController.enabled = false;
+        }
+
+        RectTransform handRect = handArea as RectTransform;
+
+        if (handRect != null)
+        {
+            handRect.anchoredPosition = handLimitDisplayPosition;
+        }
+
+        int cardCount = handArea != null ? handArea.childCount : 0;
+        float cardInterval =
+            Mathf.Max(0f, handLimitCardSize.x - handLimitCardOverlap);
+        float startX = -cardInterval * (cardCount - 1) * 0.5f;
+
+        for (int i = 0; i < cardCount; i++)
+        {
+            Transform child = handArea.GetChild(i);
+            RectTransform cardRect = child as RectTransform;
+
+            if (cardRect == null)
+                continue;
+
+            LayoutElement layout = child.GetComponent<LayoutElement>();
+
+            if (layout != null)
+            {
+                layout.ignoreLayout = true;
+                layout.preferredWidth = handLimitCardSize.x;
+                layout.preferredHeight = handLimitCardSize.y;
+            }
+
+            cardRect.sizeDelta = handLimitCardSize;
+            cardRect.localScale = Vector3.one;
+            cardRect.anchoredPosition = new Vector2(
+                startX + cardInterval * i,
+                0f
+            );
+
+            ConfigureHandLimitDiscardSelection(child.gameObject);
+        }
+
+        yield return ShowHandLimitDrawnCard();
+    }
+
+    IEnumerator ShowHandLimitDrawnCard()
+    {
+        HandLimitDrawnCardData = DrawRandomCardData();
+
+        if (HandLimitDrawnCardData == null)
+        {
+            Debug.LogWarning("11枚目として表示するカードを引けませんでした");
+            yield break;
+        }
+
+        Transform drawnCardParent =
+            handArea != null && handArea.parent != null
+            ? handArea.parent
+            : transform;
+
+        HandLimitDrawnCardObject =
+            Instantiate(cardPrefab, drawnCardParent);
+        HandLimitDrawnCardObject.name =
+            "HandLimitDrawnCard_" + HandLimitDrawnCardData.cardName;
+
+        SetupCardSize(
+            HandLimitDrawnCardObject,
+            handLimitDrawnCardSize
+        );
+
+        CardController card =
+            HandLimitDrawnCardObject.GetComponent<CardController>();
+
+        if (card != null)
+        {
+            card.SetData(HandLimitDrawnCardData);
+            card.enabled = false;
+        }
+
+        ConfigureHandLimitDiscardSelection(HandLimitDrawnCardObject);
+
+        RectTransform cardRect =
+            HandLimitDrawnCardObject.GetComponent<RectTransform>();
+
+        if (cardRect == null)
+            yield break;
+
+        HandLimitDrawnCardObject.transform.SetAsLastSibling();
+
+        Vector2 startPosition = handLimitDrawnCardPosition;
+        RectTransform parentRect = drawnCardParent as RectTransform;
+
+        if (deckPosition != null && parentRect != null)
+        {
+            startPosition = WorldToLocalPosition(
+                parentRect,
+                deckPosition.position
+            );
+        }
+
+        cardRect.anchoredPosition = startPosition;
+
+        float elapsed = 0f;
+
+        while (elapsed < flyTime)
+        {
+            elapsed += Time.deltaTime;
+            float rate = flyTime > 0f
+                ? Mathf.Clamp01(elapsed / flyTime)
+                : 1f;
+
+            cardRect.anchoredPosition = Vector2.Lerp(
+                startPosition,
+                handLimitDrawnCardPosition,
+                rate
+            );
+
+            yield return null;
+        }
+
+        cardRect.anchoredPosition = handLimitDrawnCardPosition;
+
+        Debug.Log(
+            "11枚目を表示：" +
+            HandLimitDrawnCardData.cardName
+        );
+    }
+
+    void ConfigureHandLimitDiscardSelection(GameObject cardObject)
+    {
+        if (cardObject == null)
+            return;
+
+        CardController cardController =
+            cardObject.GetComponent<CardController>();
+
+        if (cardController != null)
+        {
+            cardController.enabled = false;
+        }
+
+        CanvasGroup canvasGroup =
+            cardObject.GetComponent<CanvasGroup>();
+
+        if (canvasGroup == null)
+        {
+            canvasGroup = cardObject.AddComponent<CanvasGroup>();
+        }
+
+        canvasGroup.ignoreParentGroups = true;
+        canvasGroup.blocksRaycasts = true;
+        canvasGroup.interactable = true;
+
+        EventTrigger trigger = cardObject.GetComponent<EventTrigger>();
+
+        if (trigger == null)
+        {
+            trigger = cardObject.AddComponent<EventTrigger>();
+        }
+
+        if (trigger.triggers == null)
+        {
+            trigger.triggers = new List<EventTrigger.Entry>();
+        }
+        else
+        {
+            if (!handLimitSavedTriggers.ContainsKey(trigger))
+            {
+                handLimitSavedTriggers.Add(
+                    trigger,
+                    new List<EventTrigger.Entry>(trigger.triggers)
+                );
+            }
+
+            // Prefab側に登録されている通常クリック処理を選択中だけ外す。
+            trigger.triggers.Clear();
+        }
+
+        DisableNormalCardClickHandlers(cardObject, trigger);
+
+        EventTrigger.Entry clickEntry = new EventTrigger.Entry();
+        clickEntry.eventID = EventTriggerType.PointerClick;
+        clickEntry.callback.AddListener(
+            _ => SelectHandLimitDiscardCard(cardObject)
+        );
+        trigger.triggers.Add(clickEntry);
+    }
+
+    void DisableNormalCardClickHandlers(
+        GameObject cardObject,
+        EventTrigger selectionTrigger
+    )
+    {
+        MonoBehaviour[] behaviours =
+            cardObject.GetComponentsInChildren<MonoBehaviour>(true);
+
+        foreach (MonoBehaviour behaviour in behaviours)
+        {
+            if (behaviour == null || behaviour == selectionTrigger)
+                continue;
+
+            bool receivesCardClick =
+                behaviour is IPointerClickHandler ||
+                behaviour is IPointerDownHandler ||
+                behaviour is IPointerUpHandler ||
+                behaviour is ISubmitHandler;
+
+            if (receivesCardClick)
+            {
+                if (behaviour.enabled &&
+                    !handLimitDisabledClickBehaviours.Contains(behaviour))
+                {
+                    handLimitDisabledClickBehaviours.Add(behaviour);
+                }
+
+                behaviour.enabled = false;
+            }
+        }
+    }
+
+    void SelectHandLimitDiscardCard(GameObject cardObject)
+    {
+        if (!IsHandLimitSelecting || cardObject == null)
+            return;
+
+        if (SelectedHandLimitDiscardCard != null &&
+            SelectedHandLimitDiscardCard != cardObject)
+        {
+            SelectedHandLimitDiscardCard.transform.localScale =
+                Vector3.one;
+        }
+
+        SelectedHandLimitDiscardCard = cardObject;
+        SelectedHandLimitDiscardCard.transform.localScale =
+            Vector3.one * handLimitSelectedScale;
+
+        bool isDrawnCard =
+            SelectedHandLimitDiscardCard == HandLimitDrawnCardObject;
+
+        Debug.Log(
+            isDrawnCard
+            ? "廃棄候補に11枚目を選択"
+            : "廃棄候補に既存手札を選択：" +
+                SelectedHandLimitDiscardCard.name
+        );
+
+        ShowHandLimitDiscardUI();
+    }
+
+    void ShowHandLimitDiscardUI()
+    {
+        if (redrawChoicePanel != null)
+        {
+            redrawChoicePanel.SetActive(true);
+            redrawChoicePanel.transform.SetAsLastSibling();
+        }
+
+        SetHandLimitButton(
+            redrawButton,
+            handLimitDiscardCancelText,
+            ref savedRedrawButtonText
+        );
+        SetHandLimitButton(
+            confirmButton,
+            handLimitDiscardConfirmText,
+            ref savedConfirmButtonText
+        );
+    }
+
+    void SetHandLimitButton(
+        GameObject buttonObject,
+        string label,
+        ref string savedLabel
+    )
+    {
+        if (buttonObject == null)
+            return;
+
+        buttonObject.SetActive(true);
+
+        CanvasGroup canvasGroup =
+            buttonObject.GetComponent<CanvasGroup>();
+
+        if (canvasGroup == null)
+            canvasGroup = buttonObject.AddComponent<CanvasGroup>();
+
+        canvasGroup.alpha = 1f;
+        canvasGroup.blocksRaycasts = true;
+        canvasGroup.interactable = true;
+
+        Button button = buttonObject.GetComponent<Button>();
+
+        if (button != null)
+            button.interactable = true;
+
+        TMPro.TMP_Text text =
+            buttonObject.GetComponentInChildren<TMPro.TMP_Text>(true);
+
+        if (text != null)
+        {
+            if (savedLabel == null)
+                savedLabel = text.text;
+
+            text.text = label;
+        }
+    }
+
+    void CancelHandLimitDiscardSelection()
+    {
+        if (SelectedHandLimitDiscardCard != null)
+        {
+            SelectedHandLimitDiscardCard.transform.localScale =
+                Vector3.one;
+        }
+
+        SelectedHandLimitDiscardCard = null;
+        HideButtons();
+
+        Debug.Log("廃棄候補の選択を解除");
+    }
+
+    void ConfirmHandLimitDiscard()
+    {
+        if (SelectedHandLimitDiscardCard == null)
+            return;
+
+        bool discardDrawnCard =
+            SelectedHandLimitDiscardCard == HandLimitDrawnCardObject;
+
+        GameObject discardedCard = SelectedHandLimitDiscardCard;
+        CardController discardedController =
+            discardedCard.GetComponent<CardController>();
+
+        if (discardedController != null)
+            discardedController.enabled = true;
+
+        if (!discardDrawnCard && HandLimitDrawnCardObject != null)
+        {
+            HandLimitDrawnCardObject.transform.SetParent(handArea, false);
+            HandLimitDrawnCardObject.name =
+                "HandCard_" + HandLimitDrawnCardData.cardName;
+            SetupCardSize(HandLimitDrawnCardObject, handCardSize);
+        }
+
+        if (turnManager != null && discardedController != null)
+        {
+            turnManager.SendCardToOwnGraveyard(discardedController);
+        }
+        else
+        {
+            Destroy(discardedCard);
+        }
+
+        Debug.Log(
+            discardDrawnCard
+            ? "11枚目を廃棄して元の手札を維持"
+            : "既存手札を廃棄して11枚目を手札へ追加"
+        );
+
+        CompleteHandLimitSelection();
+    }
+
+    void CompleteHandLimitSelection()
+    {
+        HideButtons();
+        RestoreHandLimitButtonLabels();
+
+        foreach (
+            KeyValuePair<EventTrigger, List<EventTrigger.Entry>> saved
+            in handLimitSavedTriggers
+        )
+        {
+            if (saved.Key != null)
+            {
+                saved.Key.triggers =
+                    new List<EventTrigger.Entry>(saved.Value);
+            }
+        }
+
+        foreach (MonoBehaviour behaviour in
+            handLimitDisabledClickBehaviours)
+        {
+            if (behaviour != null)
+                behaviour.enabled = true;
+        }
+
+        handLimitSavedTriggers.Clear();
+        handLimitDisabledClickBehaviours.Clear();
+
+        if (handArea != null)
+        {
+            for (int i = 0; i < handArea.childCount; i++)
+            {
+                Transform child = handArea.GetChild(i);
+                child.localScale = Vector3.one;
+
+                SetupCardSize(child.gameObject, handCardSize);
+
+                LayoutElement layout =
+                    child.GetComponent<LayoutElement>();
+
+                if (layout != null)
+                    layout.ignoreLayout = false;
+
+                CanvasGroup canvasGroup =
+                    child.GetComponent<CanvasGroup>();
+
+                if (canvasGroup != null)
+                {
+                    canvasGroup.ignoreParentGroups = false;
+                    canvasGroup.blocksRaycasts = true;
+                    canvasGroup.interactable = true;
+                }
+
+                CardController controller =
+                    child.GetComponent<CardController>();
+
+                if (controller != null)
+                    controller.enabled = true;
+            }
+        }
+
+        if (handController != null)
+        {
+            handController.enabled = true;
+        }
+
+        RestoreOpeningHandLook();
+        SortPlayerHand();
+
+        IsHandLimitSelecting = false;
+        SelectedHandLimitDiscardCard = null;
+        HandLimitDrawnCardData = null;
+        HandLimitDrawnCardObject = null;
+
+        SetOpeningLock(false);
+
+        if (InputLockManager.I != null)
+            InputLockManager.I.UnlockInput();
+
+        if (endTurnButton != null)
+            endTurnButton.gameObject.SetActive(true);
+    }
+
+    void RestoreHandLimitButtonLabels()
+    {
+        RestoreButtonLabel(redrawButton, savedRedrawButtonText);
+        RestoreButtonLabel(confirmButton, savedConfirmButtonText);
+        savedRedrawButtonText = null;
+        savedConfirmButtonText = null;
+    }
+
+    void RestoreButtonLabel(GameObject buttonObject, string label)
+    {
+        if (buttonObject == null || label == null)
+            return;
+
+        TMPro.TMP_Text text =
+            buttonObject.GetComponentInChildren<TMPro.TMP_Text>(true);
+
+        if (text != null)
+            text.text = label;
+    }
+
     public void DrawOneCardToPlayerHand()
     {
         DrawOneCard();
@@ -1146,7 +1694,14 @@ if (redrawButton != null)
         {
             shuffle.StartShuffle();
         }*/
-        int drawAmount = Mathf.Min(amount, enemyDeck.Count);
+        int remainingCapacity = Mathf.Max(0, maxHandSize - enemyHandCount);
+        int drawAmount = Mathf.Min(amount, enemyDeck.Count, remainingCapacity);
+
+        if (drawAmount <= 0)
+        {
+            Debug.Log("敵の手札が上限のためドローできません：" + maxHandSize + "枚");
+            yield break;
+        }
 
         for (int i = 0; i < drawAmount; i++)
         {
@@ -1310,7 +1865,7 @@ public void DamageEnemyWall(
             targetWall
         );
 
-        enemyHandCount++;
+        enemyHandCount = Mathf.Min(enemyHandCount + 1, maxHandSize);
 
         UpdateEnemyHandCountText();
 

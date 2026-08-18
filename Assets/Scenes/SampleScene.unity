@@ -11065,6 +11065,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 375d6e36735167645b82f0bec3b8f659, type: 2}
   - {fileID: 11400000, guid: e36cc1615ef10d24d8fa31889707c563, type: 2}
   dealCount: 5
+  maxHandSize: 10
   dealInterval: 0.15
   flyTime: 0.25
   redrawButton: {fileID: 1727495664}
@@ -11073,6 +11074,12 @@ MonoBehaviour:
   handController: {fileID: 1560023923}
   openingHandScale: 2
   openingHandYOffset: 300
+  handLimitDisplayPosition: {x: 0, y: 700}
+  handLimitCardSize: {x: 100, y: 150}
+  handLimitCardOverlap: 50
+  handLimitDrawnCardPosition: {x: 0, y: -400}
+  handLimitDrawnCardSize: {x: 120, y: 180}
+  handLimitSelectedScale: 1.12
   enemyHandCountText: {fileID: 418615351}
   enemyHandArea: {fileID: 1204880913}
   enemyWallArea: {fileID: 1310096523}
@@ -11310,6 +11317,7 @@ MonoBehaviour:
   expandAngleStep: 10
   openingMaxWidth: 600
   openingMaxSpacing: 80
+  openingLayoutCenter: {x: 0, y: 0}
   doubleClickTime: 0.6
 --- !u!1 &1569006930
 GameObject:
