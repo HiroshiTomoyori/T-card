@@ -9463,7 +9463,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 7571502433696829905, guid: f85d67e188f7011478ac071fee26e313, type: 3}
+  m_Sprite: {fileID: -2619141686373377173, guid: 0ac67f9b618e865409e62250cada05bb, type: 3}
   m_Type: 0
   m_PreserveAspect: 1
   m_FillCenter: 1
@@ -11006,8 +11006,8 @@ MonoBehaviour:
   wallArea: {fileID: 1149260627}
   cardBackSprite: {fileID: 21300000, guid: eeb82c69e8883a04fbc450ecad2628e5, type: 3}
   wallCount: 5
-  handCardSize: {x: 75, y: 92}
-  wallCardSize: {x: 72, y: 105}
+  handCardSize: {x: 58, y: 89}
+  wallCardSize: {x: 58, y: 89}
   cardPrefab: {fileID: 834065891895854406, guid: 3fd5776f6773a3b429041526fc91bfc3, type: 3}
   cardList:
   - {fileID: 11400000, guid: 4652edb96181aac48aa3a016c5b3e9f1, type: 2}
@@ -11074,10 +11074,10 @@ MonoBehaviour:
   handController: {fileID: 1560023923}
   openingHandScale: 2
   openingHandYOffset: 300
-  handLimitDisplayPosition: {x: 0, y: 700}
-  handLimitCardSize: {x: 100, y: 150}
-  handLimitCardOverlap: 50
-  handLimitDrawnCardPosition: {x: 0, y: -400}
+  handLimitDisplayPosition: {x: 0, y: 850}
+  handLimitCardSize: {x: 105, y: 155}
+  handLimitCardOverlap: 60
+  handLimitDrawnCardPosition: {x: 0, y: -250}
   handLimitDrawnCardSize: {x: 120, y: 180}
   handLimitSelectedScale: 1.12
   handLimitDiscardConfirmText: "\u5EC3\u68C4\u3059\u308B"

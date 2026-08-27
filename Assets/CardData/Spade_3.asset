@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   cardName: Spade_3
   suit: 0
-  artwork: {fileID: 21300000, guid: a44aecbbfac29d64d80fe070e42976c7, type: 3}
+  artwork: {fileID: 2801959813271186911, guid: 51f09245fd5cf0d4594b6963f7db4ddf, type: 3}
   cost: 3
   power: 3
   effectTypes: 06000000070000000f000000

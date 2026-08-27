@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   cardName: Heart_9
   suit: 1
-  artwork: {fileID: 21300000, guid: f435ecb042fca64468c59ec87d7d4161, type: 3}
+  artwork: {fileID: 4942276408197051916, guid: f8b6eb7c281fcd14bbb460d477720440, type: 3}
   cost: 9
   power: 9
   effectTypes: 000000000b00000011000000
