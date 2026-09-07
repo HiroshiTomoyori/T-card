@@ -948,6 +948,9 @@ public void HideAttackArrow()
         selectingTarget = false;
         currentAttacker = null;
         isBattlePhase = false;
+
+        ClearAttackableCards();
+
         HideAttackArrow();
         HideAllCardIcons();
 
@@ -3826,5 +3829,23 @@ void OnSelectJokerClear()
         }
 
         return false;
+    }
+
+    void ClearAttackableCards()
+    {
+        if(playerBattleArea == null)
+            return;
+
+        for(int i = 0; i < playerBattleArea.childCount; i++)
+        {
+            CardController card =
+                playerBattleArea.GetChild(i)
+                .GetComponent<CardController>();
+
+            if(card != null)
+            {
+                card.SetAttackable(false);
+            }
+        }
     }
 }
