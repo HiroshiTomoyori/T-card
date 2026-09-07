@@ -8174,7 +8174,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   battleArea: {fileID: 1045119676}
-  useCostCheck: 1
+  useCostCheck: 0
 --- !u!114 &1045119681
 MonoBehaviour:
   m_ObjectHideFlags: 0
