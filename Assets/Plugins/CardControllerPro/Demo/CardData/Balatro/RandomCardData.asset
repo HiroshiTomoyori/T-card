@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e4b5a3de5fa240d1bed4b5cec7dbfc78, type: 3}
+  m_Name: RandomCardData
+  m_EditorClassIdentifier: Assembly-CSharp::RandomCardData
+  cardName: Random Card
+  description: 
+  frontArt: {fileID: 21300000, guid: ecef1c3e592cc417a8758c1262ed46f3, type: 3}
+  backArt: {fileID: 0}
+  cardType: 0
+  placeableFromHand: 1
+  autoDestroyOnUse: 1
+  placeAnimation:
+    rid: 822844430191952121
+  attackAnimation:
+    rid: 822844430191952122
+  pickupAnimation:
+    rid: 822844430191952123
+  useAnimation:
+    rid: 822844430191952124
+  variants:
+  - frontImage: {fileID: 21300000, guid: f13694a3ccedf412c9f36d79d0b125fb, type: 3}
+    value: 7
+  - frontImage: {fileID: 21300000, guid: 196c429052468418fa2ab89e6c7eb0bc, type: 3}
+    value: 10
+  - frontImage: {fileID: 21300000, guid: 97c3be93a054e49d199a5f4d5a874eb5, type: 3}
+    value: 10
+  - frontImage: {fileID: 21300000, guid: f4d52bfe14b514a2e98ecb704d1b058a, type: 3}
+    value: 100
+  - frontImage: {fileID: 21300000, guid: ecef1c3e592cc417a8758c1262ed46f3, type: 3}
+    value: 20
+  - frontImage: {fileID: 21300000, guid: d1923100299024fb18b2b7114849faa3, type: 3}
+    value: 30
+  - frontImage: {fileID: 21300000, guid: f2986071ab84344f8ad196ec0c5ad3a1, type: 3}
+    value: 40
+  references:
+    version: 2
+    RefIds:
+    - rid: 822844430191952121
+      type: {class: DefaultPlaceAnimation, ns: CCP, asm: Assembly-CSharp-firstpass}
+      data: 
+    - rid: 822844430191952122
+      type: {class: ArcAttackAnimation, ns: CCP, asm: Assembly-CSharp-firstpass}
+      data:
+        duration: 2
+    - rid: 822844430191952123
+      type: {class: DefaultPickupAnimation, ns: CCP, asm: Assembly-CSharp-firstpass}
+      data: 
+    - rid: 822844430191952124
+      type: {class: NoneUseAnimation, ns: CCP, asm: Assembly-CSharp-firstpass}
+      data: 

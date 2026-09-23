@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 34f8d4030edbd4c6f86819bb6b0ab00b
+DefaultImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 370860
+  packageName: Card Controller Pro
+  packageVersion: 1.0.5
+  assetPath: Assets/Plugins/CardControllerPro/Demo/TCG Demo.unity
+  uploadId: 985282

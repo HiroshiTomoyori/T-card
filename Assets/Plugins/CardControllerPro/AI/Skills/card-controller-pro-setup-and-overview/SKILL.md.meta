@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: a4328dc99f5274f62b5de1e0ecfea3b4
+TextScriptImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 370860
+  packageName: Card Controller Pro
+  packageVersion: 1.0.5
+  assetPath: Assets/Plugins/CardControllerPro/AI/Skills/card-controller-pro-setup-and-overview/SKILL.md
+  uploadId: 985282

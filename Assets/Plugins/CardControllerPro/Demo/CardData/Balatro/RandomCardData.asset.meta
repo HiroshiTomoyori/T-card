@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 1493f03d5c3e34dad88665b60baf5acf
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 370860
+  packageName: Card Controller Pro
+  packageVersion: 1.0.5
+  assetPath: Assets/Plugins/CardControllerPro/Demo/CardData/Balatro/RandomCardData.asset
+  uploadId: 985282

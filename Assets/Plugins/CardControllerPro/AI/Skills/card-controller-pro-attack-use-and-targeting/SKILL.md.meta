@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 2a5ce6ceeb72a4606b3cd06906535411
+TextScriptImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 370860
+  packageName: Card Controller Pro
+  packageVersion: 1.0.5
+  assetPath: Assets/Plugins/CardControllerPro/AI/Skills/card-controller-pro-attack-use-and-targeting/SKILL.md
+  uploadId: 985282

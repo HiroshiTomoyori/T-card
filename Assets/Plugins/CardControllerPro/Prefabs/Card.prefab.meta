@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: abfbe962e56e34f8387b6bca06cd4f47
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 370860
+  packageName: Card Controller Pro
+  packageVersion: 1.0.5
+  assetPath: Assets/Plugins/CardControllerPro/Prefabs/Card.prefab
+  uploadId: 985282

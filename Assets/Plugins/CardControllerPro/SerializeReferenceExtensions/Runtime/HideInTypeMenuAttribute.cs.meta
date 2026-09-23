@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 9f48f5d86a108b94a9c26381f5ce678c
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 370860
+  packageName: Card Controller Pro
+  packageVersion: 1.0.5
+  assetPath: Assets/Plugins/CardControllerPro/SerializeReferenceExtensions/Runtime/HideInTypeMenuAttribute.cs
+  uploadId: 985282

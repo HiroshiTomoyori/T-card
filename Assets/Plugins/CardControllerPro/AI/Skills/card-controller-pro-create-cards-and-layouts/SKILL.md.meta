@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: fadddc0daa8cc45648c8d4d3faa8a7ce
+TextScriptImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 370860
+  packageName: Card Controller Pro
+  packageVersion: 1.0.5
+  assetPath: Assets/Plugins/CardControllerPro/AI/Skills/card-controller-pro-create-cards-and-layouts/SKILL.md
+  uploadId: 985282

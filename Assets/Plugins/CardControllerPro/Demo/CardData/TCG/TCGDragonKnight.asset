@@ -1,0 +1,56 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4fa9600d756d44a1ebc97c72abae758f, type: 3}
+  m_Name: TCGDragonKnight
+  m_EditorClassIdentifier: Assembly-CSharp::AttackCardData
+  cardName: Dragon Knight
+  description: 
+  frontArt: {fileID: 21300000, guid: 26715d85fe0ac4a138cd021fdeb587b8, type: 3}
+  backArt: {fileID: 0}
+  cardType: 1
+  placeableFromHand: 1
+  autoDestroyOnUse: 1
+  placeAnimation:
+    rid: 822844430191952176
+  attackAnimation:
+    rid: 822844430191952173
+  pickupAnimation:
+    rid: 822844430191952182
+  useAnimation:
+    rid: 822844430191952175
+  damage: 5
+  references:
+    version: 2
+    RefIds:
+    - rid: 822844430191952173
+      type: {class: ArcAttackAnimation, ns: CCP, asm: Assembly-CSharp-firstpass}
+      data:
+        retreatPoint: 0.6
+        durationWindup: 0.6
+        durationStrike: 0.15
+        durationRetreat: 0.35
+        durationPause: 0.15
+        durationReturn: 0.5
+    - rid: 822844430191952175
+      type: {class: NoneUseAnimation, ns: CCP, asm: Assembly-CSharp-firstpass}
+      data: 
+    - rid: 822844430191952176
+      type: {class: SwirlPlaceAnimation, ns: CCP, asm: Assembly-CSharp-firstpass}
+      data:
+        duration: 0.4
+    - rid: 822844430191952182
+      type: {class: PunchScalePickupAnimation, ns: CCP, asm: Assembly-CSharp-firstpass}
+      data:
+        punchScale: {x: 0.1, y: 0.1, z: 0}
+        duration: 0.3
+        vibrato: 6
+        elasticity: 0.5

@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: b934aeca38cb7a24cabd6047fe0e298a
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 370860
+  packageName: Card Controller Pro
+  packageVersion: 1.0.5
+  assetPath: Assets/Plugins/CardControllerPro/SerializeReferenceExtensions/Editor/SerializedPropertyExtensions.cs
+  uploadId: 985282

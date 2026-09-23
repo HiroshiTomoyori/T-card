@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 9ebce7a5f5f3b49cda72e51c5f8b85ac
+DefaultImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 370860
+  packageName: Card Controller Pro
+  packageVersion: 1.0.5
+  assetPath: Assets/Plugins/CardControllerPro/Demo/TCG Demo Perspective Camera.unity
+  uploadId: 985282

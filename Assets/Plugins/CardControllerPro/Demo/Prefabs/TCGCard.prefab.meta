@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 8a7dd74b976f741539f92d3c63e07cdc
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 370860
+  packageName: Card Controller Pro
+  packageVersion: 1.0.5
+  assetPath: Assets/Plugins/CardControllerPro/Demo/Prefabs/TCGCard.prefab
+  uploadId: 985282

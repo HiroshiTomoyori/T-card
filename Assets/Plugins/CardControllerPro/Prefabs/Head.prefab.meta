@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: b54cece1a38be47cfb004aea58717abb
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 370860
+  packageName: Card Controller Pro
+  packageVersion: 1.0.5
+  assetPath: Assets/Plugins/CardControllerPro/Prefabs/Head.prefab
+  uploadId: 985282

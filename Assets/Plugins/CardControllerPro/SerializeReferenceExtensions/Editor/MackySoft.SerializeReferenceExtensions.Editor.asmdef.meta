@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: e6234d6c1f7bf4e4db20eddc411c00b8
+AssemblyDefinitionImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 370860
+  packageName: Card Controller Pro
+  packageVersion: 1.0.5
+  assetPath: Assets/Plugins/CardControllerPro/SerializeReferenceExtensions/Editor/MackySoft.SerializeReferenceExtensions.Editor.asmdef
+  uploadId: 985282

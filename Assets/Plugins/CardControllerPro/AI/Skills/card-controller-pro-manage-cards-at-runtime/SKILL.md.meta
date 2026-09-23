@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 3cb47c1b6bbaa4895bf38107dd27a1eb
+TextScriptImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 370860
+  packageName: Card Controller Pro
+  packageVersion: 1.0.5
+  assetPath: Assets/Plugins/CardControllerPro/AI/Skills/card-controller-pro-manage-cards-at-runtime/SKILL.md
+  uploadId: 985282

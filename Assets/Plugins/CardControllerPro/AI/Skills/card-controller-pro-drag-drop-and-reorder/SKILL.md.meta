@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: e81b445ae24e94b7eb423c6a511ce6dc
+TextScriptImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 370860
+  packageName: Card Controller Pro
+  packageVersion: 1.0.5
+  assetPath: Assets/Plugins/CardControllerPro/AI/Skills/card-controller-pro-drag-drop-and-reorder/SKILL.md
+  uploadId: 985282

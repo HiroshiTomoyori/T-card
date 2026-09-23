@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 68ae2d585a422487eb20d4c29bb52fa9
+TextScriptImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 370860
+  packageName: Card Controller Pro
+  packageVersion: 1.0.5
+  assetPath: Assets/Plugins/CardControllerPro/AI/Skills/card-controller-pro-extend-behavior-and-animations/SKILL.md
+  uploadId: 985282

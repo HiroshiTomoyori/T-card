@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 2b3f2aa69f2be42d291119400c7c76dc
+TextScriptImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 370860
+  packageName: Card Controller Pro
+  packageVersion: 1.0.5
+  assetPath: Assets/Plugins/CardControllerPro/AI/Skills/card-controller-pro-click-and-visual-effects/SKILL.md
+  uploadId: 985282

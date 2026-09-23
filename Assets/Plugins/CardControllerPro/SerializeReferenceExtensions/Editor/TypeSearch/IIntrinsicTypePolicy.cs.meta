@@ -1,0 +1,9 @@
+fileFormatVersion: 2
+guid: 67c3f8c80bdf1514184495b1ff985d7c
+AssetOrigin:
+  serializedVersion: 1
+  productId: 370860
+  packageName: Card Controller Pro
+  packageVersion: 1.0.5
+  assetPath: Assets/Plugins/CardControllerPro/SerializeReferenceExtensions/Editor/TypeSearch/IIntrinsicTypePolicy.cs
+  uploadId: 985282
