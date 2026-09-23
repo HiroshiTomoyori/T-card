@@ -8401,6 +8401,7 @@ MonoBehaviour:
   noBlockButtonOffset: {x: 0, y: -90}
   endTurnButton: {fileID: 619094524}
   endTurnButtonRoot: {fileID: 0}
+  debugForceEnemyQ: 0
   playerGraveyard: {fileID: 883933612}
   enemyGraveyard: {fileID: 682929438}
   graveyardCardSize: {x: 45, y: 65}
@@ -11089,6 +11090,7 @@ MonoBehaviour:
   enemyDeckPosition: {fileID: 271234204}
   enemyDeckImage: {fileID: 1377010475}
   enemyHandCount: 0
+  debugForceEnemyQ: 1
   turnManager: {fileID: 1118434680}
   targetGlowSprite: {fileID: 8891656711315780718, guid: e975302d61612ac44b483c0f2eef629a, type: 3}
   slashSprite: {fileID: 21300000, guid: 4852a4e32ff3bcf4daf47206bcf1bc0c, type: 3}
@@ -11114,6 +11116,7 @@ MonoBehaviour:
   enemyHandCards: []
   enemyHandCardSize: {x: 55, y: 82}
   endTurnButton: {fileID: 0}
+  debugAllWallsAreShieldTrigger: 1
   playerWallArea: {fileID: 0}
 --- !u!1 &1540508880
 GameObject:

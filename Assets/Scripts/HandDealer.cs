@@ -63,6 +63,8 @@ public class HandDealer : MonoBehaviour
     int playerWallAliveCount = 0;
     int enemyWallAliveCount = 0;
 
+    [Header("Enemy Q Debug")]
+    public bool debugForceEnemyQ = false;
 
     [Header("Turn")]
     public TurnManager turnManager;
@@ -132,6 +134,9 @@ public class HandDealer : MonoBehaviour
     [Header("Opening Lock")]
     public Button endTurnButton;
 
+    [Header("Shield Trigger Debug")]
+    public bool debugAllWallsAreShieldTrigger = false;
+
 
 public Transform playerWallArea;
     public void DealStart()
@@ -171,7 +176,44 @@ public Transform playerWallArea;
         if (enemyHandCountText != null)
             enemyHandCountText.gameObject.SetActive(true);
 */
+        if(debugForceEnemyQ)
+{
+    CardData qCard = enemyDeck.Find(
+        card => card != null &&
+        card.cardName.Contains("Q")
+    );
+
+    if(qCard != null)
+    {
+        enemyDeck.Remove(qCard);
+
+        enemyHandCards.Add(qCard);
+        enemyHandCount++;
+
+        RefreshEnemyHandVisual();
+        UpdateEnemyHandCountText();
+
+        Debug.Log(
+            "デバッグ：敵の初期手札にQを追加 → " +
+            qCard.cardName
+        );
+
+        // Q以外の初期手札4枚を通常ドロー
+        EnemyDraw(4);
+    }
+    else
+    {
+        Debug.LogWarning(
+            "デバッグ：敵山札にQが見つかりません"
+        );
+
         EnemyDraw(5);
+    }
+}
+else
+{
+    EnemyDraw(5);
+}
     }
 
     void Start()
@@ -2527,12 +2569,15 @@ IEnumerator DamagePlayerWallRoutine(GameObject wall)
 
     yield return PlayWallSlash(wall);
 
-    bool shieldTrigger =
+bool shieldTrigger =
+    debugAllWallsAreShieldTrigger ||
+    (
         data.effectTypes != null &&
         System.Array.Exists(
             data.effectTypes,
             x => x == EffectType.ShieldTrigger
-        );
+        )
+    );
 
     bool useReverse = false;
 

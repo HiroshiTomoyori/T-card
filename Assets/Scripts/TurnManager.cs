@@ -80,7 +80,8 @@ public class TurnManager : MonoBehaviour
     [Tooltip("ボタンの背景などを含む表示ルート。未設定なら endTurnButton 本体を使用")]
     public GameObject endTurnButtonRoot;
 
-
+    [Header("Debug Mode")]
+    public bool debugForceEnemyQ = false;
 
     [Header("Graveyard")]
     public Transform playerGraveyard;
@@ -1482,28 +1483,19 @@ IEnumerator EnemyMainPhase()
 
     if(enemyResourceManager == null)
     {
-        Debug.LogWarning(
-            "EnemyResourceManager が未設定"
-        );
-
+        Debug.LogWarning("EnemyResourceManager が未設定");
         yield break;
     }
 
     if(enemyBattleArea == null)
     {
-        Debug.LogWarning(
-            "enemyBattleArea が未設定"
-        );
-
+        Debug.LogWarning("enemyBattleArea が未設定");
         yield break;
     }
 
     if(cardPrefab == null)
     {
-        Debug.LogWarning(
-            "cardPrefab が未設定"
-        );
-
+        Debug.LogWarning("cardPrefab が未設定");
         yield break;
     }
 
@@ -1522,18 +1514,18 @@ IEnumerator EnemyMainPhase()
         if(handDealer.enemyHandCards == null ||
            handDealer.enemyHandCards.Count == 0)
         {
-            Debug.Log(
-                "敵手札なし：メインフェイズ終了"
-            );
-
+            Debug.Log("敵手札なし：メインフェイズ終了");
             yield break;
         }
 
         List<CardData> summonableCards =
             new List<CardData>();
 
-        foreach(CardData card
-            in handDealer.enemyHandCards)
+        // =========================
+        // 召喚可能カードを取得
+        // =========================
+
+        foreach(CardData card in handDealer.enemyHandCards)
         {
             if(card == null)
                 continue;
@@ -1550,8 +1542,9 @@ IEnumerator EnemyMainPhase()
                 enemyResourceManager.currentResource
             );
 
-            if(card.cost <=
-               enemyResourceManager.currentResource)
+            // デバッグONならコストを無視
+            if(debugForceEnemyQ ||
+               card.cost <= enemyResourceManager.currentResource)
             {
                 summonableCards.Add(card);
             }
@@ -1559,47 +1552,89 @@ IEnumerator EnemyMainPhase()
 
         if(summonableCards.Count == 0)
         {
-            Debug.Log(
-                "召喚可能カードなし：敵メイン終了"
-            );
-
+            Debug.Log("召喚可能カードなし：敵メイン終了");
             yield break;
         }
 
-        CardData selectedCard =
-            SelectEnemySummonCard(
-                summonableCards
+        // =========================
+        // 召喚カードを選択
+        // =========================
+
+        CardData selectedCard = null;
+
+        if(debugForceEnemyQ)
+        {
+            // デバッグ時はQを優先して選択
+            selectedCard = summonableCards.Find(
+                card => GetCardName(card).Contains("Q")
             );
+
+            if(selectedCard == null)
+            {
+                Debug.LogWarning(
+                    "DEBUG：召喚可能なQが敵手札にありません"
+                );
+
+                yield break;
+            }
+
+            Debug.Log(
+                "DEBUG：コスト無視でQを召喚：" +
+                GetCardName(selectedCard)
+            );
+        }
+        else
+        {
+            // 通常時は既存AIに選択させる
+            selectedCard =
+                SelectEnemySummonCard(summonableCards);
+        }
 
         if(selectedCard == null)
         {
-            Debug.Log(
-                "AI判断：これ以上召喚しない"
-            );
-
+            Debug.Log("AI判断：これ以上召喚しない");
             yield break;
         }
 
-        bool usedResource =
-            enemyResourceManager.UseResource(
-                selectedCard.cost
-            );
+        // =========================
+        // リソース消費
+        // =========================
 
-        if(!usedResource)
+        if(!debugForceEnemyQ)
         {
-            Debug.LogWarning(
-                "敵リソース不足：" +
-                GetCardName(selectedCard)
-            );
+            bool usedResource =
+                enemyResourceManager.UseResource(
+                    selectedCard.cost
+                );
 
-            yield break;
+            if(!usedResource)
+            {
+                Debug.LogWarning(
+                    "敵リソース不足：" +
+                    GetCardName(selectedCard)
+                );
+
+                yield break;
+            }
+        }
+        else
+        {
+            Debug.Log(
+                "DEBUG：リソース消費をスキップ"
+            );
         }
 
-        handDealer.enemyHandCards.Remove(
-            selectedCard
-        );
+        // =========================
+        // 敵手札から削除
+        // =========================
+
+        handDealer.enemyHandCards.Remove(selectedCard);
 
         handDealer.enemyHandCount--;
+
+        // =========================
+        // カードを場に召喚
+        // =========================
 
         GameObject obj =
             Instantiate(
@@ -1612,17 +1647,13 @@ IEnumerator EnemyMainPhase()
 
         if(controller != null)
         {
-            controller.SetData(
-                selectedCard
-            );
+            controller.SetData(selectedCard);
 
             bool noSummonSickness =
                 controller.data.effectTypes != null &&
                 System.Array.Exists(
                     controller.data.effectTypes,
-                    x =>
-                        x ==
-                        EffectType.NoSummonSickness
+                    x => x == EffectType.NoSummonSickness
                 );
 
             controller.SetSummonSickness(
@@ -1634,14 +1665,14 @@ IEnumerator EnemyMainPhase()
                 controller.SetAttackable(false);
             }
 
+            // 召喚時効果
             if(CardEffectManager.I != null)
             {
-                CardEffectManager.I
-                    .ActivateOnSummon(
-                        controller,
-                        false,
-                        true
-                    );
+                CardEffectManager.I.ActivateOnSummon(
+                    controller,
+                    false,
+                    true
+                );
             }
             else
             {
@@ -1651,30 +1682,34 @@ IEnumerator EnemyMainPhase()
             }
         }
 
-        if(obj.GetComponent<
-            EnemyBattleCardTargetClick>() == null)
+        // =========================
+        // 敵カードのクリック処理
+        // =========================
+
+        if(obj.GetComponent<EnemyBattleCardTargetClick>() == null)
         {
-            obj.AddComponent<
-                EnemyBattleCardTargetClick>();
+            obj.AddComponent<EnemyBattleCardTargetClick>();
         }
+
+        // =========================
+        // カードサイズ・配置
+        // =========================
 
         RectTransform rt =
             obj.GetComponent<RectTransform>();
 
         if(rt != null)
         {
-            rt.localScale =
-                Vector3.one * 0.7f;
+            rt.localScale = Vector3.one * 0.7f;
 
-            rt.sizeDelta =
-                new Vector2(
-                    160f,
-                    230f
-                );
+            rt.sizeDelta = new Vector2(160f, 230f);
 
-            rt.anchoredPosition =
-                Vector2.zero;
+            rt.anchoredPosition = Vector2.zero;
         }
+
+        // =========================
+        // UI更新
+        // =========================
 
         handDealer.UpdateEnemyHandCountText();
 
@@ -1698,9 +1733,9 @@ IEnumerator EnemyMainPhase()
         yield return new WaitForSeconds(0.5f);
 
         /*
-         * A・9・Jokerなどの効果でゲーム状態や
-         * 手札・リソースが変わるため、次のwhileで
-         * 召喚候補を最初から作り直す。
+         * A・9・Jokerなどの効果で
+         * 手札・リソースが変化する可能性があるため、
+         * 次のループで候補を再取得する。
          */
     }
 
@@ -2263,6 +2298,16 @@ bool ShouldEnemyAttack(
     CardController attacker
 )
 {
+    // DEBUG：召喚したQは必ず攻撃する
+    if(debugForceEnemyQ &&
+    attacker != null &&
+    attacker.data != null &&
+    GetCardName(attacker.data).Contains("Q"))
+    {
+        Debug.Log("DEBUG：Qの攻撃を強制実行");
+        return true;
+    }
+
     if(attacker == null ||
        attacker.data == null)
     {
