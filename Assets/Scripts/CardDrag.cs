@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
 using System.Collections;
+using DG.Tweening;
 
 public class CardDrag :
     MonoBehaviour,
@@ -49,7 +50,50 @@ public class CardDrag :
     RectTransform rectTransform;
 
     Coroutine dropSnapCoroutine;
+CCP.Card proCard;
+CCP.CardGroup sourceProGroup;
+HandController sourceHand;
+bool proWasEnabled;
 
+public bool IsDragging => canDrag;
+
+void SuspendProCard()
+{
+    proCard = GetComponent<CCP.Card>();
+
+    if (proCard == null)
+        return;
+
+    sourceProGroup = proCard.parentCardGroup;
+    proWasEnabled = proCard.enabled;
+
+    proCard.Unhover();
+    proCard.enabled = false;
+
+    transform.DOKill();
+    proCard.isBeingMovedManually = true;
+}
+
+void ReleaseProHand()
+{
+    if (proCard == null)
+        return;
+
+    transform.DOKill();
+    proCard.isBeingMovedManually = false;
+
+    if (sourceProGroup != null &&
+        proCard.parentCardGroup == sourceProGroup)
+    {
+        sourceProGroup.RemoveCard(proCard);
+    }
+
+    // フィールドのCCP操作は、次の段階で接続する。
+    proCard.enabled = false;
+
+    if (sourceHand != null)
+        sourceHand.RefreshProLayout();
+}
     public bool IsDropSnapPlaying
     {
         get
@@ -75,8 +119,85 @@ public class CardDrag :
                 gameObject.AddComponent<CanvasGroup>();
         }
     }
+public void OnBeginDrag(PointerEventData eventData)
+{
+    canDrag = false;
 
-    public void OnBeginDrag(
+    if (eventData == null ||
+        IsInBattleArea() ||
+        IsDropSnapPlaying)
+    {
+        return;
+    }
+
+    sourceHand = GetComponentInParent<HandController>();
+
+    // 展開している手札だけ操作する。
+    if (sourceHand == null ||
+        sourceHand.IsIdle ||
+        sourceHand.IsOpeningLook)
+    {
+        return;
+    }
+
+    HandDealer dealer = FindFirstObjectByType<HandDealer>();
+
+    // 自分の手札だけ操作する。
+    if (dealer == null ||
+        dealer.handArea == null ||
+        transform.parent != dealer.handArea ||
+        dealer.IsHandLimitSelecting)
+    {
+        return;
+    }
+
+    ResourcePhaseManager rpm =
+        FindFirstObjectByType<ResourcePhaseManager>();
+
+TurnManager turnManager =
+    FindFirstObjectByType<TurnManager>();
+
+if (turnManager == null || !turnManager.CanDragPlayerHand)
+    return;
+
+    if (canvas == null)
+        canvas = GetComponentInParent<Canvas>();
+
+    if (rectTransform == null)
+        rectTransform = GetComponent<RectTransform>();
+
+    if (canvas == null || rectTransform == null)
+        return;
+
+    droppedSuccessfully = false;
+
+    originalParent = transform.parent;
+    originalPosition = transform.localPosition;
+    originalRotation = transform.localRotation;
+    originalScale = transform.localScale;
+    originalSizeDelta = rectTransform.sizeDelta;
+
+    sourceHand.ResetDoubleClick();
+    SuspendProCard();
+
+    canDrag = true;
+
+    transform.SetParent(canvas.transform, true);
+    transform.SetAsLastSibling();
+    transform.localRotation = Quaternion.identity;
+
+    ApplyDraggingSize();
+
+    canvasGroup.blocksRaycasts = false;
+
+// リソースへのドロップ表示はResource中だけ。
+if (rpm != null && rpm.IsRunning())
+{
+    rpm.ShowDropHighlight();
+    rpm.SetResourceDropRaycast(true);
+}
+}
+    /*public void OnBeginDrag(
         PointerEventData eventData
     )
     {
@@ -153,9 +274,8 @@ public class CardDrag :
             rpm.ShowDropHighlight();
             rpm.SetResourceDropRaycast(true);
         }
-    }
-
-    public void OnDrag(
+    }*/
+ /*   public void OnDrag(
         PointerEventData eventData
     )
     {
@@ -169,9 +289,96 @@ public class CardDrag :
             Quaternion.identity;
 
         ApplyDraggingSize();
+    }*/
+public void OnDrag(PointerEventData eventData)
+{
+    if (!canDrag ||
+        eventData == null ||
+        canvas == null ||
+        rectTransform == null)
+    {
+        return;
     }
 
-    public void OnEndDrag(
+    RectTransform parentRect =
+        rectTransform.parent as RectTransform;
+
+    if (parentRect == null)
+        return;
+
+    Camera uiCamera =
+        canvas.renderMode == RenderMode.ScreenSpaceOverlay
+            ? null
+            : canvas.worldCamera;
+
+    if (RectTransformUtility.ScreenPointToWorldPointInRectangle(
+        parentRect,
+        eventData.position,
+        uiCamera,
+        out Vector3 worldPosition))
+    {
+        rectTransform.position = worldPosition;
+    }
+
+    transform.localRotation = Quaternion.identity;
+    ApplyDraggingSize();
+}
+
+public void OnEndDrag(PointerEventData eventData)
+{
+    if (!canDrag)
+        return;
+
+    canDrag = false;
+
+    ResourcePhaseManager rpm =
+        FindFirstObjectByType<ResourcePhaseManager>();
+
+    if (rpm != null)
+    {
+        rpm.HideDropHighlight();
+        rpm.SetResourceDropRaycast(false);
+    }
+
+    if (droppedSuccessfully)
+        return;
+
+    canvasGroup.blocksRaycasts = true;
+
+    if (originalParent == null)
+    {
+        ReleaseProHand();
+        return;
+    }
+
+    // 現在の見た目の位置を保って手札の親へ戻す。
+    transform.SetParent(originalParent, true);
+    rectTransform.sizeDelta = originalSizeDelta;
+
+    if (proCard != null &&
+        sourceProGroup != null &&
+        proCard.parentCardGroup == sourceProGroup)
+    {
+        proCard.isBeingMovedManually = false;
+        proCard.enabled = proWasEnabled;
+
+        // CCPで元の手札配置へ滑らかに戻す。
+        if (sourceHand != null)
+            sourceHand.RefreshProLayout();
+        else
+            sourceProGroup.RecalculateAndAnimatePositions();
+    }
+    else
+    {
+        transform.localPosition = originalPosition;
+        transform.localRotation = originalRotation;
+        transform.localScale = originalScale;
+    }
+
+    if (sourceHand != null)
+        sourceHand.ResetDoubleClick();
+}
+ /*   public void OnEndDrag(
         PointerEventData eventData
     )
     {
@@ -214,7 +421,7 @@ public class CardDrag :
             rectTransform.sizeDelta =
                 originalSizeDelta;
         }
-    }
+    }*/
 
     void ApplyDraggingSize()
     {
@@ -235,10 +442,11 @@ public class CardDrag :
         );
     }
 
-    public void MarkDroppedSuccessfully()
-    {
-        droppedSuccessfully = true;
-    }
+public void MarkDroppedSuccessfully()
+{
+    droppedSuccessfully = true;
+    ReleaseProHand();
+}
 
     /*
      * 通常カードはスナップ演出を再生する。
@@ -260,6 +468,8 @@ public class CardDrag :
     {
         if (battleArea == null)
             return;
+
+            ReleaseProHand();
 
         CardController card =
             GetComponent<CardController>();

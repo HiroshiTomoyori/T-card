@@ -4589,6 +4589,7 @@ GameObject:
   m_Component:
   - component: {fileID: 564399309}
   - component: {fileID: 564399310}
+  - component: {fileID: 564399311}
   m_Layer: 0
   m_Name: EnemyBattleArea
   m_TagString: Untagged
@@ -4627,9 +4628,86 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6097c74c2a262da49a805060b8f7721c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  normalSpacing: 140
-  overlapSpacing: 80
-  overlapStartCount: 4
+  maxCards: 7
+  fieldWidth: 900
+  layoutCenter: {x: 0, y: 0}
+  cardSize: 1
+  layouts:
+  - cardWidth: 190
+    gap: 30
+  - cardWidth: 190
+    gap: 30
+  - cardWidth: 180
+    gap: 25
+  - cardWidth: 165
+    gap: 20
+  - cardWidth: 150
+    gap: 15
+  - cardWidth: 135
+    gap: 12
+  - cardWidth: 120
+    gap: 10
+  animationDuration: 0.25
+  animationEase: 9
+--- !u!114 &564399311
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 564399308}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f81ed0682b7184955a5274df64d7b213, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  cards: []
+  cardSpacing: 1
+  fanRadius: 0
+  yOffsetPerCard: 0
+  zOffsetPerCard: 0
+  cardScale: 1
+  anchorToFirstCard: 0
+  tweenEaseType: 6
+  tweenDuration: 0.3
+  hoverYOffset: 0.5
+  hoverZOffset: 0.2
+  makeRoomOnHover: 1
+  hoverSpacing: 0.5
+  hoverAnimation:
+    rid: 8697669831104135369
+  onClickAction: 0
+  onClickCustom:
+    m_PersistentCalls:
+      m_Calls: []
+  selectAnimation:
+    rid: 8697669831104135370
+  showSelectionMark: 0
+  allowPickup: 1
+  resetRotationOnPickup: 0
+  allowReorderingDuringDrag: 1
+  reorderYThreshold: 200
+  isTargettable: 1
+  isPlayerHand: 0
+  AttackingCardParent: {fileID: 0}
+  enableTilt: 1
+  tiltTowardsCursor: 1
+  autoTiltAmount: 5
+  manualTiltAmount: 15
+  tiltSpeed: 40
+  references:
+    version: 2
+    RefIds:
+    - rid: 8697669831104135369
+      type: {class: ScaleUpHoverAnimation, ns: CCP, asm: Assembly-CSharp-firstpass}
+      data:
+        scaleMultiplier: 1.15
+        duration: 0.2
+    - rid: 8697669831104135370
+      type: {class: LiftSelectAnimation, ns: CCP, asm: Assembly-CSharp-firstpass}
+      data:
+        liftAmount: 50
+        duration: 0.2
 --- !u!1 &565948114
 GameObject:
   m_ObjectHideFlags: 0
@@ -8097,6 +8175,7 @@ GameObject:
   - component: {fileID: 1045119678}
   - component: {fileID: 1045119680}
   - component: {fileID: 1045119681}
+  - component: {fileID: 1045119682}
   m_Layer: 0
   m_Name: PlayerBattleArea
   m_TagString: PlayerBattleArea
@@ -8187,9 +8266,86 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6097c74c2a262da49a805060b8f7721c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  normalSpacing: 140
-  overlapSpacing: 80
-  overlapStartCount: 4
+  maxCards: 7
+  fieldWidth: 850
+  layoutCenter: {x: 0, y: 0}
+  cardSize: 0.8
+  layouts:
+  - cardWidth: 190
+    gap: 30
+  - cardWidth: 190
+    gap: 30
+  - cardWidth: 180
+    gap: 25
+  - cardWidth: 165
+    gap: 20
+  - cardWidth: 150
+    gap: 15
+  - cardWidth: 135
+    gap: 12
+  - cardWidth: 120
+    gap: 10
+  animationDuration: 0.25
+  animationEase: 9
+--- !u!114 &1045119682
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1045119675}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f81ed0682b7184955a5274df64d7b213, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  cards: []
+  cardSpacing: 1
+  fanRadius: 0
+  yOffsetPerCard: 0
+  zOffsetPerCard: 0
+  cardScale: 1
+  anchorToFirstCard: 0
+  tweenEaseType: 6
+  tweenDuration: 0.3
+  hoverYOffset: 0.5
+  hoverZOffset: 0.2
+  makeRoomOnHover: 1
+  hoverSpacing: 0.5
+  hoverAnimation:
+    rid: 8697669831104135367
+  onClickAction: 0
+  onClickCustom:
+    m_PersistentCalls:
+      m_Calls: []
+  selectAnimation:
+    rid: 8697669831104135368
+  showSelectionMark: 0
+  allowPickup: 1
+  resetRotationOnPickup: 0
+  allowReorderingDuringDrag: 1
+  reorderYThreshold: 200
+  isTargettable: 1
+  isPlayerHand: 0
+  AttackingCardParent: {fileID: 0}
+  enableTilt: 1
+  tiltTowardsCursor: 1
+  autoTiltAmount: 5
+  manualTiltAmount: 15
+  tiltSpeed: 40
+  references:
+    version: 2
+    RefIds:
+    - rid: 8697669831104135367
+      type: {class: ScaleUpHoverAnimation, ns: CCP, asm: Assembly-CSharp-firstpass}
+      data:
+        scaleMultiplier: 1.15
+        duration: 0.2
+    - rid: 8697669831104135368
+      type: {class: LiftSelectAnimation, ns: CCP, asm: Assembly-CSharp-firstpass}
+      data:
+        liftAmount: 50
+        duration: 0.2
 --- !u!1 &1066137999
 GameObject:
   m_ObjectHideFlags: 0

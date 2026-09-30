@@ -39,6 +39,9 @@ public class BattleDropZone :
             return;
         }
 
+        if (!cardDrag.IsDragging)
+    return;
+
         CardController card =
             eventData.pointerDrag
                 .GetComponent<CardController>();
@@ -557,38 +560,35 @@ public class BattleDropZone :
             layout.Refresh();
     }
 
-    IEnumerator CompleteSummonAfterSnap(
-        CardDrag cardDrag
-    )
+IEnumerator CompleteSummonAfterSnap(CardDrag cardDrag)
+{
+    ResourcePhaseManager rpm =
+        FindFirstObjectByType<ResourcePhaseManager>();
+
+    // Mainでの召喚なら、フェイズを開始し直さない。
+    bool summonedDuringResource =
+        rpm != null && rpm.IsRunning();
+
+    while (cardDrag != null && cardDrag.IsDropSnapPlaying)
     {
-        while (
-            cardDrag != null &&
-            cardDrag.IsDropSnapPlaying
-        )
-        {
-            yield return null;
-        }
-
-        ResourcePhaseManager
-            resourcePhaseManager =
-                FindFirstObjectByType
-                    <ResourcePhaseManager>();
-
-        if (resourcePhaseManager != null)
-        {
-            resourcePhaseManager
-                .EndResourcePhase();
-        }
-
-        TurnManager turnManager =
-            FindFirstObjectByType<TurnManager>();
-
-        if (turnManager != null)
-        {
-            turnManager
-                .OnResourcePhaseComplete();
-        }
+        yield return null;
     }
+
+    if (!summonedDuringResource ||
+        rpm == null ||
+        !rpm.IsRunning())
+    {
+        yield break;
+    }
+
+    rpm.EndResourcePhase();
+
+    TurnManager turnManager =
+        FindFirstObjectByType<TurnManager>();
+
+    if (turnManager != null)
+        turnManager.OnResourcePhaseComplete();
+}
 
     bool IsSpecialSummonK(
         CardController card

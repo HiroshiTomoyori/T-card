@@ -15,6 +15,9 @@ public class ResourceDropZone : MonoBehaviour, IDropHandler
             return;
         }
 
+        if (!resourcePhaseManager.IsRunning())
+    return;
+
         if (eventData.pointerDrag == null)
         {
             Debug.LogError("pointerDrag が null");
@@ -29,7 +32,8 @@ public class ResourceDropZone : MonoBehaviour, IDropHandler
             Debug.LogError("CardDrag が見つからない");
             return;
         }
-
+if (!card.IsDragging)
+    return;
         resourcePhaseManager.TryChargeResource(card);
     }
 }

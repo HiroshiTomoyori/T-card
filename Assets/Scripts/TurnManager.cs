@@ -13,7 +13,25 @@ public class TurnManager : MonoBehaviour
     bool isBattlePhase = false;
 
     bool enemyExtraTurnRequested = false;
+private bool isPlayerMainPhase = false;
 
+public bool CanDragPlayerHand
+{
+    get
+    {
+        bool isResource =
+            resourcePhaseManager != null &&
+            resourcePhaseManager.IsRunning();
+
+        return isPlayerTurnActive &&
+               !isEndingTurn &&
+               !isBattlePhase &&
+               !HandDealer.IsRedrawSelecting &&
+               !IsSelectingTarget() &&
+               !IsSelectingDestroyTarget() &&
+               (isResource || isPlayerMainPhase);
+    }
+}
     public bool IsBattlePhase
     {
         get { return isBattlePhase; }
@@ -228,6 +246,7 @@ IEnumerator FirstTurnRoutine()
 
     void StartDrawPhase()
     {
+        isPlayerMainPhase = false;
         Debug.Log("Draw Phase");
 
         if(handDealer != null)
@@ -238,6 +257,7 @@ IEnumerator FirstTurnRoutine()
 
     void StartResourcePhase()
     {
+        isPlayerMainPhase = false;
         Debug.Log("Resource Phase");
 
         if(resourcePhaseManager != null)
@@ -248,6 +268,7 @@ IEnumerator FirstTurnRoutine()
 
     void StartMainPhase()
     {
+        isPlayerMainPhase = true;
         Debug.Log("Main Phase");
 
         if (mainPhaseManager != null)
