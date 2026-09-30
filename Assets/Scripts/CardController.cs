@@ -9,6 +9,8 @@ public class CardController : MonoBehaviour
 
     [Header("UI")]
     public Image artworkImage;
+
+    public RectTransform tapVisual;
     public TextMeshProUGUI costText;
     public TextMeshProUGUI attackText;
     public TextMeshProUGUI hpText;
@@ -207,7 +209,7 @@ public class CardController : MonoBehaviour
     // Tap Visual
     // ========================================
 
-    void UpdateTapVisual()
+ /*  void UpdateTapVisual()
     {
         RectTransform rect =
             GetComponent<RectTransform>();
@@ -226,9 +228,21 @@ public class CardController : MonoBehaviour
             rect.localRotation =
                 Quaternion.identity;
         }
+    }*/
+
+    void UpdateTapVisual()
+    {
+        RectTransform target = tapVisual != null
+            ? tapVisual
+            : GetComponent<RectTransform>();
+
+        if (target == null)
+            return;
+
+        target.localRotation = isTapped
+            ? Quaternion.Euler(0f, 0f, -90f)
+            : Quaternion.identity;
     }
-
-
     // ========================================
     // Summon Sickness
     // ========================================

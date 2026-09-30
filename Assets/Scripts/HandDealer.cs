@@ -22,6 +22,11 @@ public class HandDealer : MonoBehaviour
     [Header("Prefab")]
     public GameObject cardPrefab;
 
+    [Header("Card Controller Pro / Player Hand")]
+    public GameObject proHandCardPrefab;
+    public CCP.CardGroup proHandGroup;
+
+
     [Header("Card Data")]
     public List<CardData> cardList = new List<CardData>();
 
@@ -372,7 +377,8 @@ else
 
         return selectedCard;
     }
-    GameObject CreateHandCard(CardData selectedCard)
+
+/*    GameObject CreateHandCard(CardData selectedCard)
     {
         GameObject cardObj = Instantiate(cardPrefab, handArea);
         cardObj.name = "HandCard_" + selectedCard.cardName;
@@ -391,7 +397,61 @@ else
         }
 
         return cardObj;
-    }
+    }*/
+
+    GameObject CreateHandCard(CardData selectedCard)
+        {
+            bool usePro =
+                proHandCardPrefab != null &&
+                proHandGroup != null &&
+                proHandGroup.transform == handArea;
+
+            GameObject prefab = usePro
+                ? proHandCardPrefab
+                : cardPrefab;
+
+            GameObject cardObj = Instantiate(prefab, handArea);
+            cardObj.name = "HandCard_" + selectedCard.cardName;
+
+            SetupCardSize(cardObj, handCardSize);
+
+            CardController controller =
+                cardObj.GetComponent<CardController>();
+
+            if (controller != null)
+            {
+                controller.SetData(selectedCard);
+            }
+            else
+            {
+                Debug.LogError(
+                    "手札PrefabにCardControllerがありません",
+                    cardObj
+                );
+            }
+
+            if (usePro)
+            {
+                CCP.Card proCard = cardObj.GetComponent<CCP.Card>();
+
+                if (proCard != null)
+                {
+                    // 今回は表示だけ接続。入力は次の段階で有効化する。
+                    //proCard.enabled = false;
+                    proCard.enabled = true;
+                    proHandGroup.AddBack(proCard);
+                }
+                else
+                {
+                    Debug.LogError(
+                        "Pro用PrefabにCCP.Cardがありません",
+                        cardObj
+                    );
+                }
+            }
+
+            return cardObj;
+        }
 
     void SetupCardSize(GameObject cardObj, Vector2 size)
     {
@@ -417,6 +477,22 @@ IEnumerator AnimateCardToHand(RectTransform cardRect)
 {
     if (cardRect == null)
         yield break;
+
+        CCP.Card proCard = cardRect.GetComponent<CCP.Card>();
+
+    if (proCard != null &&
+        proHandGroup != null &&
+        proCard.parentCardGroup == proHandGroup)
+    {
+        // 配布元の位置から、Proが計算した配置へ移動する。
+        proHandGroup.RecalculateAndAnimatePositions();
+
+        yield return new WaitForSeconds(
+            Mathf.Max(0f, flyTime)
+        );
+
+        yield break;
+    }
 
     Vector2 start = cardRect.anchoredPosition;
     Vector2 end = Vector2.zero;
@@ -805,7 +881,7 @@ IEnumerator AnimateCardToHand(RectTransform cardRect)
 
             
         }
-    void ClearHand()
+  /*  void ClearHand()
     {
         if (handArea == null) return;
 
@@ -813,8 +889,35 @@ IEnumerator AnimateCardToHand(RectTransform cardRect)
         {
             Destroy(handArea.GetChild(i).gameObject);
         }
-    }
+    }*/
+    void ClearHand()
+    {
+        if (handArea == null)
+            return;
 
+        if (proHandGroup != null &&
+            proHandGroup.transform == handArea)
+        {
+            for (int i = proHandGroup.cards.Count - 1; i >= 0; i--)
+            {
+                CCP.Card card = proHandGroup.cards[i];
+
+                if (card != null)
+                    proHandGroup.RemoveCard(card);
+                else
+                    proHandGroup.cards.RemoveAt(i);
+            }
+        }
+
+        for (int i = handArea.childCount - 1; i >= 0; i--)
+        {
+            GameObject cardObj = handArea.GetChild(i).gameObject;
+
+            cardObj.SetActive(false);
+            cardObj.transform.SetParent(null, false);
+            Destroy(cardObj);
+        }
+    }
     void ClearWall()
     {
         if (wallArea == null) return;
@@ -1036,8 +1139,22 @@ if (redrawButton != null)
         foreach(GameObject oldCard
             in oldHandCards)
         {
-            if(oldCard != null)
+            /*if(oldCard != null)
             {
+                oldCard.SetActive(false);
+                Destroy(oldCard);
+            }*/
+
+            if (oldCard != null)
+            {
+                CCP.Card proCard = oldCard.GetComponent<CCP.Card>();
+
+                if (proCard != null &&
+                    proCard.parentCardGroup != null)
+                {
+                    proCard.parentCardGroup.RemoveCard(proCard);
+                }
+
                 oldCard.SetActive(false);
                 Destroy(oldCard);
             }
@@ -2130,8 +2247,70 @@ public void DamageEnemyWall(
         return normalEnemyDefeatSE;
     }
 
-        public void SortPlayerHand()
+    public void SortPlayerHand()
     {
+        if (proHandGroup != null &&
+    proHandGroup.transform == handArea &&
+    proHandCardPrefab != null)
+    {
+        // 手札から出たカード・削除済みカードを登録から外す。
+        for (int i = proHandGroup.cards.Count - 1; i >= 0; i--)
+        {
+            CCP.Card card = proHandGroup.cards[i];
+
+            if (card == null)
+            {
+                proHandGroup.cards.RemoveAt(i);
+            }
+            else if (card.transform.parent != handArea ||
+                    !card.gameObject.activeSelf)
+            {
+                proHandGroup.RemoveCard(card);
+            }
+        }
+
+        proHandGroup.cards.Sort((a, b) =>
+        {
+            CardController ca = a.GetComponent<CardController>();
+            CardController cb = b.GetComponent<CardController>();
+
+            CardData da = ca != null ? ca.data : null;
+            CardData db = cb != null ? cb.data : null;
+
+            if (da == null)
+                return db == null ? 0 : 1;
+
+            if (db == null)
+                return -1;
+
+            int rankCompare =
+                GetRankOrder(da.cardName ?? "").CompareTo(
+                    GetRankOrder(db.cardName ?? "")
+                );
+
+            if (rankCompare != 0)
+                return rankCompare;
+
+            // Suitの定義順：Spade → Heart → Club → Diamond
+            return da.suit.CompareTo(db.suit);
+        });
+
+        for (int i = 0; i < proHandGroup.cards.Count; i++)
+        {
+            proHandGroup.cards[i].transform.SetSiblingIndex(i);
+        }
+
+        if (handController != null)
+        {
+            handController.RefreshProLayout();
+        }
+        else
+        {
+            proHandGroup.RecalculateAndAnimatePositions();
+        }
+
+        return;
+    }
         List<Transform> cards = new List<Transform>();
 
         for(int i=0; i<handArea.childCount; i++)

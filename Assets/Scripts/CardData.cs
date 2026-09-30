@@ -61,6 +61,12 @@ public class CardData : ScriptableObject
         if(string.IsNullOrEmpty(value))
             value = name;
 
+        if (suit == Suit.Joker || value.Contains("Joker"))
+        {
+            power = 13;
+            return;
+        }
+
         if(value.Contains("A"))
         {
             power = 1;

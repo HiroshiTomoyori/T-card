@@ -162,8 +162,9 @@ GameObject:
   - component: {fileID: 6093454757237384202}
   - component: {fileID: 2834822994431069354}
   - component: {fileID: 3825648182280718501}
+  - component: {fileID: 6414741044360586348}
   m_Layer: 5
-  m_Name: Card
+  m_Name: TCardProCard
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -248,6 +249,28 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
+--- !u!114 &6414741044360586348
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 632414178086774423}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 92de01f75488c0c4c9486eb69ae4178f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  data: {fileID: 0}
+  artworkImage: {fileID: 6776581759766363393}
+  tapVisual: {fileID: 8511996468999583275}
+  costText: {fileID: 0}
+  attackText: {fileID: 0}
+  hpText: {fileID: 0}
+  attackGlow: {fileID: 0}
+  cardGlow: {fileID: 0}
+  isTapped: 0
+  hasSummonSickness: 0
 --- !u!1 &1140805190982313420
 GameObject:
   m_ObjectHideFlags: 0

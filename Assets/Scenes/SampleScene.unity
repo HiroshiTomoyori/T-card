@@ -11010,6 +11010,8 @@ MonoBehaviour:
   handCardSize: {x: 58, y: 89}
   wallCardSize: {x: 58, y: 89}
   cardPrefab: {fileID: 834065891895854406, guid: 3fd5776f6773a3b429041526fc91bfc3, type: 3}
+  proHandCardPrefab: {fileID: 632414178086774423, guid: 7d31c3cd09191ae46baa8636807318fa, type: 3}
+  proHandGroup: {fileID: 1560023924}
   cardList:
   - {fileID: 11400000, guid: 4652edb96181aac48aa3a016c5b3e9f1, type: 2}
   - {fileID: 11400000, guid: 2542e8c605483d04d83a473804ce01a7, type: 2}
@@ -11271,6 +11273,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1560023922}
   - component: {fileID: 1560023923}
+  - component: {fileID: 1560023924}
   m_Layer: 0
   m_Name: HandArea
   m_TagString: Untagged
@@ -11324,6 +11327,65 @@ MonoBehaviour:
   openingMaxSpacing: 80
   openingLayoutCenter: {x: 0, y: 240}
   doubleClickTime: 0.6
+--- !u!114 &1560023924
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1560023921}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f81ed0682b7184955a5274df64d7b213, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  cards: []
+  cardSpacing: 1
+  fanRadius: 0
+  yOffsetPerCard: 0
+  zOffsetPerCard: 0
+  cardScale: 1
+  anchorToFirstCard: 0
+  tweenEaseType: 6
+  tweenDuration: 0.3
+  hoverYOffset: 0.5
+  hoverZOffset: 0.2
+  makeRoomOnHover: 1
+  hoverSpacing: 0.5
+  hoverAnimation:
+    rid: 8697669831104135358
+  onClickAction: 0
+  onClickCustom:
+    m_PersistentCalls:
+      m_Calls: []
+  selectAnimation:
+    rid: 8697669831104135359
+  showSelectionMark: 0
+  allowPickup: 0
+  resetRotationOnPickup: 0
+  allowReorderingDuringDrag: 0
+  reorderYThreshold: 200
+  isTargettable: 0
+  isPlayerHand: 1
+  AttackingCardParent: {fileID: 0}
+  enableTilt: 1
+  tiltTowardsCursor: 1
+  autoTiltAmount: 5
+  manualTiltAmount: 15
+  tiltSpeed: 40
+  references:
+    version: 2
+    RefIds:
+    - rid: 8697669831104135358
+      type: {class: ScaleUpHoverAnimation, ns: CCP, asm: Assembly-CSharp-firstpass}
+      data:
+        scaleMultiplier: 1.15
+        duration: 0.2
+    - rid: 8697669831104135359
+      type: {class: LiftSelectAnimation, ns: CCP, asm: Assembly-CSharp-firstpass}
+      data:
+        liftAmount: 50
+        duration: 0.2
 --- !u!1 &1569006930
 GameObject:
   m_ObjectHideFlags: 0

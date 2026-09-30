@@ -2,6 +2,44 @@ using UnityEngine;
 
 public class HandController : MonoBehaviour
 {
+[Header("Card Controller Pro")]
+public CCP.CardGroup proHandGroup;
+
+private int lastProCardCount = -1;
+
+public void RefreshProLayout()
+{
+    if (proHandGroup == null)
+        return;
+
+    lastProCardCount = proHandGroup.cards.Count;
+
+    if (isIdle)
+    {
+        proHandGroup.SetTCardLayout(
+            idleMaxWidth,
+            idleMaxSpacing,
+            idleScale,
+            0f,
+            0f,
+            isOpeningLook
+                ? openingLayoutCenter
+                : Vector2.zero
+        );
+    }
+    else
+    {
+        proHandGroup.SetTCardLayout(
+            expandMaxWidth,
+            expandMaxSpacing,
+            expandScale,
+            expandArcHeight,
+            expandAngleStep,
+            Vector2.zero
+        );
+    }
+}
+
     [Header("待機位置")]
     public Vector3 idlePosition = Vector3.zero;
 
@@ -70,7 +108,17 @@ public class HandController : MonoBehaviour
 
     void LateUpdate()
     {
-        if(isIdle)
+        if (proHandGroup != null)
+        {
+            if (lastProCardCount != proHandGroup.cards.Count)
+            {
+                RefreshProLayout();
+            }
+
+            return;
+        }
+
+        if (isIdle)
         {
             ApplyIdleLayout();
         }
@@ -106,6 +154,7 @@ public class HandController : MonoBehaviour
         }
 
         ResetDoubleClick();
+        RefreshProLayout();
     }
 
     /// <summary>
@@ -115,6 +164,11 @@ public class HandController : MonoBehaviour
     /// </summary>
     public void RegisterHandCardClick()
     {
+        if (isOpeningLook)
+        {
+            ResetDoubleClick();
+            return;
+        }
         float now =
             Time.unscaledTime;
 
@@ -198,6 +252,7 @@ public class HandController : MonoBehaviour
         transform.SetAsLastSibling();
 
         ResetDoubleClick();
+        RefreshProLayout();
 
         Debug.Log(
             "初期手札表示ON / Scale：" +
@@ -244,6 +299,7 @@ public class HandController : MonoBehaviour
             idlePosition;
 
         ResetDoubleClick();
+        RefreshProLayout();
 
         Debug.Log("初期手札表示OFF");
     }

@@ -9,6 +9,33 @@ namespace CCP
 {
 
 public class CardGroup : MonoBehaviour {
+
+
+    // T-CARDの手札レイアウト
+private bool useTCardLayout;
+private float tCardMaxWidth;
+private float tCardArcHeight;
+private float tCardAngleStep;
+private Vector2 tCardLayoutCenter;
+
+public void SetTCardLayout(
+    float maxWidth,
+    float maxSpacing,
+    float scale,
+    float arcHeight,
+    float angleStep,
+    Vector2 layoutCenter)
+{
+    useTCardLayout = true;
+    tCardMaxWidth = Mathf.Max(0f, maxWidth);
+    cardSpacing = Mathf.Max(0f, maxSpacing);
+    cardScale = Mathf.Max(0.01f, scale);
+    tCardArcHeight = arcHeight;
+    tCardAngleStep = angleStep;
+    tCardLayoutCenter = layoutCenter;
+
+    RecalculateAndAnimatePositions();
+}
     // Runtime state
     [HideInInspector] public List<Card> cards = new List<Card>();
     private int hoveredCardIndex = -1;
@@ -110,6 +137,7 @@ public class CardGroup : MonoBehaviour {
     }
 
     private void RecalculateCardOrder() {
+        RemoveInvalidCards();
         if (cards == null || cards.Count <= 1) return;
 
         // Create a sorted list based on Z position (higher Z = render on top)
@@ -307,6 +335,7 @@ public class CardGroup : MonoBehaviour {
     }
 
     public void RecalculateAndAnimatePositions(Card skipAnimating = null) {
+        RemoveInvalidCards();
         int n = cards.Count;
         if (n == 0) return;
 
@@ -344,7 +373,26 @@ public class CardGroup : MonoBehaviour {
                 // For UI cards, rotate around Z axis (perpendicular to canvas)
                 localRot = Quaternion.Euler(0, 0, -angle * Mathf.Rad2Deg);
             }
+            if (useTCardLayout)
+            {
+                float center = (n - 1) * 0.5f;
+                float offset = i - center;
 
+                float spacing = n > 1
+                    ? Mathf.Min(cardSpacing, tCardMaxWidth / (n - 1))
+                    : 0f;
+
+                localPos = new Vector3(
+                    tCardLayoutCenter.x + offset * spacing,
+                    tCardLayoutCenter.y
+                        - Mathf.Abs(offset) * tCardArcHeight,
+                    0f
+                );
+
+                localRot = Quaternion.Euler(
+                    0f, 0f, -offset * tCardAngleStep
+                );
+            }
             // Apply hover adjustments (skip if this is the dragged card)
             Vector3 clickTargetHoverOffset = Vector3.zero;
             if (i == hoveredCardIndex && cards[i] != skipAnimating) {
@@ -368,7 +416,8 @@ public class CardGroup : MonoBehaviour {
             }
 
             // Convert to world space
-            Vector3 worldPos = transform.position + transform.TransformDirection(localPos);
+            //Vector3 worldPos = transform.position + transform.TransformDirection(localPos);
+            Vector3 worldPos = transform.TransformPoint(localPos);
             Quaternion worldRot = transform.rotation * localRot;
 
             // Skip animating the dragged card - it's being manually positioned
@@ -395,6 +444,33 @@ public class CardGroup : MonoBehaviour {
         // Recalculate positions, but skip animating the dragged card
         RecalculateAndAnimatePositions(card);
     }
+
+    private void RemoveInvalidCards()
+{
+    if (cards == null)
+        cards = new List<Card>();
+
+    // 削除前に、ホバー中のカードを保存する。
+    Card hoveredCard =
+        hoveredCardIndex >= 0 &&
+        hoveredCardIndex < cards.Count
+            ? cards[hoveredCardIndex]
+            : null;
+
+    cards.RemoveAll(card =>
+        card == null || card.parentCardGroup != this
+    );
+
+    selectedCards.RemoveAll(card =>
+        card == null || !cards.Contains(card)
+    );
+
+    hoveredCardIndex = hoveredCard != null
+        ? cards.IndexOf(hoveredCard)
+        : -1;
 }
+}
+
+
 
 }
