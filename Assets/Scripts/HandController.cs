@@ -1,4 +1,7 @@
 using UnityEngine;
+using System.Collections.Generic;
+using DG.Tweening;
+using UnityEngine.Events;
 
 public class HandController : MonoBehaviour
 {
@@ -85,7 +88,51 @@ public void RefreshProLayout()
     float normalIdleMaxSpacing;
 
     bool hasSavedNormalIdle = false;
+[Header("手札選択中の操作制限")]
+public HandDealer handDealer;
 
+private CCP.CardGroup clickBoundGroup;
+
+void BindProHandClicks()
+{
+    if (proHandGroup == null)
+        return;
+
+    clickBoundGroup = proHandGroup;
+    clickBoundGroup.onClickAction = CCP.OnClickAction.Custom;
+
+    if (clickBoundGroup.onClickCustom == null)
+    {
+        clickBoundGroup.onClickCustom =
+            new UnityEvent<CCP.Card>();
+    }
+
+    clickBoundGroup.onClickCustom.AddListener(
+        OnProHandCardClicked
+    );
+}
+
+void OnProHandCardClicked(CCP.Card card)
+{
+    if (card == null ||
+        card.parentCardGroup != proHandGroup)
+    {
+        return;
+    }
+
+    RegisterHandCardClick();
+}
+
+void OnDestroy()
+{
+    if (clickBoundGroup != null &&
+        clickBoundGroup.onClickCustom != null)
+    {
+        clickBoundGroup.onClickCustom.RemoveListener(
+            OnProHandCardClicked
+        );
+    }
+}
     public bool IsIdle
     {
         get { return isIdle; }
@@ -101,10 +148,14 @@ public void RefreshProLayout()
         SaveNormalIdleSettings();
     }
 
-    void Start()
-    {
-        ChangeState(true);
-    }
+void Start()
+{
+    if (handDealer == null)
+        handDealer = FindFirstObjectByType<HandDealer>();
+
+    BindProHandClicks();
+    ChangeState(true);
+}
 
     void LateUpdate()
     {
@@ -133,58 +184,94 @@ public void RefreshProLayout()
         ChangeState(!isIdle);
     }
 
-    public void ChangeState(bool toIdle)
+public void ChangeState(bool toIdle)
+{
+    List<CCP.Card> animatedCards = new List<CCP.Card>();
+    List<Vector3> currentPositions = new List<Vector3>();
+    List<Quaternion> currentRotations =
+        new List<Quaternion>();
+
+    if (proHandGroup != null)
     {
-        isIdle = toIdle;
-
-        transform.localEulerAngles =
-            Vector3.zero;
-
-        if(isIdle)
+        foreach (CCP.Card card in proHandGroup.cards)
         {
-            transform.localPosition =
-                idlePosition;
-        }
-        else
-        {
-            transform.SetAsLastSibling();
+            if (card == null ||
+                card.transform.parent != proHandGroup.transform)
+            {
+                continue;
+            }
 
-            transform.localPosition =
-                expandPosition;
-        }
+            card.transform.DOKill();
 
-        ResetDoubleClick();
-        RefreshProLayout();
+            animatedCards.Add(card);
+            currentPositions.Add(card.transform.position);
+            currentRotations.Add(card.transform.rotation);
+        }
     }
+
+    isIdle = toIdle;
+
+    transform.localEulerAngles = Vector3.zero;
+
+    if (!isIdle)
+        transform.SetAsLastSibling();
+
+    transform.localPosition = isIdle
+        ? idlePosition
+        : expandPosition;
+
+    // 親の位置変更によるカードの瞬間移動を打ち消す。
+    for (int i = 0; i < animatedCards.Count; i++)
+    {
+        if (animatedCards[i] == null)
+            continue;
+
+        animatedCards[i].transform.SetPositionAndRotation(
+            currentPositions[i],
+            currentRotations[i]
+        );
+    }
+
+    ResetDoubleClick();
+
+    // 新しい配置へ位置・角度・サイズをアニメーション。
+    RefreshProLayout();
+}
 
     /// <summary>
     /// 手札内のカードがクリックされたときに呼ぶ。
     /// カードが違っても、同じ手札内なら
     /// ダブルクリックとして扱う。
     /// </summary>
-    public void RegisterHandCardClick()
+public void RegisterHandCardClick()
+{
+    // 初期手札確認・手札上限選択中は切り替えない。
+    if (isOpeningLook ||
+        (handDealer != null &&
+         handDealer.IsHandLimitSelecting))
     {
-        if (isOpeningLook)
-        {
-            ResetDoubleClick();
-            return;
-        }
-        float now =
-            Time.unscaledTime;
-
-        if(lastHandClickTime >= 0f &&
-           now - lastHandClickTime <=
-           doubleClickTime)
-        {
-            lastHandClickTime = -1f;
-
-            Toggle();
-
-            return;
-        }
-
-        lastHandClickTime = now;
+        ResetDoubleClick();
+        return;
     }
+
+    // ドラッグ中のクリックは数えない。
+    if (CCP.Card.movingCard != null)
+    {
+        ResetDoubleClick();
+        return;
+    }
+
+    float now = Time.unscaledTime;
+
+    if (lastHandClickTime >= 0f &&
+        now - lastHandClickTime <= doubleClickTime)
+    {
+        Toggle();
+        return;
+    }
+
+    lastHandClickTime = now;
+}
 
     public void ResetDoubleClick()
     {

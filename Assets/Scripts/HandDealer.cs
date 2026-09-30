@@ -10,6 +10,9 @@ public class HandDealer : MonoBehaviour
     public Transform handArea;
     public RectTransform deckPosition;
 
+    [Header("配布始点の調整")]
+    public Vector2 dealStartOffset = Vector2.zero;
+
     [Header("Wall Cards")]
     public Transform wallArea;
     public Sprite cardBackSprite;
@@ -473,7 +476,7 @@ else
         layout.minWidth = size.x;
         layout.minHeight = size.y;
     }
-IEnumerator AnimateCardToHand(RectTransform cardRect)
+/*IEnumerator AnimateCardToHand(RectTransform cardRect)
 {
     if (cardRect == null)
         yield break;
@@ -509,6 +512,102 @@ IEnumerator AnimateCardToHand(RectTransform cardRect)
 
         cardRect.anchoredPosition =
             Vector2.Lerp(start, end, rate);
+
+        yield return null;
+    }
+
+    if (cardRect != null)
+        cardRect.anchoredPosition = end;
+}*/
+
+IEnumerator AnimateCardToHand(RectTransform cardRect)
+{
+    if (cardRect == null)
+        yield break;
+
+    CCP.Card proCard = cardRect.GetComponent<CCP.Card>();
+
+    if (proCard != null &&
+        proHandGroup != null &&
+        proCard.parentCardGroup == proHandGroup)
+    {
+        // 手札の最終配置を計算する。
+        if (handController != null &&
+            handController.proHandGroup == proHandGroup)
+        {
+            handController.RefreshProLayout();
+        }
+        else
+        {
+            proHandGroup.RecalculateAndAnimatePositions();
+        }
+
+        Vector3 targetPosition = proCard.destinationPosition;
+        Quaternion targetRotation = proCard.destinationRotation;
+        float targetScale = proHandGroup.GetCardScale();
+
+        // 出発時の角度・サイズ。
+        cardRect.localRotation = Quaternion.identity;
+        cardRect.localScale =
+            Vector3.one * targetScale * 0.75f;
+
+        if (deckPosition != null)
+        {
+            // 山札画像の中心。
+            Vector2 startCenter =
+                deckPosition.rect.center + dealStartOffset;
+
+            Vector3 deckCenter = deckPosition.TransformPoint(
+                new Vector3(startCenter.x, startCenter.y, 0f)
+            );
+
+            RectTransform frontRect = proCard.front != null
+                ? proCard.front.GetComponent<RectTransform>()
+                : null;
+
+            // カード表面画像の中心。
+            Vector3 cardCenter = frontRect != null
+                ? frontRect.TransformPoint(frontRect.rect.center)
+                : cardRect.TransformPoint(cardRect.rect.center);
+
+            // 画像同士の中心を合わせる。
+            cardRect.position += deckCenter - cardCenter;
+        }
+
+        float duration = Mathf.Max(0.01f, flyTime);
+
+        // CCPで位置・角度・サイズをアニメーション。
+        proCard.MoveToPosition(
+            targetPosition,
+            targetRotation,
+            DG.Tweening.Ease.OutCubic,
+            duration,
+            targetScale
+        );
+
+        yield return new WaitForSeconds(duration);
+        yield break;
+    }
+
+    // 旧Prefabを使う場合の配布処理。
+    Vector2 start = cardRect.anchoredPosition;
+    Vector2 end = Vector2.zero;
+
+    float elapsed = 0f;
+    float legacyDuration = Mathf.Max(0.01f, flyTime);
+
+    while (elapsed < legacyDuration)
+    {
+        if (cardRect == null)
+            yield break;
+
+        elapsed += Time.deltaTime;
+
+        cardRect.anchoredPosition = Vector2.Lerp(
+            start,
+            end,
+            Mathf.Clamp01(elapsed / legacyDuration)
+        );
 
         yield return null;
     }
