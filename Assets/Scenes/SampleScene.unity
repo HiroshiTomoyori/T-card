@@ -4628,25 +4628,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6097c74c2a262da49a805060b8f7721c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxCards: 7
-  fieldWidth: 900
+  maxCards: 6
+  fieldWidth: 850
   layoutCenter: {x: 0, y: 0}
-  cardSize: 1
+  cardSize: 0.57
   layouts:
   - cardWidth: 190
-    gap: 30
+    gap: 0
   - cardWidth: 190
-    gap: 30
-  - cardWidth: 180
-    gap: 25
-  - cardWidth: 165
-    gap: 20
+    gap: 0
+  - cardWidth: 190
+    gap: -30
+  - cardWidth: 170
+    gap: -50
   - cardWidth: 150
-    gap: 15
+    gap: -50
   - cardWidth: 135
-    gap: 12
-  - cardWidth: 120
-    gap: 10
+    gap: -50
   animationDuration: 0.25
   animationEase: 9
 --- !u!114 &564399311
