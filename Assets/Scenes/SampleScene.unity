@@ -8269,20 +8269,20 @@ MonoBehaviour:
   maxCards: 7
   fieldWidth: 850
   layoutCenter: {x: 0, y: 0}
-  cardSize: 0.8
+  cardSize: 0.57
   layouts:
   - cardWidth: 190
     gap: 30
   - cardWidth: 190
-    gap: 30
-  - cardWidth: 180
-    gap: 25
-  - cardWidth: 165
-    gap: 20
+    gap: 0
+  - cardWidth: 190
+    gap: -30
+  - cardWidth: 170
+    gap: -50
   - cardWidth: 150
-    gap: 15
+    gap: -50
   - cardWidth: 135
-    gap: 12
+    gap: -50
   - cardWidth: 120
     gap: 10
   animationDuration: 0.25
