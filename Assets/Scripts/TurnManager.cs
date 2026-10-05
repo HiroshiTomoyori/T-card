@@ -23,7 +23,7 @@ public bool CanDragPlayerHand
             resourcePhaseManager != null &&
             resourcePhaseManager.IsRunning();
 
-        return isPlayerTurnActive &&
+        return (handDealer == null || !handDealer.IsWallPlacementRunning) && isPlayerTurnActive &&
                !isEndingTurn &&
                !isBattlePhase &&
                !HandDealer.IsRedrawSelecting &&
@@ -283,6 +283,7 @@ IEnumerator FirstTurnRoutine()
 
 public void StartBattleByAttackSelect(GameObject attacker)
 {
+    if (handDealer != null && handDealer.IsWallPlacementRunning) return;
     if(attacker == null)
         return;
 
@@ -934,7 +935,7 @@ public void HideAttackArrow()
     public void EndPlayerTurn()
     {    
         // マッチ開始前・敵ターン中・二重クリックからの呼び出しを拒否する。
-        if(!isPlayerTurnActive || isEndingTurn)
+        if(!isPlayerTurnActive || isEndingTurn || (handDealer != null && handDealer.IsWallPlacementRunning))
         {
             Debug.Log("自分のターンではないためターン終了不可");
             return;
@@ -1739,6 +1740,7 @@ IEnumerator EnemyMainPhase()
             enemyBattleLayout.Refresh();
         }
 
+        yield return new WaitUntil(() => handDealer == null || !handDealer.IsWallPlacementRunning);
         summonCount++;
 
         Debug.Log(
@@ -3649,7 +3651,7 @@ public bool IsSelectingDestroyTarget()
         if(endTurnButton == null)
             return;
 
-        bool shouldShow = isPlayerTurnActive && !isEndingTurn;
+        bool shouldShow = isPlayerTurnActive && !isEndingTurn && (handDealer == null || !handDealer.IsWallPlacementRunning);
         GameObject target = endTurnButtonRoot != null
             ? endTurnButtonRoot
             : endTurnButton.gameObject;
@@ -3730,6 +3732,8 @@ void ClearArea(Transform area)
 {
     if(area == null)
         return;
+    WallAreaLayout wallLayout = area.GetComponent<WallAreaLayout>();
+    if (wallLayout != null) { wallLayout.ClearWalls(false); return; }
 
     for(
         int i=area.childCount-1;

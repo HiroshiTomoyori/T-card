@@ -342,6 +342,7 @@ else
 
         CreateWallCards();
         CreateEnemyWallCards();
+        yield return new WaitUntil(() => !IsWallPlacementRunning);
 
         if(showButtonsAfterDeal)
         {
@@ -634,352 +635,110 @@ IEnumerator AnimateCardToHand(RectTransform cardRect)
         return localPoint;
     }
 
+    public bool IsWallPlacementRunning =>
+        (wallArea != null && wallArea.GetComponent<WallAreaLayout>() != null &&
+         wallArea.GetComponent<WallAreaLayout>().IsAnimating) ||
+        (enemyWallArea != null && enemyWallArea.GetComponent<WallAreaLayout>() != null &&
+         enemyWallArea.GetComponent<WallAreaLayout>().IsAnimating);
+
+    WallAreaLayout GetWallLayout(Transform area)
+    {
+        if (area == null) return null;
+        WallAreaLayout layout = area.GetComponent<WallAreaLayout>();
+        return layout != null ? layout : area.gameObject.AddComponent<WallAreaLayout>();
+    }
+
     void CreateWallCards()
     {
-        playerWallAliveCount = wallCount;
-        if(wallArea == null) return;
-        if(cardPrefab == null) return;
-
-        if(cardBackSprite == null)
+        playerWallAliveCount = 0;
+        WallAreaLayout layout = GetWallLayout(wallArea);
+        if (layout == null || cardPrefab == null || cardBackSprite == null) return;
+        layout.ClearWalls();
+        for (int i = 0; i < wallCount && layout.HasSpace; i++)
         {
-            Debug.LogWarning("CardBackSprite が未設定です");
-            return;
-        }
-
-        ClearWall();
-
-        for(int i = 0; i < wallCount; i++)
-        {
-            CardData selectedCard = DrawRandomCardData();
-
-            if(selectedCard == null)
-                break;
-
-            GameObject wallCard =
-                Instantiate(cardPrefab, wallArea);
-
-            wallCard.name =
-                "PlayerWallCard_" + selectedCard.cardName;
-
-            SetupCardSize(wallCard, wallCardSize);
-
-            DisableWallInput(wallCard);
-
-            CardController card =
-                wallCard.GetComponent<CardController>();
-
-            if(card != null)
-            {
-                card.SetData(selectedCard);
-
-                if(card.artworkImage != null)
-                    card.artworkImage.sprite = cardBackSprite;
-
-                if(card.costText != null)
-                    card.costText.gameObject.SetActive(false);
-
-                if(card.attackText != null)
-                    card.attackText.gameObject.SetActive(false);
-
-                if(card.hpText != null)
-                    card.hpText.gameObject.SetActive(false);
-
-                // これが重要
-                card.enabled = false;
-            }
-            else
-            {
-                Image img = wallCard.GetComponent<Image>();
-
-                if(img != null)
-                    img.sprite = cardBackSprite;
-            }
-
-            GameObject slashObj = new GameObject("SlashEffect");
-            slashObj.transform.SetParent(wallCard.transform, false);
-
-            RectTransform slashRt = slashObj.AddComponent<RectTransform>();
-            slashRt.anchorMin = Vector2.zero;
-            slashRt.anchorMax = Vector2.one;
-            slashRt.offsetMin = new Vector2(-120, -120);
-            slashRt.offsetMax = new Vector2(120, 120);
-
-            Image slashImg = slashObj.AddComponent<Image>();
-            slashImg.raycastTarget = false;
-
-            if(slashSprite != null)
-            {
-                slashImg.sprite = slashSprite;
-                slashImg.preserveAspect = true;
-            }
-
-            slashImg.color = Color.white;
-            slashObj.transform.rotation = Quaternion.Euler(0, 0, -35f);
-
-            CanvasGroup slashCG = slashObj.AddComponent<CanvasGroup>();
-            slashCG.alpha = 0f;
-
-            slashObj.transform.SetAsLastSibling();
-
-            LayoutElement layout =
-                wallCard.GetComponent<LayoutElement>();
-
-            if(layout != null)
-                layout.ignoreLayout = false;
+            CardData data = DrawRandomCardData();
+            if (data == null) break;
+            if (CreateWallCard(data, false, false)) playerWallAliveCount++;
+            else currentDeck.Add(data);
         }
     }
 
-    void CreateSinglePlayerWallCard(CardData selectedCard)
-    {
-        if(selectedCard == null) return;
-        if(wallArea == null) return;
-        if(cardPrefab == null) return;
-
-        GameObject wallCard =
-            Instantiate(cardPrefab, wallArea);
-
-        wallCard.name =
-            "RecoveredWall_" + selectedCard.cardName;
-
-        SetupCardSize(wallCard, wallCardSize);
-
-        CardController card =
-            wallCard.GetComponent<CardController>();
-
-        if(card != null)
-        {
-            card.SetData(selectedCard);
-
-            if(card.artworkImage != null)
-                card.artworkImage.sprite = cardBackSprite;
-
-            if(card.costText != null)
-                card.costText.gameObject.SetActive(false);
-
-            if(card.attackText != null)
-                card.attackText.gameObject.SetActive(false);
-
-            if(card.hpText != null)
-                card.hpText.gameObject.SetActive(false);
-
-            card.enabled = false;
-        }
-
-        GameObject slashObj = new GameObject("SlashEffect");
-        slashObj.transform.SetParent(wallCard.transform, false);
-
-        RectTransform slashRt = slashObj.AddComponent<RectTransform>();
-        slashRt.anchorMin = Vector2.zero;
-        slashRt.anchorMax = Vector2.one;
-        slashRt.offsetMin = new Vector2(-120, -120);
-        slashRt.offsetMax = new Vector2(120, 120);
-
-        Image slashImg = slashObj.AddComponent<Image>();
-        slashImg.raycastTarget = false;
-
-        if(slashSprite != null)
-        {
-            slashImg.sprite = slashSprite;
-            slashImg.preserveAspect = true;
-        }
-
-        slashImg.color = Color.white;
-        slashObj.transform.rotation = Quaternion.Euler(0, 0, -35f);
-
-        CanvasGroup slashCG = slashObj.AddComponent<CanvasGroup>();
-        slashCG.alpha = 0f;
-
-        slashObj.transform.SetAsLastSibling();
-
-        LayoutElement layout =
-            wallCard.GetComponent<LayoutElement>();
-
-        if(layout != null)
-            layout.ignoreLayout = false;
-    }
     void CreateEnemyWallCards()
     {
-        enemyWallAliveCount = enemyWallCount;
-        if (enemyWallArea == null) return;
-        if (cardPrefab == null) return;
-        if (cardBackSprite == null) return;
-
-        // 既存削除
-        for (int i = enemyWallArea.childCount - 1; i >= 0; i--)
+        enemyWallAliveCount = 0;
+        WallAreaLayout layout = GetWallLayout(enemyWallArea);
+        if (layout == null || cardPrefab == null || cardBackSprite == null) return;
+        layout.ClearWalls();
+        for (int i = 0; i < enemyWallCount && layout.HasSpace; i++)
         {
-            Destroy(enemyWallArea.GetChild(i).gameObject);
+            CardData data = DrawEnemyRandomCardData();
+            if (data == null) break;
+            if (CreateWallCard(data, true, false)) enemyWallAliveCount++;
+            else enemyDeck.Add(data);
         }
-
-        for (int i = 0; i < enemyWallCount; i++)
-        {
-            CardData selectedCard =
-                DrawEnemyRandomCardData();
-
-            if (selectedCard == null)
-                break;
-
-            GameObject wallCard =
-                Instantiate(
-                    cardPrefab,
-                    enemyWallArea
-                );
-
-            wallCard.name =
-                "EnemyWallCard_" +
-                selectedCard.cardName;
-
-            SetupCardSize(
-                wallCard,
-                wallCardSize
-            );
-
-            DisableWallInput(wallCard);
-            CanvasGroup wallCg =
-            wallCard.GetComponent<CanvasGroup>();
-
-            if(wallCg == null)
-                wallCg = wallCard.AddComponent<CanvasGroup>();
-
-            wallCg.blocksRaycasts = false;
-            wallCg.interactable = false;
-            //====================
-            // SlashEffect追加
-            //====================
-
-            GameObject slashObj =
-                new GameObject("SlashEffect");
-
-            slashObj.transform.SetParent(
-                wallCard.transform,
-                false
-            );
-
-            RectTransform slashRt =
-                slashObj.AddComponent<RectTransform>();
-
-            slashRt.anchorMin = Vector2.zero;
-            slashRt.anchorMax = Vector2.one;
-
-            slashRt.offsetMin =
-                new Vector2(-120,-120);
-
-            slashRt.offsetMax =
-                new Vector2(120,120);
-
-            Image slashImg =
-                slashObj.AddComponent<Image>();
-
-            slashImg.raycastTarget = false;
-
-            if(slashSprite != null)
-            {
-                slashImg.sprite = slashSprite;
-                slashImg.preserveAspect = true;
-            }
-            else
-            {
-                Debug.LogWarning("slashSprite が未設定です");
-            }
-
-            slashImg.color =
-                new Color(
-                    1f,
-                    1f,
-                    1f,
-                    1f
-                );
-
-            slashObj.transform.rotation =
-                Quaternion.Euler(
-                    0,
-                    0,
-                    -35f
-                );
-
-            CanvasGroup slashCG =
-                slashObj.AddComponent<CanvasGroup>();
-
-            slashCG.alpha = 0f;
-            slashObj.transform.SetAsLastSibling();
-            // ウォールクリック追加
-            if (wallCard.GetComponent<EnemyWallClick>() == null)
-            {
-                wallCard.AddComponent<EnemyWallClick>();
-            }
-    // ターゲットグロー追加
-    GameObject glowObj =
-        new GameObject("TargetGlow");
-
-    glowObj.transform.SetParent(
-        wallCard.transform,
-        false
-    );
-
-    RectTransform glowRt =
-        glowObj.AddComponent<RectTransform>();
-
-    glowRt.anchorMin = Vector2.zero;
-    glowRt.anchorMax = Vector2.one;
-
-    glowRt.offsetMin = new Vector2(-16f,-16f);
-    glowRt.offsetMax = new Vector2(16f,16f);
-
-    Image glowImg =
-        glowObj.AddComponent<Image>();
-
-    if(targetGlowSprite != null)
-    {
-        glowImg.sprite = targetGlowSprite;
-        glowImg.type = Image.Type.Sliced;
     }
 
-    glowImg.color =
-        new Color(
-            0.65f,
-            1f,
-            0.35f,
-            1f
-        );
-
-    glowImg.raycastTarget = false;
-
-    glowObj.SetActive(false);
-
-    glowObj.transform.SetAsLastSibling();
-                CardController card =
-                    wallCard.GetComponent<CardController>();
-
-                if (card != null)
-                {
-                    // 内部データ保持
-                    card.SetData(selectedCard);
-
-                    // 見た目だけ裏面化
-                    if (card.artworkImage != null)
-                        card.artworkImage.sprite = cardBackSprite;
-
-                    // 全情報を隠す
-                    if (card.costText != null)
-                        card.costText.gameObject.SetActive(false);
-
-                    if (card.attackText != null)
-                        card.attackText.gameObject.SetActive(false);
-
-                    if (card.hpText != null)
-                        card.hpText.gameObject.SetActive(false);
-
-                    card.enabled = false;
-                }
-
-                LayoutElement layout =
-                    wallCard.GetComponent<LayoutElement>();
-
-                if (layout != null)
-                    layout.ignoreLayout = false;
-            }
-
-            
+    bool CreateWallCard(CardData data, bool enemy, bool fromKing)
+    {
+        Transform area = enemy ? enemyWallArea : wallArea;
+        WallAreaLayout layout = GetWallLayout(area);
+        if (data == null || layout == null || !layout.HasSpace ||
+            cardPrefab == null || cardBackSprite == null) return false;
+        GameObject wall = Instantiate(cardPrefab, area);
+        wall.name = (enemy ? "EnemyWallCard_" : "PlayerWallCard_") + data.cardName;
+        SetupCardSize(wall, wallCardSize);
+        DisableWallInput(wall);
+        CardController controller = wall.GetComponent<CardController>();
+        if (controller == null)
+        {
+            Destroy(wall);
+            Debug.LogError("Wall prefab requires CardController");
+            return false;
         }
+        controller.SetData(data);
+        if (controller.artworkImage != null) controller.artworkImage.sprite = cardBackSprite;
+        if (controller.costText != null) controller.costText.gameObject.SetActive(false);
+        if (controller.attackText != null) controller.attackText.gameObject.SetActive(false);
+        if (controller.hpText != null) controller.hpText.gameObject.SetActive(false);
+        controller.enabled = false;
+
+        GameObject slash = new GameObject("SlashEffect", typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
+        slash.layer = wall.layer;
+        slash.transform.SetParent(wall.transform, false);
+        RectTransform slashRect = slash.GetComponent<RectTransform>();
+        slashRect.anchorMin = Vector2.zero;
+        slashRect.anchorMax = Vector2.one;
+        slashRect.offsetMin = new Vector2(-120f, -120f);
+        slashRect.offsetMax = new Vector2(120f, 120f);
+        slashRect.localRotation = Quaternion.Euler(0f, 0f, -35f);
+        Image slashImage = slash.GetComponent<Image>();
+        slashImage.sprite = slashSprite;
+        slashImage.preserveAspect = true;
+        slashImage.raycastTarget = false;
+        slash.GetComponent<CanvasGroup>().alpha = 0f;
+        if (enemy)
+        {
+            if (wall.GetComponent<EnemyWallClick>() == null) wall.AddComponent<EnemyWallClick>();
+            GameObject glow = new GameObject("TargetGlow", typeof(RectTransform), typeof(Image));
+            glow.layer = wall.layer;
+            glow.transform.SetParent(wall.transform, false);
+            RectTransform rt = glow.GetComponent<RectTransform>();
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = new Vector2(-16f, -16f);
+            rt.offsetMax = new Vector2(16f, 16f);
+            Image image = glow.GetComponent<Image>();
+            image.sprite = targetGlowSprite;
+            image.type = Image.Type.Sliced;
+            image.color = new Color(0.65f, 1f, 0.35f, 1f);
+            image.raycastTarget = false;
+            glow.SetActive(false);
+        }
+        if (layout.AddWall(wall, fromKing, wallCardSize)) return true;
+        wall.SetActive(false);
+        Destroy(wall);
+        return false;
+    }
   /*  void ClearHand()
     {
         if (handArea == null) return;
@@ -1019,12 +778,7 @@ IEnumerator AnimateCardToHand(RectTransform cardRect)
     }
     void ClearWall()
     {
-        if (wallArea == null) return;
-
-        for (int i = wallArea.childCount - 1; i >= 0; i--)
-        {
-            Destroy(wallArea.GetChild(i).gameObject);
-        }
+        GetWallLayout(wallArea)?.ClearWalls();
     }
 
     void ForceHandLayout()
@@ -3155,34 +2909,21 @@ bool shieldTrigger =
     // 10：敵手札ランダム墓地
     public void RecoverWallFromDeck()
     {
-        if(currentDeck == null ||
-        currentDeck.Count <= 0)
-        {
-            Debug.Log("山札なし");
-            return;
-        }
-
-        if(playerWallAliveCount >= 9)
-        {
-            Debug.Log("Wall最大");
-            return;
-        }
-
-        CardData card =
-            currentDeck[0];
-
-        currentDeck.RemoveAt(0);
-
-        CreateSinglePlayerWallCard(card);
-
-        playerWallAliveCount++;
-
-        Debug.Log(
-            "効果発動：Wall回復 → " +
-            card.cardName
-        );
+        RecoverWallFromDeck(false, false);
     }
 
+    bool RecoverWallFromDeck(bool enemy, bool fromKing)
+    {
+        List<CardData> deck = enemy ? enemyDeck : currentDeck;
+        WallAreaLayout layout = GetWallLayout(enemy ? enemyWallArea : wallArea);
+        if (deck == null || deck.Count == 0 || layout == null || !layout.HasSpace) return false;
+        CardData data = deck[0];
+        if (!CreateWallCard(data, enemy, fromKing)) return false;
+        deck.RemoveAt(0);
+        if (enemy) enemyWallAliveCount++;
+        else playerWallAliveCount++;
+        return true;
+    }
     public void DiscardRandomEnemyHand()
     {
         if(enemyHandCards == null ||
@@ -3216,25 +2957,16 @@ bool shieldTrigger =
     }
     public void RecoverWallByKing()
     {
-        if(playerWallAliveCount < 5)
-        {
-            int recoverAmount = 5 - playerWallAliveCount;
+        RecoverWallByKing(false);
+    }
 
-            for(int i = 0; i < recoverAmount; i++)
-            {
-                RecoverWallFromDeck();
-            }
-
-            return;
-        }
-
-        if(playerWallAliveCount < 9)
-        {
-            RecoverWallFromDeck();
-            return;
-        }
-
-        Debug.Log("Wall最大(9)");
+    public void RecoverWallByKing(bool enemy)
+    {
+        // Preserve the current recovery rule; only placement/ownership changes here.
+        int alive = enemy ? enemyWallAliveCount : playerWallAliveCount;
+        int amount = alive < 5 ? 5 - alive : alive < 9 ? 1 : 0;
+        for (int i = 0; i < amount; i++)
+            if (!RecoverWallFromDeck(enemy, true)) break;
     }
     public IEnumerator DamagePlayerWallAndWait(GameObject wall)
     {

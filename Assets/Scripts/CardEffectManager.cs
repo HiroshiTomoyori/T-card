@@ -145,7 +145,7 @@ public class CardEffectManager :
                             "Wall回復 最大9枚対応"
                         );
 
-                        handDealer.RecoverWallByKing();
+                        handDealer.RecoverWallByKing(isEnemy);
                     }
                     else
                     {
