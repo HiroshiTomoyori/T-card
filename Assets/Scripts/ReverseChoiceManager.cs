@@ -12,6 +12,15 @@ public class ReverseChoiceManager : MonoBehaviour
     public Button useButton;
     public Button handButton;
 
+    [Header("Monarch Shield Order")]
+    public GameObject orderPanel;
+    public Button firstOrderButton;
+    public Button secondOrderButton;
+    public Image firstOrderPreview;
+    public Image secondOrderPreview;
+    public TMPro.TMP_Text choiceTitle;
+    int orderSelection = -1;
+
     bool isChoosing = false;
     bool result = false;
 
@@ -26,6 +35,7 @@ public class ReverseChoiceManager : MonoBehaviour
 
         if(choicePanel != null)
             choicePanel.SetActive(false);
+        if (orderPanel != null) orderPanel.SetActive(false);
     }
 
 public IEnumerator ShowChoiceRoutine(
@@ -36,12 +46,18 @@ public IEnumerator ShowChoiceRoutine(
     if(isChoosing)
         yield break;
 
+    if (choicePanel == null || useButton == null || handButton == null)
+        throw new InvalidOperationException("Shield choice UI is not configured" );
     isChoosing = true;
     result = false;
     callback = onSelected;
 
     if(choicePanel != null)
+    {
+        choicePanel.transform.SetAsLastSibling();
         choicePanel.SetActive(true);
+    }
+    if (choiceTitle != null) choiceTitle.text = "Use shield: " + data.cardName + "?";
 
     // =====================
     // カード表面表示
@@ -109,6 +125,36 @@ public IEnumerator ShowChoiceRoutine(
         choicePanel.SetActive(false);
 }
 
+    public IEnumerator ShowOrderRoutine(CardData first, CardData second, Action<int> selected)
+    {
+        while (isChoosing) yield return null;
+        if (orderPanel == null || firstOrderButton == null || secondOrderButton == null ||
+            firstOrderPreview == null || secondOrderPreview == null)
+            throw new InvalidOperationException("Shield order UI is not configured");
+        firstOrderPreview.sprite = first.artwork;
+        secondOrderPreview.sprite = second.artwork;
+        firstOrderPreview.preserveAspect = secondOrderPreview.preserveAspect = true;
+        orderSelection = -1;
+        isChoosing = true;
+        firstOrderButton.onClick.RemoveAllListeners();
+        secondOrderButton.onClick.RemoveAllListeners();
+        firstOrderButton.onClick.AddListener(() => orderSelection = 0);
+        secondOrderButton.onClick.AddListener(() => orderSelection = 1);
+        orderPanel.transform.SetAsLastSibling();
+        orderPanel.SetActive(true);
+        try
+        {
+            while (orderSelection < 0) yield return null;
+            selected(orderSelection);
+        }
+        finally
+        {
+            isChoosing = false;
+            orderPanel.SetActive(false);
+            firstOrderButton.onClick.RemoveAllListeners();
+            secondOrderButton.onClick.RemoveAllListeners();
+        }
+    }
     void OnUseSelected()
     {
         result = true;

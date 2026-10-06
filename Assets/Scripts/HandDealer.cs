@@ -342,7 +342,7 @@ else
 
         CreateWallCards();
         CreateEnemyWallCards();
-        yield return new WaitUntil(() => !IsWallPlacementRunning);
+        yield return new WaitUntil(() => !IsWallPlacementRunning && !IsHandLimitSelecting);
 
         if(showButtonsAfterDeal)
         {
@@ -2566,41 +2566,108 @@ public IEnumerator EnemyChargeSpecificResourceAnimation(
         );
     }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+public bool PrepareMonarchDebugWalls(List<CardData> cards)
+{
+    if (wallArea == null || cards == null || cards.Count == 0) return false;
+    var existing = new List<CardController>();
+    foreach (Transform child in wallArea)
+    {
+        var controller = child.GetComponent<CardController>();
+        var cg = child.GetComponent<CanvasGroup>();
+        if (controller == null || !child.gameObject.activeSelf ||
+            (cg != null && cg.alpha <= 0.01f)) continue;
+        existing.Add(controller);
+    }
+    if (existing.Count < cards.Count)
+    {
+        Debug.LogWarning("モナークテストに必要なウォールが不足しています。ウォールの再配布は行いません");
+        return false;
+    }
+    // Preserve the existing objects, slots and transforms; only change test data.
+    for (int i = 0; i < cards.Count; i++)
+    {
+        existing[i].SetData(cards[i]);
+        if (existing[i].artworkImage != null) existing[i].artworkImage.sprite = cardBackSprite;
+    }
+    // Keep the selected test's wall count without compacting the remaining slots.
+    for (int i = cards.Count; i < existing.Count; i++)
+    {
+        var cg = existing[i].GetComponent<CanvasGroup>() ?? existing[i].gameObject.AddComponent<CanvasGroup>();
+        cg.alpha = 0f;
+        cg.blocksRaycasts = false;
+        cg.interactable = false;
+    }
+    playerWallAliveCount = cards.Count;
+    return true;
+}
+#endif
+public bool IsResolvingWallAttack { get; private set; }
+
 IEnumerator DamagePlayerWallRoutine(GameObject wall)
 {
-    if(wall == null)
-        yield break;
+    yield return DamagePlayerWallsAndWait(new[] { wall });
+}
 
-    CanvasGroup wallCg =
-        wall.GetComponent<CanvasGroup>();
-
-    if(wallCg != null && wallCg.alpha <= 0.01f)
-        yield break;
-
-    CardController wallCard =
-        wall.GetComponent<CardController>();
-
-    if(wallCard == null)
-        wallCard =
-            wall.GetComponentInChildren<CardController>();
-
-    if(wallCard == null ||
-       wallCard.data == null)
+public IEnumerator DamagePlayerWallsAndWait(IEnumerable<GameObject> requested)
+{
+    if (IsResolvingWallAttack) yield break;
+    var walls = new List<GameObject>();
+    var cards = new List<CardData>();
+    foreach (var wall in requested)
     {
-        Debug.Log("破壊できるWallカードなし");
-        yield break;
+        if (wall == null || walls.Contains(wall) || wall.transform.parent != wallArea) continue;
+        var cg = wall.GetComponent<CanvasGroup>();
+        var card = wall.GetComponentInChildren<CardController>();
+        if ((cg != null && cg.alpha <= 0.01f) || card == null || card.data == null) continue;
+        walls.Add(wall);
+        cards.Add(card.data);
+        if (walls.Count == 2) break;
     }
+    if (walls.Count == 0) yield break;
+    IsResolvingWallAttack = true;
+    try
+    {
+        // Start all slash animations in the same frame, then commit both breaks
+        // before any shield choice/effect can recover a wall or destroy the attacker.
+        var animations = new List<Coroutine>();
+        foreach (var wall in walls) animations.Add(StartCoroutine(PlayWallSlash(wall)));
+        foreach (var animation in animations) yield return animation;
+        foreach (var wall in walls)
+        {
+            var cg = wall.GetComponent<CanvasGroup>() ?? wall.AddComponent<CanvasGroup>();
+            cg.alpha = 0f;
+            cg.blocksRaycasts = false;
+            cg.interactable = false;
+        }
+        playerWallAliveCount = Mathf.Max(0, playerWallAliveCount - walls.Count);
+        var shields = cards.FindAll(IsShieldCard);
+        if (shields.Count == 2 && ReverseChoiceManager.I != null)
+        {
+            int first = 0;
+            yield return ReverseChoiceManager.I.ShowOrderRoutine(shields[0], shields[1], value => first = value);
+            if (first == 1) { var swap = shields[0]; shields[0] = shields[1]; shields[1] = swap; }
+        }
+        foreach (var data in cards)
+            if (!IsShieldCard(data)) yield return ResolveBrokenPlayerWall(data);
+        foreach (var data in shields)
+        {
+            yield return ResolveBrokenPlayerWall(data);
+            yield return new WaitUntil(() => !IsWallPlacementRunning && !IsHandLimitSelecting);
+        }
+        Debug.Log("ウォール攻撃完了：同時破壊 " + walls.Count + "枚 / 残り " + playerWallAliveCount);
+    }
+    finally { IsResolvingWallAttack = false; }
+}
 
-    CardData data =
-        wallCard.data;
+bool IsShieldCard(CardData data)
+{
+    return debugAllWallsAreShieldTrigger || (data != null && data.effectTypes != null &&
+        System.Array.Exists(data.effectTypes, effect => effect == EffectType.ShieldTrigger));
+}
 
-    Debug.Log(
-        "プレイヤーWall破壊 → " +
-        data.cardName
-    );
-
-    yield return PlayWallSlash(wall);
-
+IEnumerator ResolveBrokenPlayerWall(CardData data)
+{
 bool shieldTrigger =
     debugAllWallsAreShieldTrigger ||
     (
@@ -2857,20 +2924,6 @@ bool shieldTrigger =
         SortPlayerHand();
     }
 
-    if(wallCg == null)
-        wallCg =
-            wall.AddComponent<CanvasGroup>();
-
-    wallCg.alpha = 0f;
-    wallCg.blocksRaycasts = false;
-    wallCg.interactable = false;
-
-    playerWallAliveCount--;
-
-    Debug.Log(
-        "プレイヤーWall残り：" +
-        playerWallAliveCount
-    );
 }
 
     public void ChargeTopDeckToResource()

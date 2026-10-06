@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
 
-public class TurnManager : MonoBehaviour
+public partial class TurnManager : MonoBehaviour
 {
     int turnCount = 1;
 
@@ -23,7 +23,7 @@ public bool CanDragPlayerHand
             resourcePhaseManager != null &&
             resourcePhaseManager.IsRunning();
 
-        return (handDealer == null || !handDealer.IsWallPlacementRunning) && isPlayerTurnActive &&
+        return (handDealer == null || (!handDealer.IsWallPlacementRunning && !handDealer.IsResolvingWallAttack)) && isPlayerTurnActive &&
                !isEndingTurn &&
                !isBattlePhase &&
                !HandDealer.IsRedrawSelecting &&
@@ -198,6 +198,7 @@ public bool CanDragPlayerHand
         StartCoroutine(FirstTurnRoutine());
     }
 
+    bool resolvingEnemyBlock = false;
     bool waitingBlockSelect = false;
     bool enemyAttackBlocked = false;
     CardController pendingEnemyAttacker;
@@ -283,7 +284,7 @@ IEnumerator FirstTurnRoutine()
 
 public void StartBattleByAttackSelect(GameObject attacker)
 {
-    if (handDealer != null && handDealer.IsWallPlacementRunning) return;
+    if (handDealer != null && (handDealer.IsWallPlacementRunning || handDealer.IsResolvingWallAttack)) return;
     if(attacker == null)
         return;
 
@@ -424,7 +425,7 @@ public void SelectAttackTarget(GameObject target)
     if(currentAttacker == null)
         return;
 
-    if(target == null)
+    if(target == null || pendingWallTargets.Contains(target))
         return;
 
     CardController attackerCard =
@@ -488,9 +489,7 @@ public void SelectAttackTarget(GameObject target)
     );
 
     // まだ2枚目選択が必要
-    if(wallBreakCount < maxWallBreakCount &&
-    handDealer != null &&
-    !handDealer.IsEnemyWallZero())
+    if(wallBreakCount < Mathf.Min(maxWallBreakCount, GetAliveEnemyWallCount()))
     {
         Debug.Log("2枚目のWallを選択してください");
 
@@ -652,6 +651,7 @@ int GetAliveEnemyWallCount()
 
     for(int i = 0; i < handDealer.enemyWallArea.childCount; i++)
     {
+        if (handDealer.enemyWallArea.GetChild(i).GetComponentInChildren<CardController>() == null) continue;
         CanvasGroup cg =
             handDealer.enemyWallArea.GetChild(i)
             .GetComponent<CanvasGroup>();
@@ -908,7 +908,7 @@ public void ShowAttackArrowTo(GameObject target)
     if(currentAttacker == null)
         return;
 
-    if(target == null)
+    if(target == null || pendingWallTargets.Contains(target))
         return;
 
     if(attackArrowManager == null)
@@ -935,7 +935,7 @@ public void HideAttackArrow()
     public void EndPlayerTurn()
     {    
         // マッチ開始前・敵ターン中・二重クリックからの呼び出しを拒否する。
-        if(!isPlayerTurnActive || isEndingTurn || (handDealer != null && handDealer.IsWallPlacementRunning))
+        if(!isPlayerTurnActive || isEndingTurn || (handDealer != null && (handDealer.IsWallPlacementRunning || handDealer.IsResolvingWallAttack)))
         {
             Debug.Log("自分のターンではないためターン終了不可");
             return;
@@ -2074,6 +2074,13 @@ IEnumerator EnemyBattlePhase()
             enemyBattleArea
         );
 
+    CardController debugAttacker = PrepareMonarchDebugAttack();
+    if (debugAttacker != null)
+    {
+        attackers = new List<CardController> { debugAttacker };
+        yield return new WaitUntil(() => !handDealer.IsWallPlacementRunning);
+    }
+
     int playerWallCount =
         GetAlivePlayerWallCount();
 
@@ -2130,7 +2137,7 @@ IEnumerator EnemyBattlePhase()
             continue;
         }
 
-        if(!ShouldEnemyAttack(attacker))
+        if(attacker != debugAttacker && !ShouldEnemyAttack(attacker))
         {
             Debug.Log(
                 "CPU判断：攻撃見送り：" +
@@ -2151,7 +2158,7 @@ IEnumerator EnemyBattlePhase()
                 playerWallArea.GetChild(w)
                 .GetComponent<RectTransform>();
 
-            if(wall == null)
+            if(wall == null || wall.GetComponentInChildren<CardController>() == null)
                 continue;
 
             CanvasGroup cg =
@@ -2236,7 +2243,7 @@ IEnumerator EnemyBattlePhase()
 
         enemyAttackBlocked = false;
 
-        if(HasUntappedPlayerBlocker())
+        if(attacker != debugAttacker && HasUntappedPlayerBlocker())
         {
             waitingBlockSelect = true;
 
@@ -2250,7 +2257,7 @@ IEnumerator EnemyBattlePhase()
                 "ブロックするカードを選んでください"
             );
 
-            while(waitingBlockSelect)
+            while(waitingBlockSelect || resolvingEnemyBlock)
             {
                 yield return null;
             }
@@ -2288,17 +2295,19 @@ IEnumerator EnemyBattlePhase()
             HideAttackArrow();
         }
 
-        if(handDealer != null &&
-           pendingEnemyTargetWall != null)
+        if (handDealer != null && pendingEnemyTargetWall != null)
         {
-            yield return StartCoroutine(
-                handDealer
-                .DamagePlayerWallAndWait(
-                    pendingEnemyTargetWall
-                )
-            );
+            var wallTargets = new List<GameObject> { pendingEnemyTargetWall };
+            if (IsMonarchCard(attacker.data))
+                foreach (var candidate in targets)
+                    if (candidate != null && candidate.gameObject != pendingEnemyTargetWall)
+                    { wallTargets.Add(candidate.gameObject); break; }
+            attacker.Tap();
+            bool previousShieldDebug = handDealer.debugAllWallsAreShieldTrigger;
+            if (attacker == debugAttacker) handDealer.debugAllWallsAreShieldTrigger = false;
+            try { yield return handDealer.DamagePlayerWallsAndWait(wallTargets); }
+            finally { handDealer.debugAllWallsAreShieldTrigger = previousShieldDebug; }
         }
-
         // Shield Triggerなどで攻撃カードが
         // 墓地へ送られた可能性を考慮
         if(attacker != null &&
@@ -2402,6 +2411,7 @@ int GetAlivePlayerWallCount()
 
     for(int i = 0; i < playerWallArea.childCount; i++)
     {
+        if (playerWallArea.GetChild(i).GetComponentInChildren<CardController>() == null) continue;
         CanvasGroup cg =
             playerWallArea.GetChild(i)
             .GetComponent<CanvasGroup>();
@@ -2659,12 +2669,15 @@ void ShowEnemyAttackArrow(GameObject attacker, GameObject target)
 
         HideAllCardIcons();
 
+        resolvingEnemyBlock = true;
         StartCoroutine(
             BlockRoutine(blocker)
         );
     }
     IEnumerator BlockRoutine(GameObject blocker)
     {
+        try
+        {
         HideAttackArrow();
 
         if(blocker != null)
@@ -2700,6 +2713,8 @@ void ShowEnemyAttackArrow(GameObject attacker, GameObject target)
 
         pendingEnemyAttacker = null;
         pendingEnemyTargetWall = null;
+            }
+        finally { resolvingEnemyBlock = false; }
     }
     public bool IsWaitingBlockSelect()
     {
