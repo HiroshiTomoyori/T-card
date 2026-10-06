@@ -21,14 +21,16 @@ public class CardDrag :
 
     [Header("召喚スナップ演出")]
     [Tooltip("場に出る直前の拡大倍率")]
-    public float dropZoomMultiplier = 1.35f;
+    public float dropZoomMultiplier = 1.8f;
 
     [Tooltip("拡大状態を見せる時間")]
-    public float dropZoomDuration = 0.16f;
+    public float dropZoomDuration = 0.18f;
 
     [Header("召喚スナップSE")]
     [Tooltip("スナップ拡大開始時に鳴らすSE")]
     public AudioClip dropSnapSE;
+    [Min(0f)] public float dropZoomHoldDuration = 0.55f;
+    public AudioClip dropLandingSE;
 
     [Range(0f, 1f)]
     public float dropSnapSEVolume = 1f;
@@ -41,6 +43,7 @@ public class CardDrag :
     Quaternion originalRotation;
     Vector3 originalScale;
     Vector2 originalSizeDelta;
+    Vector3 draggingScale;
 
     bool droppedSuccessfully = false;
     bool canDrag = false;
@@ -50,6 +53,8 @@ public class CardDrag :
     RectTransform rectTransform;
 
     Coroutine dropSnapCoroutine;
+    bool battlePlacementStarted;
+    bool battlePlacementFinished;
 CCP.Card proCard;
 CCP.CardGroup sourceProGroup;
 HandController sourceHand;
@@ -182,6 +187,13 @@ if (turnManager == null || !turnManager.CanDragPlayerHand)
 
     canDrag = true;
 
+    // Keep the expanded hand size when changing to the Canvas parent.
+    Vector3 handScale = originalParent.lossyScale;
+    Vector3 canvasScale = canvas.transform.lossyScale;
+    draggingScale = new Vector3(
+        sourceHand.expandScale * handScale.x / canvasScale.x,
+        sourceHand.expandScale * handScale.y / canvasScale.y,
+        sourceHand.expandScale * handScale.z / canvasScale.z);
     transform.SetParent(canvas.transform, true);
     transform.SetAsLastSibling();
     transform.localRotation = Quaternion.identity;
@@ -425,21 +437,9 @@ public void OnEndDrag(PointerEventData eventData)
 
     void ApplyDraggingSize()
     {
-        if (rectTransform == null)
-            return;
-
-        transform.localScale =
-            Vector3.one;
-
-        rectTransform.SetSizeWithCurrentAnchors(
-            RectTransform.Axis.Horizontal,
-            dragWidth
-        );
-
-        rectTransform.SetSizeWithCurrentAnchors(
-            RectTransform.Axis.Vertical,
-            dragHeight
-        );
+        if (rectTransform == null) return;
+        transform.localScale = draggingScale;
+        rectTransform.sizeDelta = originalSizeDelta;
     }
 
 public void MarkDroppedSuccessfully()
@@ -512,13 +512,12 @@ public void MarkDroppedSuccessfully()
             dropSnapCoroutine = null;
         }
 
-        transform.SetParent(
-            battleArea,
-            false
-        );
+        BattleCardClick battleClick = GetComponent<BattleCardClick>();
+        if (battleClick == null) battleClick = gameObject.AddComponent<BattleCardClick>();
+        battleClick.enabled = true;
 
-        transform.localPosition =
-            Vector3.zero;
+        transform.SetParent(battleArea, true);
+        if (!playSnap) transform.localPosition = Vector3.zero;
 
         transform.localRotation =
             Quaternion.identity;
@@ -534,6 +533,9 @@ public void MarkDroppedSuccessfully()
 
         if (playSnap)
         {
+            battlePlacementStarted = false;
+            battlePlacementFinished = false;
+            if (proCard != null) proCard.isBeingMovedManually = true;
             dropSnapCoroutine =
                 StartCoroutine(
                     DropSnapRoutine()
@@ -577,61 +579,51 @@ public void MarkDroppedSuccessfully()
         dropSnapCoroutine = null;
     }
 
+    public void PlayBattlePlacement(Vector3 target, Quaternion rotation, float targetScale, float duration)
+    {
+        if (!IsDropSnapPlaying || battlePlacementStarted) return;
+        battlePlacementStarted = true;
+        proCard = GetComponent<CCP.Card>();
+        if (proCard == null) proCard = gameObject.AddComponent<CCP.Card>();
+        proCard.enabled = false;
+        proCard.destinationPosition = target;
+        proCard.destinationRotation = rotation;
+        CCP.IPlaceAnimation animation = new BattleCardPlaceAnimation
+        {
+            targetScale = targetScale,
+            zoomMultiplier = dropZoomMultiplier,
+            zoomDuration = dropZoomDuration,
+            holdDuration = dropZoomHoldDuration,
+            onLanding = () => PlaySummonSE(dropLandingSE),
+            settleDuration = Mathf.Max(0.3f, duration)
+        };
+        animation.Place(proCard, target, () => battlePlacementFinished = true);
+    }
+
     IEnumerator DropSnapRoutine()
     {
         PlayDropSnapSE();
-
-        /*
-         * 最初にカードを大きく表示する。
-         */
-        transform.localScale =
-            Vector3.one *
-            battleScale *
-            dropZoomMultiplier;
-
-        float elapsed = 0f;
-
-        while (
-            elapsed < dropZoomDuration
-        )
+        yield return null; // Allow the coroutine handle and battle layout to be ready.
+        BattleAreaLayout layout = GetComponentInParent<BattleAreaLayout>();
+        if (layout != null) layout.Refresh();
+        else PlayBattlePlacement(transform.position, transform.rotation, battleScale, 0.25f);
+        while (!battlePlacementFinished)
         {
-            /*
-             * 拡大演出中は召喚酔いが付いても
-             * 透明にしない。
-             */
             canvasGroup.alpha = 1f;
-
-            elapsed +=
-                Time.unscaledDeltaTime;
-
             yield return null;
         }
-
-        transform.localScale =
-            Vector3.one * battleScale;
-
-        /*
-         * スナップ完了後は
-         * 本来の召喚酔い表示へ戻す。
-         */
-        CardController card =
-            GetComponent<CardController>();
-
-        canvasGroup.alpha =
-            card != null &&
-            card.hasSummonSickness
-                ? 0.6f
-                : 1f;
-
+        if (proCard != null) proCard.isBeingMovedManually = false;
+        CardController card = GetComponent<CardController>();
+        canvasGroup.alpha = card != null && card.hasSummonSickness ? 0.6f : 1f;
         canvasGroup.blocksRaycasts = true;
         canvasGroup.interactable = true;
-
         dropSnapCoroutine = null;
     }
+    void PlayDropSnapSE() { PlaySummonSE(dropSnapSE); }
 
-    void PlayDropSnapSE()
+    void PlaySummonSE(AudioClip clip)
     {
-        if (dropSnapSE == null)
+        if (clip == null)
             return;
 
         if (dropSnapAudioSource == null)
@@ -654,7 +646,7 @@ public void MarkDroppedSuccessfully()
         }
 
         dropSnapAudioSource.PlayOneShot(
-            dropSnapSE,
+            clip,
             dropSnapSEVolume
         );
     }
@@ -737,6 +729,8 @@ public void MarkDroppedSuccessfully()
     {
         if (dropSnapCoroutine != null)
         {
+            transform.DOKill();
+            if (proCard != null) proCard.isBeingMovedManually = false;
             StopCoroutine(
                 dropSnapCoroutine
             );
@@ -759,5 +753,42 @@ public void MarkDroppedSuccessfully()
             rpm.HideDropHighlight();
             rpm.SetResourceDropRaycast(false);
         }
+    }
+}
+[System.Serializable]
+public class BattleCardPlaceAnimation : CCP.IPlaceAnimation
+{
+    public float targetScale = 1f;
+    public float zoomMultiplier = 1.35f;
+    public float zoomDuration = 0.16f;
+    public float settleDuration = 0.3f;
+    public float holdDuration = 0.55f;
+    public System.Action onLanding;
+
+    public void Place(CCP.Card card, Vector3 target, System.Action onComplete)
+    {
+        if (card == null) { onComplete?.Invoke(); return; }
+        card.transform.DOKill();
+
+        Vector3 enlargedScale = card.transform.localScale * Mathf.Max(1f, zoomMultiplier);
+        bool completed = false;
+        System.Action finish = () =>
+        {
+            if (completed) return;
+            completed = true;
+
+            onComplete?.Invoke();
+        };
+        Sequence sequence = DOTween.Sequence().SetTarget(card.transform)
+            .SetUpdate(CCP.CardControllerSettings.Instance.useUnscaledTime);
+        sequence.Append(card.transform.DOScale(enlargedScale, Mathf.Max(0.01f, zoomDuration)).SetEase(Ease.OutBack));
+        sequence.AppendInterval(Mathf.Max(0f, holdDuration));
+        sequence.Append(card.transform.DOMove(target, Mathf.Max(0.01f, settleDuration)).SetEase(Ease.OutCubic));
+        sequence.Join(card.transform.DORotateQuaternion(card.destinationRotation, Mathf.Max(0.01f, settleDuration)).SetEase(Ease.OutCubic));
+        sequence.Join(card.transform.DOScale(Vector3.one * targetScale, Mathf.Max(0.01f, settleDuration)).SetEase(Ease.OutCubic));
+        sequence.AppendCallback(() => onLanding?.Invoke());
+        sequence.Append(card.transform.DOPunchScale(Vector3.one * targetScale * 0.12f, 0.18f, 2, 0.4f));
+        sequence.OnComplete(() => { card.onPlaced?.Invoke(); finish(); });
+        sequence.OnKill(() => finish());
     }
 }

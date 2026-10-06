@@ -16,6 +16,9 @@ public class BattleCardClick : MonoBehaviour, IPointerClickHandler
         if(eventData.button != PointerEventData.InputButton.Left)
             return;
 
+        CardDrag drag = GetComponent<CardDrag>();
+        if (drag != null && (drag.IsDragging || drag.IsDropSnapPlaying)) return;
+
         GameObject playerBattleArea =
             GameObject.Find("PlayerBattleArea");
 

@@ -8264,7 +8264,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6097c74c2a262da49a805060b8f7721c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxCards: 7
+  maxCards: 6
   fieldWidth: 850
   layoutCenter: {x: 0, y: 0}
   cardSize: 0.57
@@ -8281,8 +8281,6 @@ MonoBehaviour:
     gap: -50
   - cardWidth: 135
     gap: -50
-  - cardWidth: 120
-    gap: 10
   animationDuration: 0.25
   animationEase: 9
 --- !u!114 &1045119682
@@ -8619,6 +8617,26 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   maxWidth: 850
   overlapLimit: 90
+  slotCount: 9
+  cardSize: {x: 70, y: 105}
+  layoutCenter: {x: 0, y: 0}
+  placementInterval: 0.06
+  normalPlacement:
+    enterFromRight: 0
+    duration: 0.25
+    travel: 180
+    lift: 12
+    startAngle: 8
+    startScale: 0.85
+    ease: 9
+  kingPlacement:
+    enterFromRight: 1
+    duration: 0.5
+    travel: 240
+    lift: 65
+    startAngle: -18
+    startScale: 0.65
+    ease: 27
 --- !u!1 &1165335850
 GameObject:
   m_ObjectHideFlags: 0
@@ -9882,6 +9900,26 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   maxWidth: 850
   overlapLimit: 90
+  slotCount: 9
+  cardSize: {x: 70, y: 105}
+  layoutCenter: {x: 0, y: 0}
+  placementInterval: 0.06
+  normalPlacement:
+    enterFromRight: 0
+    duration: 0.25
+    travel: 180
+    lift: 12
+    startAngle: 8
+    startScale: 0.85
+    ease: 9
+  kingPlacement:
+    enterFromRight: 1
+    duration: 0.5
+    travel: 240
+    lift: 65
+    startAngle: -18
+    startScale: 0.65
+    ease: 27
 --- !u!1 &1336849809
 GameObject:
   m_ObjectHideFlags: 0

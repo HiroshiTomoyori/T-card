@@ -230,6 +230,7 @@ public class BattleAreaLayout : MonoBehaviour
                     .AddComponent<CCP.Card>();
             }
 
+            card.isBeingMovedManually = IsSnapping(controller);
             // フィールドの移動のみCCPを使用する
             card.enabled = false;
 
@@ -295,9 +296,6 @@ public class BattleAreaLayout : MonoBehaviour
             CardController controller = fieldCards[i];
             CCP.Card card = orderedCards[i];
 
-            if (IsSnapping(controller))
-                continue;
-
             RectTransform rect =
                 controller.GetComponent<RectTransform>();
 
@@ -337,6 +335,13 @@ public class BattleAreaLayout : MonoBehaviour
 
             Quaternion worldRotation =
                 transform.rotation * localRotation;
+
+            if (IsSnapping(controller))
+            {
+                controller.GetComponent<CardDrag>().PlayBattlePlacement(
+                    worldPosition, worldRotation, targetScale, animationDuration);
+                continue;
+            }
 
             card.MoveToPosition(
                 worldPosition,

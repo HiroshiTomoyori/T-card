@@ -141,7 +141,10 @@ public void SetTCardLayout(
         if (cards == null || cards.Count <= 1) return;
 
         // Create a sorted list based on Z position (higher Z = render on top)
-        List<Card> sortedCards = new List<Card>(cards);
+        // Dragged cards may belong to this group while living under the Canvas.
+        // Only reorder children of this group, never siblings of the Canvas.
+        List<Card> sortedCards = cards.FindAll(card => card.transform.parent == transform);
+        if (sortedCards.Count <= 1) return;
         sortedCards.Sort((a, b) => -a.transform.localPosition.z.CompareTo(b.transform.localPosition.z));
 
         // Check if order has changed

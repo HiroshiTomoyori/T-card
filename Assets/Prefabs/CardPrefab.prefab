@@ -273,8 +273,10 @@ MonoBehaviour:
   dragHeight: 285
   battleScale: 1.5
   dropZoomMultiplier: 1.8
-  dropZoomDuration: 0.8
+  dropZoomDuration: 0.18
   dropSnapSE: {fileID: 8300000, guid: 155c8bb1ed4b6414d8fbf56443d4510b, type: 3}
+  dropZoomHoldDuration: 0.55
+  dropLandingSE: {fileID: 8300000, guid: b11cd97012d02d744b423c64e87a7927, type: 3}
   dropSnapSEVolume: 1
   dropSnapAudioSource: {fileID: 0}
 --- !u!225 &5398876303123097329
