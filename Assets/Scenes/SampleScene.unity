@@ -1630,6 +1630,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bb9eb57f69f15e04792a3544d773d2d8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  nineEffectDuration: 1.8
+  nineMeteorSE: {fileID: 8300000, guid: 6b1ce4bcc854edc4a9333b5aac3201e3, type: 3}
+  nineSEVolume: 0.55
 --- !u!1 &168608627
 GameObject:
   m_ObjectHideFlags: 0

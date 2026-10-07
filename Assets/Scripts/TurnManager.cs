@@ -30,7 +30,7 @@ public bool CanDragPlayerHand
             resourcePhaseManager != null &&
             resourcePhaseManager.IsRunning();
 
-        return (handDealer == null || (!handDealer.IsWallPlacementRunning && !handDealer.IsResolvingWallAttack)) && isPlayerTurnActive &&
+        return (CardEffectManager.I == null || !CardEffectManager.I.IsResolvingNine) && (handDealer == null || (!handDealer.IsWallPlacementRunning && !handDealer.IsResolvingWallAttack)) && isPlayerTurnActive &&
                !isEndingTurn &&
                !isBattlePhase &&
                !HandDealer.IsRedrawSelecting &&
@@ -943,7 +943,7 @@ public void HideAttackArrow()
     public void EndPlayerTurn()
     {    
         // マッチ開始前・敵ターン中・二重クリックからの呼び出しを拒否する。
-        if(!isPlayerTurnActive || isEndingTurn || (handDealer != null && (handDealer.IsWallPlacementRunning || handDealer.IsResolvingWallAttack)))
+        if(!isPlayerTurnActive || isEndingTurn || (CardEffectManager.I != null && CardEffectManager.I.IsResolvingNine) || (handDealer != null && (handDealer.IsWallPlacementRunning || handDealer.IsResolvingWallAttack)))
         {
             Debug.Log("自分のターンではないためターン終了不可");
             return;
@@ -1560,6 +1560,10 @@ IEnumerator EnemyMainPhase()
             if(card == null)
                 continue;
 
+            // A and Nine can be cast even when all six creature slots are occupied.
+            if(!BattleAreaLayout.IsSpell(card) && !BattleAreaLayout.CanAccept(enemyBattleArea))
+                continue;
+
             card.SetPowerFromName();
             card.SetCostFromName();
 
@@ -1748,10 +1752,10 @@ IEnumerator EnemyMainPhase()
             enemyBattleLayout.Refresh();
         }
 
-        while(IsSelectingDestroyTarget()) yield return null;
+        while(IsSelectingDestroyTarget() || (CardEffectManager.I != null && CardEffectManager.I.IsResolvingNine)) yield return null;
 
         yield return new WaitUntil(() => handDealer == null || !handDealer.IsWallPlacementRunning);
-        summonCount++;
+        if(!BattleAreaLayout.IsSpell(selectedCard)) summonCount++;
 
         Debug.Log(
             "敵が召喚：" +
@@ -3969,115 +3973,6 @@ void OnSelectJokerClear()
             if(card != null)
             {
                 card.SetAttackable(false);
-            }
-        }
-    }
-}
-
-// Non-interactive Canvas graphics keep target selection available beneath the spell.
-public class AceSelectionEffect : MonoBehaviour
-{
-    TurnManager owner;
-    AudioSource sound;
-    AudioClip waiting;
-    float volume, age, nextChime = 1.5f, ending = -1f;
-    readonly List<CardController> targets = new List<CardController>();
-    readonly List<AceSpellRing> rings = new List<AceSpellRing>();
-    readonly Vector3[] corners = new Vector3[4];
-
-    public void Initialize(TurnManager manager, Transform area, bool enemy, AudioClip cast, AudioClip idle, float level)
-    {
-        owner = manager;
-        waiting = idle;
-        volume = level;
-        sound = gameObject.AddComponent<AudioSource>();
-        sound.playOnAwake = false;
-        sound.spatialBlend = 0f;
-        if(cast != null) sound.PlayOneShot(cast, volume);
-        Color tint = enemy ? new Color(1f, 0.35f, 0.2f) : new Color(0.25f, 0.85f, 1f);
-        if(area == null) return;
-        foreach(Transform child in area)
-        {
-            CardController target = child.GetComponent<CardController>();
-            if(target == null || target.data == null || !child.gameObject.activeInHierarchy) continue;
-            GameObject halo = new GameObject("Ace Target Aura", typeof(RectTransform));
-            halo.layer = gameObject.layer;
-            halo.transform.SetParent(transform, false);
-            AceSpellRing ring = halo.AddComponent<AceSpellRing>();
-            ring.raycastTarget = false;
-            ring.color = tint;
-            targets.Add(target);
-            rings.Add(ring);
-        }
-    }
-
-    void Update()
-    {
-        age += Time.unscaledDeltaTime;
-        bool selecting = owner != null && owner.isActiveAndEnabled && owner.IsSelectingDestroyTarget();
-        if(!selecting && ending < 0f) { ending = age; sound.Stop(); }
-        float fade = ending < 0f ? 1f : 1f - (age - ending) / 0.35f;
-        if(fade <= 0f) { Destroy(gameObject); return; }
-        if(selecting && waiting != null && age >= nextChime)
-        {
-            sound.PlayOneShot(waiting, volume * 0.22f);
-            nextChime = age + Mathf.Max(1.8f, waiting.length);
-        }
-        RectTransform parent = transform.parent as RectTransform;
-        if(parent == null) return;
-        for(int i = 0; i < rings.Count; i++)
-        {
-            CardController target = targets[i];
-            if(target == null) { rings[i].enabled = false; continue; }
-            // Freeze the final aura when the selected card moves to its graveyard.
-            if(selecting)
-            {
-                RectTransform image = target.artworkImage != null ? target.artworkImage.rectTransform : target.transform as RectTransform;
-                if(image == null) continue;
-                image.GetWorldCorners(corners);
-                Vector3 min = parent.InverseTransformPoint(corners[0]), max = min;
-                for(int j = 1; j < 4; j++)
-                {
-                    Vector3 p = parent.InverseTransformPoint(corners[j]);
-                    min = Vector3.Min(min, p); max = Vector3.Max(max, p);
-                }
-                RectTransform rect = rings[i].rectTransform;
-                rect.anchorMin = rect.anchorMax = parent.pivot;
-                rect.anchoredPosition = (min + max) * 0.5f;
-                rect.sizeDelta = new Vector2(max.x - min.x + 28f, max.y - min.y + 28f);
-            }
-            rings[i].phase = age;
-            Color color = rings[i].color;
-            color.a = fade * (0.5f + 0.2f * Mathf.Sin(age * 3.5f));
-            rings[i].color = color;
-            rings[i].SetVerticesDirty();
-        }
-    }
-}
-
-public class AceSpellRing : MaskableGraphic
-{
-    public float phase;
-    protected override void OnPopulateMesh(VertexHelper mesh)
-    {
-        mesh.Clear();
-        Vector2 radius = rectTransform.rect.size * 0.5f;
-        for(int band = 0; band < 2; band++)
-        {
-            float factor = band == 0 ? 1f : 0.87f;
-            for(int i = 0; i < 64; i++)
-            {
-                if(band == 1 && i % 8 >= 5) continue;
-                float a = i * Mathf.PI * 2f / 64f + phase * (band == 0 ? 0.3f : -0.55f);
-                float b = (i + 1) * Mathf.PI * 2f / 64f + phase * (band == 0 ? 0.3f : -0.55f);
-                Vector2 r = radius * factor;
-                Vector2 inner = r - Vector2.one * 2.5f;
-                int index = mesh.currentVertCount;
-                mesh.AddVert(new Vector3(Mathf.Cos(a)*r.x, Mathf.Sin(a)*r.y), color, Vector2.zero);
-                mesh.AddVert(new Vector3(Mathf.Cos(b)*r.x, Mathf.Sin(b)*r.y), color, Vector2.zero);
-                mesh.AddVert(new Vector3(Mathf.Cos(b)*inner.x, Mathf.Sin(b)*inner.y), color, Vector2.zero);
-                mesh.AddVert(new Vector3(Mathf.Cos(a)*inner.x, Mathf.Sin(a)*inner.y), color, Vector2.zero);
-                mesh.AddTriangle(index,index+1,index+2); mesh.AddTriangle(index,index+2,index+3);
             }
         }
     }

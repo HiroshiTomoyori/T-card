@@ -80,6 +80,12 @@ public class BattleDropZone :
             }
         }
 
+        if(!BattleAreaLayout.IsSpell(card.data) && !BattleAreaLayout.CanAccept(battleArea, selectedBaseCard))
+        {
+            Debug.Log("バトルエリア上限6枚：手札へ戻します");
+            return; // OnEndDrag restores the rejected card; no resource is spent.
+        }
+
         if (useCostCheck)
         {
             ResourceManager resourceManager =
@@ -431,28 +437,7 @@ public class BattleDropZone :
          * TurnManagerが敵側を正しく判定できる。
          */
         ActivateSummonEffect(card);
-
-        TurnManager turnManager =
-            FindFirstObjectByType<TurnManager>();
-
-        if (turnManager != null)
-        {
-            turnManager
-                .SendCardToOwnGraveyard(card);
-
-            Debug.Log(
-                "9を墓地へ移動：" +
-                card.data.name
-            );
-        }
-        else
-        {
-            Debug.LogWarning(
-                "9を墓地へ送れません：" +
-                "TurnManagerが見つかりません"
-            );
-        }
-
+        // The shared Nine sequence sends the spell to the graveyard after its cue.
         RefreshBattleLayout();
 
         StartCoroutine(
@@ -566,6 +551,7 @@ IEnumerator CompleteSummonAfterSnap(CardDrag cardDrag)
         yield break;
     }
 
+    while(CardEffectManager.I != null && CardEffectManager.I.IsResolvingNine) yield return null;
     rpm.EndResourcePhase();
 
     TurnManager turnManager =

@@ -23,8 +23,28 @@ public class BattleAreaLayout : MonoBehaviour
     }
 
     [Header("フィールド")]
-    [Range(1, 7)]
-    public int maxCards = 7;
+    [Range(1, 6)]
+    public int maxCards = 6;
+
+    public static bool IsSpell(CardData data)
+    {
+        return data != null && data.effectTypes != null && Array.Exists(data.effectTypes,
+            effect => effect == EffectType.DestroyOneEnemyBattle || effect == EffectType.TapAllEnemyBattle);
+    }
+
+    public static bool CanAccept(Transform area, CardController replacedCard = null)
+    {
+        if(area == null) return false;
+        BattleAreaLayout layout = area.GetComponent<BattleAreaLayout>();
+        int limit = layout != null ? Mathf.Clamp(layout.maxCards, 1, 6) : 6;
+        int count = 0;
+        foreach(Transform child in area)
+        {
+            CardController card = child.GetComponent<CardController>();
+            if(card != null && card.data != null && child.gameObject.activeInHierarchy && card != replacedCard && !IsSpell(card.data)) count++;
+        }
+        return count < limit;
+    }
 
     [Min(1f)]
     public float fieldWidth = 900f;
@@ -76,13 +96,16 @@ public class BattleAreaLayout : MonoBehaviour
         get
         {
             CollectCards();
-            return fieldCards.Count;
+            int count = 0;
+            foreach(CardController card in fieldCards)
+                if(!IsSpell(card.data)) count++;
+            return count;
         }
     }
 
     public bool IsFull
     {
-        get { return CardCount >= maxCards; }
+        get { return !CanAccept(transform); }
     }
 
     private void Awake()
@@ -97,7 +120,7 @@ public class BattleAreaLayout : MonoBehaviour
 
     private void OnValidate()
     {
-        maxCards = Mathf.Clamp(maxCards, 1, 7);
+        maxCards = Mathf.Clamp(maxCards, 1, 6);
         fieldWidth = Mathf.Max(1f, fieldWidth);
         animationDuration =
             Mathf.Max(0.01f, animationDuration);

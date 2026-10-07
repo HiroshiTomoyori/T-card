@@ -2716,6 +2716,13 @@ bool shieldTrigger =
             yield break;
         }
 
+        if(!BattleAreaLayout.IsSpell(data) && !BattleAreaLayout.CanAccept(turnManager.playerBattleArea))
+        {
+            Debug.Log("シールドトリガー召喚不可：場が6枚のため手札へ追加");
+            CreateHandCard(data);
+            yield break;
+        }
+
         GameObject triggerCard =
             Instantiate(
                 proHandCardPrefab != null ? proHandCardPrefab : cardPrefab,
@@ -2865,6 +2872,8 @@ bool shieldTrigger =
             }
             else if(isNine || isJoker)
             {
+                while(isNine && CardEffectManager.I != null && CardEffectManager.I.IsResolvingNine)
+                    yield return null;
                 if(triggerController != null &&
                    triggerController.transform.IsChildOf(
                        turnManager.playerBattleArea
@@ -2965,10 +2974,17 @@ bool shieldTrigger =
     bool RecoverWallFromDeck(bool enemy, bool fromKing)
     {
         if(fromKing && (enemy ? enemyKingWallsAdded : playerKingWallsAdded) >= Mathf.Max(0, maxKingWallAdditions))
+        {
+            Debug.Log($"ウォール追加不可：{(enemy ? "敵" : "味方")} キング累計上限 {maxKingWallAdditions}");
             return false;
+        }
         List<CardData> deck = enemy ? enemyDeck : currentDeck;
         WallAreaLayout layout = GetWallLayout(enemy ? enemyWallArea : wallArea);
-        if (deck == null || deck.Count == 0 || layout == null || !layout.HasSpace) return false;
+        if (deck == null || deck.Count == 0 || layout == null || !layout.HasSpace)
+        {
+            Debug.LogWarning($"ウォール追加不可：{(enemy ? "敵" : "味方")} 山札={deck?.Count ?? 0} 配置先={layout != null} 空き枠={layout != null && layout.HasSpace}");
+            return false;
+        }
         CardData data = deck[0];
         if (!CreateWallCard(data, enemy, fromKing)) return false;
         deck.RemoveAt(0);
@@ -2979,6 +2995,7 @@ bool shieldTrigger =
         }
         if (enemy) enemyWallAliveCount++;
         else playerWallAliveCount++;
+        Debug.Log($"ウォール追加成功：{(enemy ? "敵" : "味方")} 現在{(enemy ? enemyWallAliveCount : playerWallAliveCount)}枚 / キング累計{(enemy ? enemyKingWallsAdded : playerKingWallsAdded)}/{maxKingWallAdditions}");
         return true;
     }
     public void DiscardRandomEnemyHand()
@@ -3020,7 +3037,6 @@ bool shieldTrigger =
     public void RecoverWallByKing(bool enemy)
     {
         int remaining = Mathf.Max(0, maxKingWallAdditions - (enemy ? enemyKingWallsAdded : playerKingWallsAdded));
-        if(remaining == 0) return;
         // Each King restores exactly one wall, subject to space, deck and lifetime limit.
         RecoverWallFromDeck(enemy, true);
     }

@@ -1,10 +1,16 @@
 using UnityEngine;
 using System.Collections;
+using System.Linq;
 
 public class CardEffectManager :
     MonoBehaviour
 {
     public static CardEffectManager I;
+    [Header("Nine meteor spell")]
+    [Min(0.5f)] public float nineEffectDuration = 1.8f;
+    public AudioClip nineMeteorSE;
+    [Range(0f, 1f)] public float nineSEVolume = 0.55f;
+    public bool IsResolvingNine { get; private set; }
 
     void Awake()
     {
@@ -16,6 +22,48 @@ public class CardEffectManager :
         bool isShieldTrigger = false,
         bool isEnemy = false
     )
+    {
+        if(card != null && card.data != null && card.data.effectTypes != null &&
+           card.data.effectTypes.Contains(EffectType.TapAllEnemyBattle))
+        {
+            if(!IsResolvingNine) StartCoroutine(ResolveNineWithMeteors(card, isShieldTrigger, isEnemy));
+            return;
+        }
+        ResolveOnSummon(card, isShieldTrigger, isEnemy);
+    }
+
+    IEnumerator ResolveNineWithMeteors(CardController card, bool shield, bool enemy)
+    {
+        IsResolvingNine = true;
+        GameObject effect = null;
+        try
+        {
+            TurnManager manager = FindFirstObjectByType<TurnManager>();
+            Transform field = manager != null ? manager.playerBattleArea : null;
+            if(field != null && manager.enemyBattleArea != null)
+            {
+                while(field.parent != null && !manager.enemyBattleArea.IsChildOf(field)) field = field.parent;
+            }
+            if(field != null)
+            {
+                effect = new GameObject("Nine Meteor Shower", typeof(RectTransform), typeof(CanvasRenderer));
+                effect.layer = field.gameObject.layer;
+                effect.transform.SetParent(field, false);
+                effect.AddComponent<NineMeteorEffect>().Initialize(Mathf.Max(0.5f, nineEffectDuration), enemy, nineMeteorSE, nineSEVolume);
+            }
+            yield return new WaitForSecondsRealtime(Mathf.Max(0.5f, nineEffectDuration) * 0.7f);
+            if(card != null) ResolveOnSummon(card, shield, enemy);
+            yield return new WaitForSecondsRealtime(Mathf.Max(0.5f, nineEffectDuration) * 0.3f);
+            if(card != null && manager != null && !enemy) manager.SendCardToOwnGraveyard(card);
+        }
+        finally
+        {
+            if(effect != null) Destroy(effect);
+            IsResolvingNine = false;
+        }
+    }
+
+    void ResolveOnSummon(CardController card, bool isShieldTrigger, bool isEnemy)
     {
         if (card == null)
         {
@@ -509,5 +557,6 @@ public class CardEffectManager :
         );
 
         yield return null;
+        while(IsResolvingNine) yield return null;
     }
 }

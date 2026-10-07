@@ -50,7 +50,26 @@ public class WallAreaLayout : MonoBehaviour
         group.isPlayerHand = false;
         group.cards = new List<CCP.Card>();
         foreach (LayoutGroup legacy in GetComponents<LayoutGroup>()) legacy.enabled = false;
-
+        // A script reload discards this runtime slot array while scene cards remain.
+        // Recover their registrations before reserving a slot for the next King.
+        foreach (Transform child in transform)
+        {
+            if (child.GetComponent<CardController>() == null || !child.gameObject.activeSelf) continue;
+            CanvasGroup canvasGroup = child.GetComponent<CanvasGroup>();
+            if (canvasGroup != null && canvasGroup.alpha <= 0.01f) continue;
+            int index = FindFreeSlot(false);
+            if (index < 0) break;
+            CCP.Card card = child.GetComponent<CCP.Card>();
+            if (card == null) card = child.gameObject.AddComponent<CCP.Card>();
+            card.enabled = false;
+            card.transform.DOKill();
+            card.SetCardGroup(group);
+            card.isBeingMovedManually = false;
+            slots[index] = card;
+            group.cards.Add(card);
+            LayoutElement element = child.GetComponent<LayoutElement>();
+            if (element != null) element.ignoreLayout = true;
+        }
     }
     public bool HasSpace
     {
@@ -209,6 +228,7 @@ public class WallAreaLayout : MonoBehaviour
             {
                 if (slots[i] == null) continue;
                 slots[i].transform.DOKill();
+                slots[i].isBeingMovedManually = false;
                 slots[i].transform.localPosition = SlotPosition(i);
                 slots[i].transform.localRotation = Quaternion.identity;
                 slots[i].transform.localScale = Vector3.one;
