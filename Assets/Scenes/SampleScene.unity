@@ -8258,7 +8258,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   battleArea: {fileID: 1045119676}
-  useCostCheck: 0
+  useCostCheck: 1
 --- !u!114 &1045119681
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8563,7 +8563,7 @@ MonoBehaviour:
   debugForceEnemyQ: 0
   playerGraveyard: {fileID: 883933612}
   enemyGraveyard: {fileID: 682929438}
-  graveyardCardSize: {x: 45, y: 65}
+  graveyardCardSize: {x: 65, y: 94}
   blockerSlashPrefab: {fileID: 5066958564772653146, guid: 99b55ab9f55dffc4b9b2996e7f2fc9c6, type: 3}
   resultPanel: {fileID: 0}
   retryButton: {fileID: 0}
@@ -8574,6 +8574,10 @@ MonoBehaviour:
   jokerClearButton: {fileID: 914502126}
   jokerExtraTurnButton: {fileID: 274788462}
   resultWaitTime: 1.5
+  aceCastSE: {fileID: 8300000, guid: 6b1ce4bcc854edc4a9333b5aac3201e3, type: 3}
+  aceWaitingSE: {fileID: 8300000, guid: dcf095473004cac43aec960717790a0f, type: 3}
+  aceSEVolume: 0.45
+  enemyAceSelectionDuration: 1.2
 --- !u!1 &1149260626
 GameObject:
   m_ObjectHideFlags: 0
@@ -11318,7 +11322,6 @@ MonoBehaviour:
   enemyHandCards: []
   enemyHandCardSize: {x: 55, y: 82}
   endTurnButton: {fileID: 0}
-  debugAllWallsAreShieldTrigger: 1
   playerWallArea: {fileID: 0}
 --- !u!1 &1540508880
 GameObject:

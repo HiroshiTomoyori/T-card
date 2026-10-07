@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
 using System.Collections;
+using DG.Tweening;
 
 public class BattleDropZone :
     MonoBehaviour,
@@ -19,7 +20,7 @@ public class BattleDropZone :
             "BattleDropZone OnDrop 呼ばれた"
         );
 
-        if (eventData.pointerDrag == null)
+        if (eventData == null || eventData.pointerDrag == null)
         {
             Debug.Log(
                 "ドラッグ中のオブジェクトがない"
@@ -68,6 +69,17 @@ public class BattleDropZone :
 
         CardController selectedBaseCard = null;
 
+        // Raising is a summon rule, independent of the optional cost check.
+        if (IsSpecialSummonK(card))
+        {
+            selectedBaseCard = FindKSpecialSummonBase(eventData);
+            if (selectedBaseCard != null)
+            {
+                selectedBaseCard.data.SetPowerFromName();
+                summonCost = Mathf.Max(0, card.data.cost - selectedBaseCard.data.power);
+            }
+        }
+
         if (useCostCheck)
         {
             ResourceManager resourceManager =
@@ -79,33 +91,6 @@ public class BattleDropZone :
                     "ResourceManagerが見つからない"
                 );
                 return;
-            }
-
-            CardController baseCard =
-                FindKSpecialSummonBase();
-
-            if (
-                IsSpecialSummonK(card) &&
-                baseCard != null
-            )
-            {
-                selectedBaseCard = baseCard;
-
-                baseCard.data.SetPowerFromName();
-
-                summonCost =
-                    card.data.cost -
-                    baseCard.data.power;
-
-                if (summonCost < 0)
-                    summonCost = 0;
-
-                Debug.Log(
-                    "K特殊召喚：土台 " +
-                    baseCard.data.name +
-                    " / 差分コスト " +
-                    summonCost
-                );
             }
 
             if (
@@ -600,11 +585,14 @@ IEnumerator CompleteSummonAfterSnap(CardDrag cardDrag)
         );
     }
 
-    CardController FindKSpecialSummonBase()
+    CardController FindKSpecialSummonBase(PointerEventData eventData)
     {
         if (battleArea == null)
             return null;
 
+        CardController best = null;
+        GameObject hit = eventData.pointerCurrentRaycast.gameObject;
+        CardController pointed = hit != null ? hit.GetComponentInParent<CardController>() : null;
         for (
             int i = 0;
             i < battleArea.childCount;
@@ -618,7 +606,8 @@ IEnumerator CompleteSummonAfterSnap(CardDrag cardDrag)
 
             if (
                 card == null ||
-                card.data == null
+                card.data == null ||
+                !card.gameObject.activeInHierarchy
             )
             {
                 continue;
@@ -632,11 +621,12 @@ IEnumerator CompleteSummonAfterSnap(CardDrag cardDrag)
                 card.data.power == 10
             )
             {
-                return card;
+                if (card == pointed) return card;
+                if (best == null || card.data.power > best.data.power) best = card;
             }
         }
 
-        return null;
+        return best;
     }
 
     void StackBaseCardUnderK(
@@ -682,10 +672,24 @@ IEnumerator CompleteSummonAfterSnap(CardDrag cardDrag)
         baseCard.SetAttackable(false);
         baseCard.Untap();
 
+        // Stop the field placement tween before the card becomes part of the stack.
+        baseCard.transform.DOKill();
+        CCP.Card proBase = baseCard.GetComponent<CCP.Card>();
+        if (proBase != null)
+        {
+            proBase.enabled = false;
+            if (proBase.parentCardGroup != null)
+                proBase.parentCardGroup.RemoveCard(proBase);
+            proBase.isBeingMovedManually = true;
+        }
+
         baseCard.transform.SetParent(
             kCard.transform,
             false
         );
+
+        // CCP's Front must remain above the base card.
+        baseCard.transform.SetAsFirstSibling();
 
         RectTransform baseRt =
             baseCard.GetComponent<RectTransform>();
@@ -706,6 +710,7 @@ IEnumerator CompleteSummonAfterSnap(CardDrag cardDrag)
 
             baseRt.localScale =
                 Vector3.one * 0.95f;
+            baseRt.localRotation = Quaternion.identity;
         }
 
         CanvasGroup cg =
@@ -727,6 +732,10 @@ IEnumerator CompleteSummonAfterSnap(CardDrag cardDrag)
 
         if (drag != null)
             drag.enabled = false;
+
+        // CardDrag.OnDisable restores raycasts; a stacked base must stay inert.
+        cg.blocksRaycasts = false;
+        cg.interactable = false;
 
         BattleCardClick click =
             baseCard.GetComponent<BattleCardClick>();

@@ -1,13 +1,13 @@
 {
-  "configVersion": "1.0",
+  "configVersion": "1.1",
   "lookaheadDepth": 2,
-  "maxSummonsPerTurn": 2,
+  "maxSummonsPerTurn": 10,
   "attackOrderMode": "Adaptive",
   "jokerClearBias": -9.0418,
   "reverseBias": 18.4918,
   "multiSummonBonus": 182.9679,
   "kStackBonus": 411.6259,
-  "aggressionBonus": 174.5401,
+  "aggressionBonus": 300,
   "lowWallAttackBonus": 239.7266,
   "rankWeights": [
     {

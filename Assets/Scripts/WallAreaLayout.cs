@@ -13,6 +13,9 @@ public class WallAreaLayout : MonoBehaviour
     [SerializeField, Range(1, 9)] int slotCount = 9;
     [SerializeField] Vector2 cardSize = new Vector2(70f, 105f);
     [SerializeField] Vector2 layoutCenter;
+    [Header("Wall gaps by count")]
+    [Tooltip("Element 0 = 1 wall, Element 8 = 9 walls. Gap is the space between card edges; negative values overlap.")]
+    [SerializeField] float[] gapsByCount = { -10f, -10f, -10f, -10f, -10f, -10f, -10f, -10f, -10f };
     [SerializeField, Min(0f)] float placementInterval = 0.06f;
     [Header("CCP placement animations")]
     [SerializeField] WallCardPlaceAnimation normalPlacement = new WallCardPlaceAnimation();
@@ -64,17 +67,26 @@ public class WallAreaLayout : MonoBehaviour
     }
     Vector3 SlotPosition(int index)
     {
-        float spacing = slots.Length > 1
-            ? Mathf.Min(Mathf.Max(0f, overlapLimit), Mathf.Max(0f, maxWidth) / (slots.Length - 1)) : 0f;
-        // Center the initial five walls; retain extra slots for later additions.
-        float initialCenterIndex = (Mathf.Min(5, slots.Length) - 1) * 0.5f;
-        return new Vector3(layoutCenter.x + (index - initialCenterIndex) * spacing, layoutCenter.y, 0f);
+        int count = 0;
+        int order = 0;
+        for(int i = 0; i < slots.Length; i++)
+        {
+            if(slots[i] == null) continue;
+            if(i < index) order++;
+            count++;
+        }
+        float gap = gapsByCount != null && count > 0 && count <= gapsByCount.Length
+            ? gapsByCount[count - 1] : overlapLimit - cardSize.x;
+        float spacing = Mathf.Max(1f, cardSize.x + gap);
+        if(count > 1)
+            spacing = Mathf.Min(spacing, Mathf.Max(1f, maxWidth - cardSize.x) / (count - 1));
+        return new Vector3(layoutCenter.x + (order - (count - 1) * 0.5f) * spacing, layoutCenter.y, 0f);
     }
     public bool AddWall(GameObject wall, bool fromKing, Vector2 size)
     {
         Prepare();
         ReleaseBrokenWalls();
-        int index = FindFreeSlot(fromKing);
+        int index = FindFreeSlot(false);
         if (wall == null || index < 0) return false;
 
         cardSize = size;
@@ -112,6 +124,12 @@ public class WallAreaLayout : MonoBehaviour
 
             animation.Place(item.card, target, () => finished = true);
             while (!finished && item.card != null && slots[item.slot] == item.card) yield return null;
+            if(item.card != null && slots[item.slot] == item.card)
+            {
+                item.card.isBeingMovedManually = false;
+                item.card.transform.localPosition = SlotPosition(item.slot);
+            }
+            LayoutWalls();
             float elapsed = 0f;
             while (elapsed < placementInterval)
             {
@@ -122,7 +140,27 @@ public class WallAreaLayout : MonoBehaviour
         placementRoutine = null;
     }
     void LateUpdate() { LayoutWalls(); }
-    public void LayoutWalls() { Prepare(); ReleaseBrokenWalls(); }
+    public void LayoutWalls()
+    {
+        Prepare();
+        ReleaseBrokenWalls();
+        for(int i = 0; i < slots.Length; i++)
+        {
+            CCP.Card card = slots[i];
+            if(card == null || card.isBeingMovedManually) continue;
+            card.transform.localPosition = SlotPosition(i);
+            card.transform.localRotation = Quaternion.identity;
+            card.transform.localScale = Vector3.one;
+        }
+    }
+
+    void OnValidate()
+    {
+        maxWidth = Mathf.Max(1f, maxWidth);
+        slotCount = Mathf.Clamp(slotCount, 1, 9);
+        if(gapsByCount == null) gapsByCount = new float[9];
+        if(gapsByCount.Length != 9) Array.Resize(ref gapsByCount, 9);
+    }
     void ReleaseBrokenWalls()
     {
         for (int i = 0; i < slots.Length; i++)

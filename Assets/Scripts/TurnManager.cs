@@ -1,3 +1,4 @@
+using DG.Tweening;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
@@ -5,6 +6,12 @@ using System.Collections.Generic;
 
 public partial class TurnManager : MonoBehaviour
 {
+    [Header("Ace spell presentation")]
+    public AudioClip aceCastSE;
+    public AudioClip aceWaitingSE;
+    [Range(0f, 1f)] public float aceSEVolume = 0.45f;
+    [Min(0f)] public float enemyAceSelectionDuration = 1.2f;
+    AceSelectionEffect aceSelectionEffect;
     int turnCount = 1;
 
     int wallBreakCount = 0;
@@ -32,6 +39,7 @@ public bool CanDragPlayerHand
                (isResource || isPlayerMainPhase);
     }
 }
+
     public bool IsBattlePhase
     {
         get { return isBattlePhase; }
@@ -108,7 +116,7 @@ public bool CanDragPlayerHand
     [Header("Graveyard Card Size")]
     [Tooltip("墓地に置かれるカードの固定サイズ（ピクセル）")]
     [SerializeField]
-    Vector2 graveyardCardSize = new Vector2(45f, 65f);
+    Vector2 graveyardCardSize = new Vector2(65f, 94f);
 
     [Header("Blocker Slash")]
     public GameObject blockerSlashPrefab;
@@ -1740,6 +1748,8 @@ IEnumerator EnemyMainPhase()
             enemyBattleLayout.Refresh();
         }
 
+        while(IsSelectingDestroyTarget()) yield return null;
+
         yield return new WaitUntil(() => handDealer == null || !handDealer.IsWallPlacementRunning);
         summonCount++;
 
@@ -2074,13 +2084,6 @@ IEnumerator EnemyBattlePhase()
             enemyBattleArea
         );
 
-    CardController debugAttacker = PrepareMonarchDebugAttack();
-    if (debugAttacker != null)
-    {
-        attackers = new List<CardController> { debugAttacker };
-        yield return new WaitUntil(() => !handDealer.IsWallPlacementRunning);
-    }
-
     int playerWallCount =
         GetAlivePlayerWallCount();
 
@@ -2137,7 +2140,7 @@ IEnumerator EnemyBattlePhase()
             continue;
         }
 
-        if(attacker != debugAttacker && !ShouldEnemyAttack(attacker))
+        if(!ShouldEnemyAttack(attacker))
         {
             Debug.Log(
                 "CPU判断：攻撃見送り：" +
@@ -2243,7 +2246,7 @@ IEnumerator EnemyBattlePhase()
 
         enemyAttackBlocked = false;
 
-        if(attacker != debugAttacker && HasUntappedPlayerBlocker())
+        if(HasUntappedPlayerBlocker())
         {
             waitingBlockSelect = true;
 
@@ -2303,10 +2306,7 @@ IEnumerator EnemyBattlePhase()
                     if (candidate != null && candidate.gameObject != pendingEnemyTargetWall)
                     { wallTargets.Add(candidate.gameObject); break; }
             attacker.Tap();
-            bool previousShieldDebug = handDealer.debugAllWallsAreShieldTrigger;
-            if (attacker == debugAttacker) handDealer.debugAllWallsAreShieldTrigger = false;
-            try { yield return handDealer.DamagePlayerWallsAndWait(wallTargets); }
-            finally { handDealer.debugAllWallsAreShieldTrigger = previousShieldDebug; }
+            yield return handDealer.DamagePlayerWallsAndWait(wallTargets);
         }
         // Shield Triggerなどで攻撃カードが
         // 墓地へ送られた可能性を考慮
@@ -2927,6 +2927,19 @@ void ShowBlockableCards()
             );
         }
 
+        // Cancel both field movement and CCP's child hover/scale animations.
+        foreach(Transform visual in cardObj.GetComponentsInChildren<Transform>(true))
+            visual.DOKill();
+        CCP.Card proCard = cardObj.GetComponent<CCP.Card>();
+        if(proCard != null)
+        {
+            proCard.enabled = false;
+            if(proCard.parentCardGroup != null) proCard.parentCardGroup.RemoveCard(proCard);
+            proCard.isBeingMovedManually = true;
+        }
+        CardDrag graveDrag = cardObj.GetComponent<CardDrag>();
+        if(graveDrag != null) graveDrag.enabled = false;
+
         cardObj.transform.SetParent(graveyard, false);
         cardObj.transform.SetAsLastSibling();
 
@@ -2935,22 +2948,7 @@ void ShowBlockableCards()
 
         if(rt != null)
         {
-            rt.anchorMin = new Vector2(0.5f, 0.5f);
-            rt.anchorMax = new Vector2(0.5f, 0.5f);
-            rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.anchoredPosition = Vector2.zero;
-            rt.localRotation = Quaternion.identity;
-            rt.localScale = Vector3.one;
-
-            rt.SetSizeWithCurrentAnchors(
-                RectTransform.Axis.Horizontal,
-                graveyardCardSize.x
-            );
-
-            rt.SetSizeWithCurrentAnchors(
-                RectTransform.Axis.Vertical,
-                graveyardCardSize.y
-            );
+            FitGraveyardCard(rt, graveyard);
         }
 
         LayoutElement layout =
@@ -3002,6 +3000,54 @@ void ShowBlockableCards()
 
     }
 
+    void FitGraveyardCard(RectTransform cardRect, Transform graveyard)
+    {
+        RectTransform background = graveyard.Find("GraveBackground") as RectTransform;
+        Vector2 size = new Vector2(Mathf.Max(1f, graveyardCardSize.x), Mathf.Max(1f, graveyardCardSize.y));
+        if(background != null)
+        {
+            background.localRotation = Quaternion.identity;
+            background.localScale = Vector3.one;
+            background.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, size.x + 10f);
+            background.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, size.y + 16f);
+        }
+        cardRect.anchorMin = cardRect.anchorMax = new Vector2(0.5f, 0.5f);
+        cardRect.pivot = new Vector2(0.5f, 0.5f);
+        cardRect.localRotation = Quaternion.identity;
+        cardRect.localScale = Vector3.one;
+        cardRect.sizeDelta = size;
+        cardRect.anchoredPosition3D = Vector3.zero;
+        if(background != null) cardRect.position = background.TransformPoint(background.rect.center);
+
+        CardController card = cardRect.GetComponent<CardController>();
+        if(card == null || card.artworkImage == null) return;
+        // Normalize the complete image path, including CCP's scaled visual container.
+        // The image then occupies exactly the shared graveyard size for either prefab.
+        card.artworkImage.preserveAspect = false;
+        Transform visual = card.artworkImage.transform;
+        while(visual != null)
+        {
+            AspectRatioFitter aspect = visual.GetComponent<AspectRatioFitter>();
+            if(aspect != null) aspect.enabled = false;
+            ContentSizeFitter fitter = visual.GetComponent<ContentSizeFitter>();
+            if(fitter != null) fitter.enabled = false;
+            LayoutGroup layoutGroup = visual.GetComponent<LayoutGroup>();
+            if(layoutGroup != null) layoutGroup.enabled = false;
+            if(visual == cardRect) break;
+            RectTransform imageRect = visual as RectTransform;
+            if(imageRect != null)
+            {
+                imageRect.anchorMin = Vector2.zero;
+                imageRect.anchorMax = Vector2.one;
+                imageRect.pivot = new Vector2(0.5f, 0.5f);
+                imageRect.offsetMin = imageRect.offsetMax = Vector2.zero;
+                imageRect.localRotation = Quaternion.identity;
+                imageRect.localScale = Vector3.one;
+            }
+            visual = visual.parent;
+        }
+    }
+
     void SyncGraveyardCardSizes()
     {
         SyncGraveyardCardSizes(playerGraveyard);
@@ -3010,49 +3056,18 @@ void ShowBlockableCards()
 
     void SyncGraveyardCardSizes(Transform graveyard)
     {
-        if(graveyard == null)
-            return;
-
+        if(graveyard == null) return;
         for(int i = 0; i < graveyard.childCount; i++)
         {
             Transform child = graveyard.GetChild(i);
-
-            if(child == null)
-                continue;
-
-            // GraveBackgroundなど、カード以外の子UIは変更しない。
-            if(child.GetComponent<CardController>() == null)
-                continue;
-
+            if(child.GetComponent<CardController>() == null) continue;
             RectTransform rt = child as RectTransform;
-
-            if(rt == null)
-                continue;
-
+            if(rt == null) continue;
             LayoutElement layout = child.GetComponent<LayoutElement>();
-
-            if(layout != null)
-                layout.ignoreLayout = true;
-
-            rt.anchorMin = new Vector2(0.5f, 0.5f);
-            rt.anchorMax = new Vector2(0.5f, 0.5f);
-            rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.anchoredPosition = Vector2.zero;
-            rt.localRotation = Quaternion.identity;
-            rt.localScale = Vector3.one;
-
-            rt.SetSizeWithCurrentAnchors(
-                RectTransform.Axis.Horizontal,
-                graveyardCardSize.x
-            );
-
-            rt.SetSizeWithCurrentAnchors(
-                RectTransform.Axis.Vertical,
-                graveyardCardSize.y
-            );
+            if(layout != null) layout.ignoreLayout = true;
+            FitGraveyardCard(rt, graveyard);
         }
     }
-
 void ResolveCardBattle(CardController attacker, CardController defender)
 {
     Debug.Log("ResolveCardBattle 呼ばれた");
@@ -3211,6 +3226,7 @@ string GetSuitFromCardName(string cardName)
 }
     CardController pendingDestroySelfCard;
     bool isSelectingDestroyTarget = false;
+    bool resolvingEnemyAce;
 
 public void StartSelectEnemyBattleToDestroy(
     CardController selfCard
@@ -3247,8 +3263,31 @@ public void StartSelectEnemyBattleToDestroy(
 
     Debug.Log("A効果 isEnemyCard = " + isEnemyCard);
 
+    if(aceSelectionEffect != null) Destroy(aceSelectionEffect.gameObject);
+    Canvas spellCanvas = selfCard.GetComponentInParent<Canvas>();
+    if(spellCanvas != null)
+    {
+        GameObject fx = new GameObject("Ace Selection Effect", typeof(RectTransform));
+        fx.layer = spellCanvas.rootCanvas.gameObject.layer;
+        fx.transform.SetParent(spellCanvas.rootCanvas.transform, false);
+        aceSelectionEffect = fx.AddComponent<AceSelectionEffect>();
+        aceSelectionEffect.Initialize(this, isEnemyCard ? playerBattleArea : enemyBattleArea,
+            isEnemyCard, aceCastSE, aceWaitingSE, aceSEVolume);
+    }
+
     if(isEnemyCard)
     {
+        StartCoroutine(ResolveEnemyAceAfterCue(selfCard));
+        return;
+    }
+
+    Debug.Log("破壊する敵カードを選択してください");
+}
+
+IEnumerator ResolveEnemyAceAfterCue(CardController selfCard)
+{
+        yield return new WaitForSecondsRealtime(Mathf.Max(0f, enemyAceSelectionDuration));
+        if(!isSelectingDestroyTarget || pendingDestroySelfCard != selfCard) yield break;
         CardController target =
             GetCpuDestroyTargetFromPlayerBattle();
 
@@ -3260,7 +3299,7 @@ public void StartSelectEnemyBattleToDestroy(
 
             pendingDestroySelfCard = null;
             isSelectingDestroyTarget = false;
-            return;
+            yield break;
         }
 
         Debug.Log(
@@ -3268,11 +3307,9 @@ public void StartSelectEnemyBattleToDestroy(
             GetCardName(target.data)
         );
 
-        TrySelectDestroyTarget(target);
-        return;
-    }
-
-    Debug.Log("破壊する敵カードを選択してください");
+        resolvingEnemyAce = true;
+        try { TrySelectDestroyTarget(target); }
+        finally { resolvingEnemyAce = false; }
 }
 
 CardController GetCpuDestroyTargetFromPlayerBattle()
@@ -3350,6 +3387,8 @@ public bool TrySelectDestroyTarget(
     bool sourceIsPlayer =
         playerBattleArea != null &&
         pendingDestroySelfCard.transform.IsChildOf(playerBattleArea);
+
+    if(sourceIsEnemy && !resolvingEnemyAce) return false;
 
     bool targetIsValidOpponent =
         (sourceIsEnemy &&
@@ -3930,6 +3969,115 @@ void OnSelectJokerClear()
             if(card != null)
             {
                 card.SetAttackable(false);
+            }
+        }
+    }
+}
+
+// Non-interactive Canvas graphics keep target selection available beneath the spell.
+public class AceSelectionEffect : MonoBehaviour
+{
+    TurnManager owner;
+    AudioSource sound;
+    AudioClip waiting;
+    float volume, age, nextChime = 1.5f, ending = -1f;
+    readonly List<CardController> targets = new List<CardController>();
+    readonly List<AceSpellRing> rings = new List<AceSpellRing>();
+    readonly Vector3[] corners = new Vector3[4];
+
+    public void Initialize(TurnManager manager, Transform area, bool enemy, AudioClip cast, AudioClip idle, float level)
+    {
+        owner = manager;
+        waiting = idle;
+        volume = level;
+        sound = gameObject.AddComponent<AudioSource>();
+        sound.playOnAwake = false;
+        sound.spatialBlend = 0f;
+        if(cast != null) sound.PlayOneShot(cast, volume);
+        Color tint = enemy ? new Color(1f, 0.35f, 0.2f) : new Color(0.25f, 0.85f, 1f);
+        if(area == null) return;
+        foreach(Transform child in area)
+        {
+            CardController target = child.GetComponent<CardController>();
+            if(target == null || target.data == null || !child.gameObject.activeInHierarchy) continue;
+            GameObject halo = new GameObject("Ace Target Aura", typeof(RectTransform));
+            halo.layer = gameObject.layer;
+            halo.transform.SetParent(transform, false);
+            AceSpellRing ring = halo.AddComponent<AceSpellRing>();
+            ring.raycastTarget = false;
+            ring.color = tint;
+            targets.Add(target);
+            rings.Add(ring);
+        }
+    }
+
+    void Update()
+    {
+        age += Time.unscaledDeltaTime;
+        bool selecting = owner != null && owner.isActiveAndEnabled && owner.IsSelectingDestroyTarget();
+        if(!selecting && ending < 0f) { ending = age; sound.Stop(); }
+        float fade = ending < 0f ? 1f : 1f - (age - ending) / 0.35f;
+        if(fade <= 0f) { Destroy(gameObject); return; }
+        if(selecting && waiting != null && age >= nextChime)
+        {
+            sound.PlayOneShot(waiting, volume * 0.22f);
+            nextChime = age + Mathf.Max(1.8f, waiting.length);
+        }
+        RectTransform parent = transform.parent as RectTransform;
+        if(parent == null) return;
+        for(int i = 0; i < rings.Count; i++)
+        {
+            CardController target = targets[i];
+            if(target == null) { rings[i].enabled = false; continue; }
+            // Freeze the final aura when the selected card moves to its graveyard.
+            if(selecting)
+            {
+                RectTransform image = target.artworkImage != null ? target.artworkImage.rectTransform : target.transform as RectTransform;
+                if(image == null) continue;
+                image.GetWorldCorners(corners);
+                Vector3 min = parent.InverseTransformPoint(corners[0]), max = min;
+                for(int j = 1; j < 4; j++)
+                {
+                    Vector3 p = parent.InverseTransformPoint(corners[j]);
+                    min = Vector3.Min(min, p); max = Vector3.Max(max, p);
+                }
+                RectTransform rect = rings[i].rectTransform;
+                rect.anchorMin = rect.anchorMax = parent.pivot;
+                rect.anchoredPosition = (min + max) * 0.5f;
+                rect.sizeDelta = new Vector2(max.x - min.x + 28f, max.y - min.y + 28f);
+            }
+            rings[i].phase = age;
+            Color color = rings[i].color;
+            color.a = fade * (0.5f + 0.2f * Mathf.Sin(age * 3.5f));
+            rings[i].color = color;
+            rings[i].SetVerticesDirty();
+        }
+    }
+}
+
+public class AceSpellRing : MaskableGraphic
+{
+    public float phase;
+    protected override void OnPopulateMesh(VertexHelper mesh)
+    {
+        mesh.Clear();
+        Vector2 radius = rectTransform.rect.size * 0.5f;
+        for(int band = 0; band < 2; band++)
+        {
+            float factor = band == 0 ? 1f : 0.87f;
+            for(int i = 0; i < 64; i++)
+            {
+                if(band == 1 && i % 8 >= 5) continue;
+                float a = i * Mathf.PI * 2f / 64f + phase * (band == 0 ? 0.3f : -0.55f);
+                float b = (i + 1) * Mathf.PI * 2f / 64f + phase * (band == 0 ? 0.3f : -0.55f);
+                Vector2 r = radius * factor;
+                Vector2 inner = r - Vector2.one * 2.5f;
+                int index = mesh.currentVertCount;
+                mesh.AddVert(new Vector3(Mathf.Cos(a)*r.x, Mathf.Sin(a)*r.y), color, Vector2.zero);
+                mesh.AddVert(new Vector3(Mathf.Cos(b)*r.x, Mathf.Sin(b)*r.y), color, Vector2.zero);
+                mesh.AddVert(new Vector3(Mathf.Cos(b)*inner.x, Mathf.Sin(b)*inner.y), color, Vector2.zero);
+                mesh.AddVert(new Vector3(Mathf.Cos(a)*inner.x, Mathf.Sin(a)*inner.y), color, Vector2.zero);
+                mesh.AddTriangle(index,index+1,index+2); mesh.AddTriangle(index,index+2,index+3);
             }
         }
     }

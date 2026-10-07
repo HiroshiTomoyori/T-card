@@ -461,6 +461,14 @@ public void MarkDroppedSuccessfully()
      * 呼び出し側の指定に関係なく
      * スナップ演出とSEを無効化する。
      */
+    public void PlaceFromShield(Transform battleArea)
+    {
+        // A shield summon has no OnBeginDrag to capture its starting geometry.
+        if(rectTransform == null) rectTransform = GetComponent<RectTransform>();
+        if(rectTransform != null) originalSizeDelta = rectTransform.sizeDelta;
+        DropToBattleArea(battleArea);
+    }
+
     public void DropToBattleArea(
         Transform battleArea,
         bool playSnap = true

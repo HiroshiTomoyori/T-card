@@ -68,8 +68,8 @@ public class TCardEnemyAIBrain : MonoBehaviour
             }
         }
 
-        // 13以上では、評価が低いカードを無理にチャージしない。
-        if(maxResource >= 13 && bestScore < 20f)
+        // Every card is affordable at 13; keep the hand for summoning.
+        if(maxResource >= 13)
             return null;
 
         return best;
@@ -101,6 +101,15 @@ public class TCardEnemyAIBrain : MonoBehaviour
                 playerField,
                 enemyField
             );
+
+            if(score <= -999000f) continue;
+            // Spend efficiently when another body can be summoned afterwards.
+            card.SetCostFromName();
+            card.SetPowerFromName();
+            score /= Mathf.Sqrt(Mathf.Max(1, card.cost));
+            if(CanAttack(card)) score += 180f;
+            if(HasEffect(card, EffectType.NoSummonSickness) && CanAttack(card))
+                score += playerWallCount <= 1 ? 1800f : 650f;
 
             if(showDecisionLog)
             {
@@ -219,7 +228,13 @@ public bool ShouldAttack(
         attackScore += Config.aggressionBonus;
 
     // 相手ブロッカーが多い場合は損失リスクを計算
-    float strongestBlocker = 0f;
+    float worstTrade = 0f;
+    int blockerCount = 0;
+    int readyAttackers = 0;
+    if(enemyField != null)
+        foreach(var ally in enemyField)
+            if(ally != null && ally.data != null && !ally.isTapped &&
+               !ally.hasSummonSickness && CanAttack(ally.data)) readyAttackers++;
 
     if(playerField != null)
     {
@@ -243,28 +258,27 @@ public bool ShouldAttack(
                 continue;
             }
 
-            strongestBlocker =
-                Mathf.Max(
-                    strongestBlocker,
-                    GetCardValue(blocker.data)
-                );
+            blockerCount++;
+            card.SetPowerFromName();
+            blocker.data.SetPowerFromName();
+            int attackPower = card.power;
+            int blockPower = blocker.data.power;
+            ApplySuitAdvantage(card, blocker.data, ref attackPower, ref blockPower);
+            float trade;
+            if(CanSpecialBreak(card, blocker.data)) trade = GetCardValue(blocker.data);
+            else if(CanSpecialBreak(blocker.data, card)) trade = -GetCardValue(card);
+            else if(attackPower > blockPower) trade = GetCardValue(blocker.data);
+            else if(attackPower == blockPower) trade = GetCardValue(blocker.data) - GetCardValue(card);
+            else trade = -GetCardValue(card);
+            worstTrade = Mathf.Min(worstTrade, trade);
         }
     }
 
-    float attackerValue =
-        GetCardValue(card);
-
-    if(strongestBlocker > attackerValue)
+    if(blockerCount > 0)
     {
-        // 弱いカードならブロッカー誘導として攻撃可能
-        if(attackerValue <= 900f)
-        {
-            attackScore += 250f;
-        }
-        else
-        {
-            attackScore -= 700f;
-        }
+        attackScore += worstTrade * 0.8f;
+        // Trading a small attacker can open the way for the rest of the board.
+        if(readyAttackers > blockerCount) attackScore += 650f;
     }
 
     bool shouldAttack =
@@ -518,7 +532,7 @@ bool IsSuitAdvantage(
 public int GetMaxSummonsPerTurn()
 {
     if(Config == null)
-        return 1;
+        return 10;
 
     return Mathf.Max(
         1,
@@ -604,6 +618,7 @@ bool CanSpecialBreak(
         int playerFieldCount
     )
     {
+        card.SetCostFromName();
         string rank = GetRank(card);
         TCardAIRankWeight weight = GetWeight(rank);
 
@@ -621,6 +636,22 @@ bool CanSpecialBreak(
         }
 
         score += Mathf.Max(0, duplicates - 1) * 12f;
+
+        // Keep early attackers instead of charging them while holding only expensive cards.
+        if(CanAttack(card) && card.cost <= maxResource + 1)
+            score -= 110f;
+        if(card.cost > maxResource + 3)
+            score += 90f;
+        float nextSummon = 0f;
+        foreach(var remaining in hand)
+        {
+            if(remaining == null || remaining == card) continue;
+            remaining.SetCostFromName();
+            remaining.SetPowerFromName();
+            if(remaining.cost <= maxResource + 1)
+                nextSummon = Mathf.Max(nextSummon, GetCardValue(remaining));
+        }
+        score += nextSummon * 0.12f;
 
         if(weight != null)
             score -= weight.chargePenalty;
@@ -688,10 +719,7 @@ bool CanSpecialBreak(
 
         if(HasEffect(card, EffectType.RecoverWall))
         {
-            int recovery =
-                enemyWallCount < 5
-                ? 5 - enemyWallCount
-                : enemyWallCount < 9 ? 1 : 0;
+            int recovery = enemyWallCount < 9 ? 1 : 0;
 
             score += recovery * 850f;
         }
@@ -703,6 +731,10 @@ bool CanSpecialBreak(
 
         if(HasEffect(card, EffectType.NoSummonSickness))
             score += 250f;
+
+        if(HasEffect(card, EffectType.Draw1)) score += 350f;
+        if(HasEffect(card, EffectType.ChargeTopDeck)) score += 300f;
+        if(HasEffect(card, EffectType.DiscardEnemyHand)) score += 300f;
 
         if(HasEffect(card, EffectType.BlockOnly))
             score += enemyWallCount <= 2 ? 400f : 180f;

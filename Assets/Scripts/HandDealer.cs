@@ -18,6 +18,12 @@ public class HandDealer : MonoBehaviour
     public Sprite cardBackSprite;
     public int wallCount = 5;
 
+    [Header("King Wall Addition Limit")]
+    [Tooltip("各陣営が1対戦中にキングで追加できるウォールの累計枚数。初期ウォールは含まず、破壊されても使用済み枚数は戻りません。0で追加なし。")]
+    [Min(0)] public int maxKingWallAdditions = 4;
+    int playerKingWallsAdded;
+    int enemyKingWallsAdded;
+
     [Header("Card Size")]
     public Vector2 handCardSize = new Vector2(75, 112);
     public Vector2 wallCardSize = new Vector2(70, 105);
@@ -142,8 +148,6 @@ public class HandDealer : MonoBehaviour
     [Header("Opening Lock")]
     public Button endTurnButton;
 
-    [Header("Shield Trigger Debug")]
-    public bool debugAllWallsAreShieldTrigger = false;
 
 
 public Transform playerWallArea;
@@ -651,6 +655,7 @@ IEnumerator AnimateCardToHand(RectTransform cardRect)
     void CreateWallCards()
     {
         playerWallAliveCount = 0;
+        playerKingWallsAdded = 0;
         WallAreaLayout layout = GetWallLayout(wallArea);
         if (layout == null || cardPrefab == null || cardBackSprite == null) return;
         layout.ClearWalls();
@@ -666,6 +671,7 @@ IEnumerator AnimateCardToHand(RectTransform cardRect)
     void CreateEnemyWallCards()
     {
         enemyWallAliveCount = 0;
+        enemyKingWallsAdded = 0;
         WallAreaLayout layout = GetWallLayout(enemyWallArea);
         if (layout == null || cardPrefab == null || cardBackSprite == null) return;
         layout.ClearWalls();
@@ -1827,6 +1833,7 @@ if (redrawButton != null)
     }
 
 bool allowEnemyWallDamage = false;
+readonly HashSet<GameObject> resolvingEnemyWalls = new HashSet<GameObject>();
 
 public void DamageEnemyWallFromAttack(
     GameObject targetWall
@@ -1863,8 +1870,33 @@ public void DamageEnemyWall(
         GameObject targetWall
     )
     {
+        if(targetWall == null || enemyWallArea == null ||
+           targetWall.transform.parent != enemyWallArea ||
+           !targetWall.activeInHierarchy || !resolvingEnemyWalls.Add(targetWall))
+            yield break;
+
+        try
+        {
+            yield return DamageEnemyWallCore(targetWall);
+        }
+        finally
+        {
+            resolvingEnemyWalls.Remove(targetWall);
+        }
+    }
+
+    IEnumerator DamageEnemyWallCore(GameObject targetWall)
+    {
         if(targetWall == null)
             yield break;
+
+        CardController wallCard = targetWall.GetComponent<CardController>();
+        if(wallCard == null || wallCard.data == null)
+        {
+            Debug.LogWarning("敵ウォールのカードデータがありません", targetWall);
+            yield break;
+        }
+        CardData brokenCard = wallCard.data;
 
         CanvasGroup cg =
             targetWall.GetComponent<CanvasGroup>();
@@ -1877,8 +1909,12 @@ public void DamageEnemyWall(
             targetWall
         );
 
-        enemyHandCount = Mathf.Min(enemyHandCount + 1, maxHandSize);
+        if(targetWall == null)
+            yield break;
 
+        enemyHandCards.Add(brokenCard);
+        enemyHandCount = enemyHandCards.Count;
+        RefreshEnemyHandVisual();
         UpdateEnemyHandCountText();
 
         if(cg == null)
@@ -2566,42 +2602,7 @@ public IEnumerator EnemyChargeSpecificResourceAnimation(
         );
     }
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-public bool PrepareMonarchDebugWalls(List<CardData> cards)
-{
-    if (wallArea == null || cards == null || cards.Count == 0) return false;
-    var existing = new List<CardController>();
-    foreach (Transform child in wallArea)
-    {
-        var controller = child.GetComponent<CardController>();
-        var cg = child.GetComponent<CanvasGroup>();
-        if (controller == null || !child.gameObject.activeSelf ||
-            (cg != null && cg.alpha <= 0.01f)) continue;
-        existing.Add(controller);
-    }
-    if (existing.Count < cards.Count)
-    {
-        Debug.LogWarning("モナークテストに必要なウォールが不足しています。ウォールの再配布は行いません");
-        return false;
-    }
-    // Preserve the existing objects, slots and transforms; only change test data.
-    for (int i = 0; i < cards.Count; i++)
-    {
-        existing[i].SetData(cards[i]);
-        if (existing[i].artworkImage != null) existing[i].artworkImage.sprite = cardBackSprite;
-    }
-    // Keep the selected test's wall count without compacting the remaining slots.
-    for (int i = cards.Count; i < existing.Count; i++)
-    {
-        var cg = existing[i].GetComponent<CanvasGroup>() ?? existing[i].gameObject.AddComponent<CanvasGroup>();
-        cg.alpha = 0f;
-        cg.blocksRaycasts = false;
-        cg.interactable = false;
-    }
-    playerWallAliveCount = cards.Count;
-    return true;
-}
-#endif
+
 public bool IsResolvingWallAttack { get; private set; }
 
 IEnumerator DamagePlayerWallRoutine(GameObject wall)
@@ -2662,14 +2663,13 @@ public IEnumerator DamagePlayerWallsAndWait(IEnumerable<GameObject> requested)
 
 bool IsShieldCard(CardData data)
 {
-    return debugAllWallsAreShieldTrigger || (data != null && data.effectTypes != null &&
+    return (data != null && data.effectTypes != null &&
         System.Array.Exists(data.effectTypes, effect => effect == EffectType.ShieldTrigger));
 }
 
 IEnumerator ResolveBrokenPlayerWall(CardData data)
 {
 bool shieldTrigger =
-    debugAllWallsAreShieldTrigger ||
     (
         data.effectTypes != null &&
         System.Array.Exists(
@@ -2718,7 +2718,7 @@ bool shieldTrigger =
 
         GameObject triggerCard =
             Instantiate(
-                cardPrefab,
+                proHandCardPrefab != null ? proHandCardPrefab : cardPrefab,
                 turnManager.playerBattleArea
             );
 
@@ -2747,7 +2747,7 @@ bool shieldTrigger =
             triggerLayout =
                 triggerCard.AddComponent<LayoutElement>();
 
-        triggerLayout.ignoreLayout = false;
+        triggerLayout.ignoreLayout = true;
         triggerLayout.preferredWidth = handCardSize.x;
         triggerLayout.preferredHeight = handCardSize.y;
         triggerLayout.minWidth = handCardSize.x;
@@ -2771,7 +2771,23 @@ bool shieldTrigger =
 
         if(layout != null)
         {
-            layout.Refresh();
+            // The normal summon path registers CCP movement and field click input.
+            CardDrag triggerDrag = triggerCard.GetComponent<CardDrag>();
+            if(triggerDrag != null)
+            {
+                triggerDrag.enabled = true;
+                triggerDrag.PlaceFromShield(turnManager.playerBattleArea);
+                layout.Refresh();
+                while(triggerDrag != null && triggerDrag.IsDropSnapPlaying)
+                    yield return null;
+            }
+            else
+            {
+                BattleCardClick click = triggerCard.GetComponent<BattleCardClick>();
+                if(click == null) click = triggerCard.AddComponent<BattleCardClick>();
+                click.enabled = true;
+                layout.Refresh();
+            }
         }
 
         if(CardEffectManager.I != null &&
@@ -2874,27 +2890,8 @@ bool shieldTrigger =
             : "通常Wallを手札へ：" + data.cardName
         );
 
-        GameObject handCard =
-            Instantiate(
-                cardPrefab,
-                handArea
-            );
-
-        handCard.name =
-            "HandCard_" + data.cardName;
-
-        SetupCardSize(
-            handCard,
-            handCardSize
-        );
-
-        CardController handController =
-            handCard.GetComponent<CardController>();
-
-        if(handController != null)
-        {
-            handController.SetData(data);
-        }
+        // Use the same prefab and Pro hand registration as a normal draw.
+        GameObject handCard = CreateHandCard(data);
 
         LayoutElement layout2 =
             handCard.GetComponent<LayoutElement>();
@@ -2967,12 +2964,19 @@ bool shieldTrigger =
 
     bool RecoverWallFromDeck(bool enemy, bool fromKing)
     {
+        if(fromKing && (enemy ? enemyKingWallsAdded : playerKingWallsAdded) >= Mathf.Max(0, maxKingWallAdditions))
+            return false;
         List<CardData> deck = enemy ? enemyDeck : currentDeck;
         WallAreaLayout layout = GetWallLayout(enemy ? enemyWallArea : wallArea);
         if (deck == null || deck.Count == 0 || layout == null || !layout.HasSpace) return false;
         CardData data = deck[0];
         if (!CreateWallCard(data, enemy, fromKing)) return false;
         deck.RemoveAt(0);
+        if(fromKing)
+        {
+            if(enemy) enemyKingWallsAdded++;
+            else playerKingWallsAdded++;
+        }
         if (enemy) enemyWallAliveCount++;
         else playerWallAliveCount++;
         return true;
@@ -3015,11 +3019,10 @@ bool shieldTrigger =
 
     public void RecoverWallByKing(bool enemy)
     {
-        // Preserve the current recovery rule; only placement/ownership changes here.
-        int alive = enemy ? enemyWallAliveCount : playerWallAliveCount;
-        int amount = alive < 5 ? 5 - alive : alive < 9 ? 1 : 0;
-        for (int i = 0; i < amount; i++)
-            if (!RecoverWallFromDeck(enemy, true)) break;
+        int remaining = Mathf.Max(0, maxKingWallAdditions - (enemy ? enemyKingWallsAdded : playerKingWallsAdded));
+        if(remaining == 0) return;
+        // Each King restores exactly one wall, subject to space, deck and lifetime limit.
+        RecoverWallFromDeck(enemy, true);
     }
     public IEnumerator DamagePlayerWallAndWait(GameObject wall)
     {
