@@ -23,6 +23,8 @@ public class HandDealer : MonoBehaviour
     [Min(0)] public int maxKingWallAdditions = 4;
     int playerKingWallsAdded;
     int enemyKingWallsAdded;
+    public int EnemyKingRecoveryRemaining => Mathf.Min(
+        Mathf.Max(0, maxKingWallAdditions - enemyKingWallsAdded), enemyDeck != null ? enemyDeck.Count : 0);
 
     [Header("Card Size")]
     public Vector2 handCardSize = new Vector2(75, 112);
@@ -2932,8 +2934,19 @@ bool shieldTrigger =
 
 }
 
-    public void ChargeTopDeckToResource()
+    public void ChargeTopDeckToResource() => ChargeTopDeckToResource(false);
+
+    public void ChargeTopDeckToResource(bool enemy)
     {
+        if(enemy)
+        {
+            if(enemyDeck == null || enemyDeck.Count == 0) return;
+            EnemyResourceManager manager = FindFirstObjectByType<EnemyResourceManager>();
+            if(manager == null) return;
+            enemyDeck.RemoveAt(0);
+            manager.AddResource(false);
+            return;
+        }
         if(currentDeck == null ||
         currentDeck.Count <= 0)
         {
@@ -2998,8 +3011,20 @@ bool shieldTrigger =
         Debug.Log($"ウォール追加成功：{(enemy ? "敵" : "味方")} 現在{(enemy ? enemyWallAliveCount : playerWallAliveCount)}枚 / キング累計{(enemy ? enemyKingWallsAdded : playerKingWallsAdded)}/{maxKingWallAdditions}");
         return true;
     }
-    public void DiscardRandomEnemyHand()
+    public void DiscardRandomEnemyHand() => DiscardRandomEnemyHand(false);
+
+    public void DiscardRandomEnemyHand(bool sourceIsEnemy)
     {
+        if(sourceIsEnemy)
+        {
+            var cards = TCardAIUnityBridge.GetCards(handArea);
+            if(cards.Count == 0) return;
+            CardController discarded = cards[Random.Range(0, cards.Count)];
+            if(turnManager != null) turnManager.DiscardPlayerHandCard(discarded);
+            else Destroy(discarded.gameObject);
+            if(handController != null) handController.RefreshProLayout();
+            return;
+        }
         if(enemyHandCards == null ||
         enemyHandCards.Count <= 0)
         {

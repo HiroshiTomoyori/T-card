@@ -6,6 +6,8 @@ using System.Collections.Generic;
 
 public partial class TurnManager : MonoBehaviour
 {
+    public int PlayerWallCountForAI => GetAlivePlayerWallCount();
+    public int EnemyWallCountForAI => GetAliveEnemyWallCount();
     [Header("Ace spell presentation")]
     public AudioClip aceCastSE;
     public AudioClip aceWaitingSE;
@@ -592,7 +594,8 @@ CardController SelectEnemyBlocker(
             .SelectBestBlocker(
                 attacker,
                 blockers,
-                enemyWallCount
+                enemyWallCount,
+                TCardAIUnityBridge.GetCards(playerBattleArea)
             );
     }
 
@@ -1349,6 +1352,7 @@ CardData SelectEnemyResourceChargeCard()
             ? playerBattleArea.childCount
             : 0;
 
+        enemyAIBrain.KingRecoveriesAvailable = handDealer.EnemyKingRecoveryRemaining;
         CardData aiSelectedCard =
             enemyAIBrain.SelectResourceCard(
                 handDealer.enemyHandCards,
@@ -1356,7 +1360,10 @@ CardData SelectEnemyResourceChargeCard()
                     ? enemyResourceManager.maxResource
                     : 0,
                 enemyWallCount,
-                playerFieldCount
+                playerFieldCount,
+                TCardAIUnityBridge.GetCards(playerBattleArea),
+                TCardAIUnityBridge.GetCards(enemyBattleArea),
+                GetAlivePlayerWallCount()
             );
 
         if(aiSelectedCard != null)
@@ -1561,7 +1568,9 @@ IEnumerator EnemyMainPhase()
                 continue;
 
             // A and Nine can be cast even when all six creature slots are occupied.
-            if(!BattleAreaLayout.IsSpell(card) && !BattleAreaLayout.CanAccept(enemyBattleArea))
+            CardController availableKingBase = enemyAIBrain != null
+                ? enemyAIBrain.SelectKingBase(card, TCardAIUnityBridge.GetCards(enemyBattleArea), enemyResourceManager.currentResource) : null;
+            if(!BattleAreaLayout.IsSpell(card) && !BattleAreaLayout.CanAccept(enemyBattleArea, availableKingBase))
                 continue;
 
             card.SetPowerFromName();
@@ -1578,7 +1587,7 @@ IEnumerator EnemyMainPhase()
 
             // デバッグONならコストを無視
             if(debugForceEnemyQ ||
-               card.cost <= enemyResourceManager.currentResource)
+               (availableKingBase != null || card.cost <= enemyResourceManager.currentResource))
             {
                 summonableCards.Add(card);
             }
@@ -1621,7 +1630,7 @@ IEnumerator EnemyMainPhase()
         {
             // 通常時は既存AIに選択させる
             selectedCard =
-                SelectEnemySummonCard(summonableCards);
+                SelectEnemySummonCard(handDealer.enemyHandCards);
         }
 
         if(selectedCard == null)
@@ -1634,11 +1643,19 @@ IEnumerator EnemyMainPhase()
         // リソース消費
         // =========================
 
+        CardController kingBase = !debugForceEnemyQ && enemyAIBrain != null ? enemyAIBrain.PlannedKingBase : null;
+        if(kingBase != null && kingBase.transform.parent != enemyBattleArea) kingBase = null;
+        int summonCost = selectedCard.cost;
+        if(kingBase != null)
+        {
+            kingBase.data.SetPowerFromName();
+            summonCost = Mathf.Max(0, selectedCard.cost - kingBase.data.power);
+        }
         if(!debugForceEnemyQ)
         {
             bool usedResource =
                 enemyResourceManager.UseResource(
-                    selectedCard.cost
+                    summonCost
                 );
 
             if(!usedResource)
@@ -1682,6 +1699,7 @@ IEnumerator EnemyMainPhase()
         if(controller != null)
         {
             controller.SetData(selectedCard);
+            if(kingBase != null) StackEnemyKingBase(controller, kingBase);
 
             bool noSummonSickness =
                 controller.data.effectTypes != null &&
@@ -1690,9 +1708,8 @@ IEnumerator EnemyMainPhase()
                     x => x == EffectType.NoSummonSickness
                 );
 
-            controller.SetSummonSickness(
-                !noSummonSickness
-            );
+            noSummonSickness = noSummonSickness || kingBase != null;
+            controller.SetSummonSickness(!noSummonSickness);
 
             if(!noSummonSickness)
             {
@@ -1810,13 +1827,17 @@ CardData SelectEnemySummonCard(
         int enemyWallCount =
             GetAliveEnemyWallCount();
 
+        enemyAIBrain.KingRecoveriesAvailable = handDealer.EnemyKingRecoveryRemaining;
         CardData aiSelectedCard =
             enemyAIBrain.SelectSummonCard(
                 summonableCards,
                 enemyWallCount,
                 playerWallCount,
                 playerCards,
-                enemyCards
+                enemyCards,
+                enemyResourceManager.currentResource,
+                enemyBattleArea.GetComponent<BattleAreaLayout>() != null
+                    ? Mathf.Clamp(enemyBattleArea.GetComponent<BattleAreaLayout>().maxCards, 1, 6) : 6
             );
 
         if(aiSelectedCard != null)
@@ -2091,18 +2112,16 @@ IEnumerator EnemyBattlePhase()
     int playerWallCount =
         GetAlivePlayerWallCount();
 
-    // AIが攻撃順を決定
-    if(enemyAIBrain != null)
+    while(attackers.Count > 0)
     {
-        attackers =
-            enemyAIBrain.OrderAttackers(
-                attackers,
-                playerWallCount
-            );
-    }
-
-    foreach(CardController attacker in attackers)
-    {
+        // Replan after each battle and shield trigger using the current visible board.
+        attackers.RemoveAll(card => card == null || card.transform.parent != enemyBattleArea);
+        if(enemyAIBrain != null)
+            attackers = enemyAIBrain.OrderAttackers(attackers, GetAlivePlayerWallCount(),
+                TCardAIUnityBridge.GetCards(playerBattleArea));
+        if(attackers.Count == 0) break;
+        CardController attacker = attackers[0];
+        attackers.RemoveAt(0);
         // 攻撃途中で墓地へ送られた場合
         if(attacker == null)
             continue;
@@ -2365,6 +2384,7 @@ bool ShouldEnemyAttack(
                 enemyBattleArea
             );
 
+        enemyAIBrain.DefensiveWallCount = GetAliveEnemyWallCount();
         return enemyAIBrain.ShouldAttack(
             attacker,
             playerWallCount,
@@ -3321,6 +3341,15 @@ CardController GetCpuDestroyTargetFromPlayerBattle()
     if(playerBattleArea == null)
         return null;
 
+    CardController plannedTarget = enemyAIBrain != null ? enemyAIBrain.ConsumePlannedDestroyTarget() : null;
+    if(plannedTarget != null && plannedTarget.transform.parent == playerBattleArea)
+        return plannedTarget;
+
+    if(enemyAIBrain != null)
+        return enemyAIBrain.SelectDestroyTarget(
+            TCardAIUnityBridge.GetCards(playerBattleArea),
+            TCardAIUnityBridge.GetCards(enemyBattleArea),
+            GetAlivePlayerWallCount(), GetAliveEnemyWallCount());
     CardController bestTarget = null;
     int bestScore = -999;
 
@@ -3569,6 +3598,13 @@ public bool IsSelectingDestroyTarget()
         }
 
         return false;
+    }
+
+    public void DiscardPlayerHandCard(CardController card)
+    {
+        if(card != null && handDealer != null && handDealer.handArea != null &&
+           card.transform.IsChildOf(handDealer.handArea))
+            SendToGraveyard(card.gameObject, playerGraveyard);
     }
 
     public void SendCardToOwnGraveyard(CardController card)
@@ -3975,5 +4011,131 @@ void OnSelectJokerClear()
                 card.SetAttackable(false);
             }
         }
+    }
+    void StackEnemyKingBase(
+        CardController kCard,
+        CardController baseCard
+    )
+    {
+        if (
+            kCard == null ||
+            baseCard == null
+        )
+        {
+            return;
+        }
+
+        StackedCard stacked =
+            kCard.GetComponent<StackedCard>();
+
+        if (stacked == null)
+        {
+            stacked =
+                kCard.gameObject
+                    .AddComponent<StackedCard>();
+        }
+
+        stacked.baseCard =
+            baseCard.gameObject;
+
+        CanvasGroup kCg =
+            kCard.GetComponent<CanvasGroup>();
+
+        if (kCg == null)
+        {
+            kCg =
+                kCard.gameObject
+                    .AddComponent<CanvasGroup>();
+        }
+
+        kCg.alpha = 1f;
+        kCg.blocksRaycasts = true;
+        kCg.interactable = true;
+
+        baseCard.SetAttackable(false);
+        baseCard.Untap();
+
+        // Stop the field placement tween before the card becomes part of the stack.
+        baseCard.transform.DOKill();
+        CCP.Card proBase = baseCard.GetComponent<CCP.Card>();
+        if (proBase != null)
+        {
+            proBase.enabled = false;
+            if (proBase.parentCardGroup != null)
+                proBase.parentCardGroup.RemoveCard(proBase);
+            proBase.isBeingMovedManually = true;
+        }
+
+        baseCard.transform.SetParent(
+            kCard.transform,
+            false
+        );
+
+        // CCP's Front must remain above the base card.
+        baseCard.transform.SetAsFirstSibling();
+
+        RectTransform baseRt =
+            baseCard.GetComponent<RectTransform>();
+
+        if (baseRt != null)
+        {
+            baseRt.anchorMin =
+                new Vector2(0.5f, 0.5f);
+
+            baseRt.anchorMax =
+                new Vector2(0.5f, 0.5f);
+
+            baseRt.pivot =
+                new Vector2(0.5f, 0.5f);
+
+            baseRt.anchoredPosition =
+                new Vector2(0f, -12f);
+
+            baseRt.localScale =
+                Vector3.one * 0.95f;
+            baseRt.localRotation = Quaternion.identity;
+        }
+
+        CanvasGroup cg =
+            baseCard.GetComponent<CanvasGroup>();
+
+        if (cg == null)
+        {
+            cg =
+                baseCard.gameObject
+                    .AddComponent<CanvasGroup>();
+        }
+
+        cg.alpha = 1f;
+        cg.blocksRaycasts = false;
+        cg.interactable = false;
+
+        CardDrag drag =
+            baseCard.GetComponent<CardDrag>();
+
+        if (drag != null)
+            drag.enabled = false;
+
+        // CardDrag.OnDisable restores raycasts; a stacked base must stay inert.
+        cg.blocksRaycasts = false;
+        cg.interactable = false;
+
+        BattleCardClick click =
+            baseCard.GetComponent<BattleCardClick>();
+
+        if (click != null)
+            click.enabled = false;
+
+        CardActionIcon icon =
+            baseCard.GetComponent<CardActionIcon>();
+
+        if (icon != null)
+            icon.HideAll();
+
+        Debug.Log(
+            "K特殊召喚：" +
+            "土台カードを重ねた → " +
+            baseCard.data.name
+        );
     }
 }

@@ -136,7 +136,7 @@ public class CardEffectManager :
                         );
 
                         handDealer
-                            .ChargeTopDeckToResource();
+                            .ChargeTopDeckToResource(isEnemy);
                     }
                     else
                     {
@@ -151,10 +151,13 @@ public class CardEffectManager :
                     if (handDealer != null)
                     {
                         Debug.Log(
-                            "効果発動：1ドロー"
+                            isEnemy ? "敵の効果発動：1ドロー" : "味方の効果発動：1ドロー"
                         );
 
-                        handDealer.DrawOneCard();
+                        if (isEnemy)
+                            handDealer.EnemyDraw(1);
+                        else
+                            handDealer.DrawOneCard();
                     }
                     else
                     {
@@ -174,7 +177,7 @@ public class CardEffectManager :
                         );
 
                         handDealer
-                            .DiscardRandomEnemyHand();
+                            .DiscardRandomEnemyHand(isEnemy);
                     }
                     else
                     {
@@ -266,7 +269,9 @@ public class CardEffectManager :
                                         .GetCards(
                                             turnManager
                                                 .enemyBattleArea
-                                        )
+                                        ),
+                                    turnManager.PlayerWallCountForAI,
+                                    turnManager.EnemyWallCountForAI
                                 );
                         }
 

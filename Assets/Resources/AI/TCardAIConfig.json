@@ -1,6 +1,6 @@
 {
-  "configVersion": "1.1",
-  "lookaheadDepth": 2,
+  "configVersion": "2.0",
+  "lookaheadDepth": 5,
   "maxSummonsPerTurn": 10,
   "attackOrderMode": "Adaptive",
   "jokerClearBias": -9.0418,

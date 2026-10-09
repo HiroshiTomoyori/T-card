@@ -13,12 +13,14 @@ public class EnemyResourceManager : MonoBehaviour
         UpdateText();
     }
 
-    public void AddResource()
+    public void AddResource() => AddResource(true);
+
+    public void AddResource(bool refill)
     {
         maxResource++;
 
         // 現在値も最大値まで回復
-        currentResource = maxResource;
+        currentResource = refill ? maxResource : currentResource + 1;
 
         UpdateText();
 
