@@ -20,6 +20,8 @@ public partial class TurnManager : MonoBehaviour
     int maxWallBreakCount = 1;
     bool isPlayerFirst = true;
     bool isBattlePhase = false;
+    bool enemyBattleIconsActive;
+    bool battleIconsEnded;
 
     bool enemyExtraTurnRequested = false;
 private bool isPlayerMainPhase = false;
@@ -188,6 +190,7 @@ public bool CanDragPlayerHand
         // Inspectorでサイズを変更した場合や、別のUI処理に上書きされた場合も
         // 墓地内のカードへ毎フレーム固定サイズを再適用する。
         SyncGraveyardCardSizes();
+        SyncBattleActionIcons();
     }
 
     public void StartFirstTurn(bool playerFirst)
@@ -199,6 +202,7 @@ public bool CanDragPlayerHand
             return;
         }
 
+        battleIconsEnded = false;
         isPlayerFirst = playerFirst;
         turnCount = 1;
         isFirstTurnStarting = true;
@@ -595,7 +599,9 @@ CardController SelectEnemyBlocker(
                 attacker,
                 blockers,
                 enemyWallCount,
-                TCardAIUnityBridge.GetCards(playerBattleArea)
+                TCardAIUnityBridge.GetCards(playerBattleArea),
+                TCardAIUnityBridge.GetCards(enemyBattleArea),
+                GetAlivePlayerWallCount()
             );
     }
 
@@ -2103,6 +2109,13 @@ IEnumerator EnemyBattlePhase()
         yield break;
     }
 
+    if(enemyAIBrain != null) enemyAIBrain.ConfigureBattleReserve(
+        handDealer != null ? handDealer.enemyHandCards : null,
+        enemyResourceManager != null ? enemyResourceManager.maxResource : 0);
+    enemyBattleIconsActive = true;
+    SyncBattleActionIcons();
+    try
+    {
     // 現在の敵バトルカードをリスト化
     List<CardController> attackers =
         TCardAIUnityBridge.GetCards(
@@ -2118,7 +2131,8 @@ IEnumerator EnemyBattlePhase()
         attackers.RemoveAll(card => card == null || card.transform.parent != enemyBattleArea);
         if(enemyAIBrain != null)
             attackers = enemyAIBrain.OrderAttackers(attackers, GetAlivePlayerWallCount(),
-                TCardAIUnityBridge.GetCards(playerBattleArea));
+                TCardAIUnityBridge.GetCards(playerBattleArea), GetAliveEnemyWallCount(),
+                TCardAIUnityBridge.GetCards(enemyBattleArea));
         if(attackers.Count == 0) break;
         CardController attacker = attackers[0];
         attackers.RemoveAt(0);
@@ -2346,6 +2360,12 @@ IEnumerator EnemyBattlePhase()
         waitingBlockSelect = false;
 
         yield return new WaitForSeconds(0.4f);
+    }
+    }
+    finally
+    {
+        enemyBattleIconsActive = false;
+        SyncBattleActionIcons();
     }
 }
 
@@ -3720,6 +3740,9 @@ public bool IsSelectingDestroyTarget()
 
     public void StartBattleEndResult()
     {
+        battleIconsEnded = true;
+        enemyBattleIconsActive = false;
+        HideAllCardIcons();
         //Debug.LogError("★★ StartBattleEndResult 呼ばれた ★★");
 
         isPlayerTurnActive = false;
@@ -4137,5 +4160,30 @@ void OnSelectJokerClear()
             "土台カードを重ねた → " +
             baseCard.data.name
         );
+    }
+    void SyncBattleActionIcons()
+    {
+        bool playerAttack = !battleIconsEnded && isBattlePhase && isPlayerTurnActive && !isEndingTurn;
+        bool enemyAttack = !battleIconsEnded && enemyBattleIconsActive;
+        CardActionIcon template = cardPrefab != null ? cardPrefab.GetComponent<CardActionIcon>() : null;
+        SyncFieldActionIcons(playerBattleArea, playerAttack, enemyAttack, template);
+        SyncFieldActionIcons(enemyBattleArea, enemyAttack, playerAttack, template);
+    }
+
+    void SyncFieldActionIcons(Transform area, bool attackMode, bool defenseMode, CardActionIcon template)
+    {
+        if(area == null) return;
+        foreach(Transform child in area)
+        {
+            CardController controller = child.GetComponent<CardController>();
+            if(controller == null) continue;
+            CardActionIcon icon = child.GetComponent<CardActionIcon>();
+            bool attack = child.gameObject.activeInHierarchy && attackMode && CardActionIcon.CanAttack(controller);
+            bool block = child.gameObject.activeInHierarchy && defenseMode && CardActionIcon.CanBlock(controller);
+            if(icon == null && (attack || block)) icon = child.gameObject.AddComponent<CardActionIcon>();
+            if(icon == null) continue;
+            if(attack || block) icon.EnsureIcons(template);
+            icon.SetAvailability(attack, block);
+        }
     }
 }

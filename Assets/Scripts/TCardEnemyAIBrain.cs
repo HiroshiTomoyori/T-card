@@ -25,6 +25,111 @@ public class TCardEnemyAIBrain : MonoBehaviour
         I = this;
     }
 
+    public int SelectAssistedDrawIndex(List<CardData> deck, List<CardData> hand,
+        int resource, int ownWalls, int foeWalls, IReadOnlyList<CardController> playerField,
+        IReadOnlyList<CardController> enemyField, IReadOnlyList<int> candidates, int availableResource = -1)
+    {
+        if(deck == null || candidates == null) return -1;
+        var state = ReadStrategicState(hand ?? new List<CardData>(), availableResource >= 0 ? availableResource : resource,
+            ownWalls, foeWalls, playerField, enemyField);
+        var search = new StrategicSearch();
+        float offense = Pressure(state.own, state.foe, foeWalls, search);
+        float danger = Pressure(state.foe, state.own, ownWalls, search, true);
+        int best = -1; float bestScore = float.MinValue;
+        foreach(int index in candidates)
+        {
+            if(index < 0 || index >= deck.Count || deck[index] == null) continue;
+            float score = EvaluateDrawCandidate(deck[index], hand, resource, state, search, offense, danger);
+            if(score > bestScore) { bestScore = score; best = index; }
+        }
+        return best;
+    }
+
+    float EvaluateDrawCandidate(CardData card, List<CardData> hand, int resource,
+        StrategicState state, StrategicSearch search, float offense, float danger)
+    {
+        card.SetPowerFromName(); card.SetCostFromName();
+        int budget = Mathf.Max(1, resource + 1);
+        float score = GetCardValue(card) * 0.18f;
+        int cheap = 0, copies = 0;
+        if(hand != null) foreach(var held in hand)
+        {
+            if(held == null) continue;
+            held.SetCostFromName();
+            if(!IsSpell(held) && held.cost <= budget + 2) cheap++;
+            if(GetRank(held) == GetRank(card)) copies++;
+        }
+        score -= copies * 650f;
+        if(!IsSpell(card))
+        {
+            score += card.cost <= budget + 2 ? (cheap < 2 ? 1400f : 350f) : 0f;
+            score -= Mathf.Max(0, card.cost - budget - 2) * 160f;
+            if(HasEffect(card, EffectType.ChargeTopDeck)) score += resource < 13 ? 1050f : 300f;
+            if(HasEffect(card, EffectType.Draw1)) score += 650f;
+            if(HasEffect(card, EffectType.NoSummonSickness)) score += 350f;
+            if(HasEffect(card, EffectType.BlockOnly)) score += state.ownWalls <= 2 ? 600f : 200f;
+            if(HasEffect(card, EffectType.DoubleWallBreak)) score += 550f;
+        }
+        else score -= 500f;
+        int cost = card.cost;
+        bool raised = false;
+        foreach(var basis in state.own)
+            if(CanRaiseFrom(card, basis.data) && card.cost - basis.data.power < cost)
+            { cost = card.cost - basis.data.power; raised = true; }
+        bool affordable = cost <= state.mana;
+        if(HasEffect(card, EffectType.DestroyOneEnemyBattle))
+        {
+            if(state.foe.Count == 0) return score - 2500f;
+            score += 600f;
+            if(affordable)
+                foreach(var target in state.foe)
+                {
+                    var removed = state.Copy(); removed.foe.RemoveAll(u => u.source == target.source);
+                    score = Mathf.Max(score, 600f + DrawTacticalGain(removed, state, search, offense, danger));
+                }
+            return score;
+        }
+        if(HasEffect(card, EffectType.TapAllEnemyBattle))
+        {
+            var tapped = state.Copy(); foreach(var unit in tapped.foe) unit.tapped = true;
+            float gain = Pressure(tapped.own, tapped.foe, tapped.foeWalls, search) - offense;
+            if(gain <= 0f) return score - 2500f;
+            return score + (affordable ? gain * 1.2f : 350f);
+        }
+        if(HasEffect(card, EffectType.JokerClearBattleArea))
+        {
+            if(!affordable) return score;
+            var joker = state.Copy();
+            if(ChooseProjectedJokerClear(state)) { joker.own.Clear(); joker.foe.Clear(); }
+            else joker.extraTurn = true;
+            return score + DrawTacticalGain(joker, state, search, offense, danger);
+        }
+        if(HasEffect(card, EffectType.RecoverWall) && state.ownWalls < 5 && KingRecoveriesAvailable > 0)
+            score += 800f;
+        if(!affordable || (state.own.Count >= state.slots && !raised)) return score;
+        var developed = state.Copy();
+        if(raised)
+        {
+            int basis = developed.own.FindIndex(u => CanRaiseFrom(card, u.data) && card.cost - u.data.power == cost);
+            if(basis >= 0) developed.own.RemoveAt(basis);
+        }
+        developed.own.Add(new StrategicUnit { data = card,
+            sick = !raised && !HasEffect(card, EffectType.NoSummonSickness) });
+        if(HasEffect(card, EffectType.RecoverWall) && developed.ownWalls < 9 && KingRecoveriesAvailable > 0)
+            developed.ownWalls++;
+        return score + DrawTacticalGain(developed, state, search, offense, danger);
+    }
+
+    float DrawTacticalGain(StrategicState next, StrategicState before, StrategicSearch search,
+        float offense, float danger)
+    {
+        float attack = Pressure(next.own, next.foe, next.foeWalls, search, next.extraTurn);
+        if(attack >= 900000f && offense < 900000f) return 20000000f;
+        float defense = Pressure(next.foe, next.own, next.ownWalls, search, true);
+        if(danger >= 900000f && defense < 900000f) return 10000000f;
+        return Mathf.Min(12000f, Mathf.Max(0f, attack - offense)) * 1.2f +
+            Mathf.Min(12000f, Mathf.Max(0f, danger - defense)) * 0.8f;
+    }
     public CardData SelectResourceCard(
         List<CardData> hand,
         int maxResource,
@@ -42,13 +147,18 @@ public class TCardEnemyAIBrain : MonoBehaviour
         float bestScore = float.MinValue;
 
         float retainedPlan = float.MinValue;
-        if(maxResource >= 13)
+        if(maxResource >= 0)
         {
             var baseline = ReadStrategicState(hand, maxResource, currentEnemyWall,
                 playerWallCount, playerField, enemyField);
             var baselineSearch = new StrategicSearch();
-            SearchSummons(baseline, hand, baselineSearch, 4);
+            SearchSummons(baseline, hand, baselineSearch, 6);
             retainedPlan = baselineSearch.best;
+            if(baselineSearch.choice != null && retainedPlan < 10000000f)
+            {
+                var forecast = new BattleForecast();
+                retainedPlan = ForecastAttacks(baselineSearch.choice, forecast, 6) + baselineSearch.choice.effectValue + baselineSearch.choice.handValue;
+            }
         }
         float bestChargePlan = float.MinValue;
         foreach(CardData card in hand)
@@ -77,8 +187,14 @@ public class TCardEnemyAIBrain : MonoBehaviour
             var state = ReadStrategicState(remainingHand, maxResource + 1, currentEnemyWall,
                 playerWallCount, playerField, enemyField);
             var search = new StrategicSearch();
-            SearchSummons(state, remainingHand, search, 4);
-            score += search.best * 0.8f;
+            SearchSummons(state, remainingHand, search, 6);
+            float chargePlan = search.best;
+            if(search.choice != null && chargePlan < 10000000f)
+            {
+                var forecast = new BattleForecast();
+                chargePlan = ForecastAttacks(search.choice, forecast, 6) + search.choice.effectValue + search.choice.handValue;
+            }
+            score += chargePlan * 0.8f;
             if(showDecisionLog)
             {
                 Debug.Log(
@@ -93,10 +209,14 @@ public class TCardEnemyAIBrain : MonoBehaviour
             {
                 bestScore = score;
                 best = card;
-                bestChargePlan = search.best;
+                bestChargePlan = chargePlan;
             }
         }
 
+        // Never destroy an already available winning line just to gain one resource.
+        if(retainedPlan >= 10000000f && bestChargePlan < 10000000f) return null;
+        if(retainedPlan > -1000000f && bestChargePlan <= -1000000f) return null;
+        if(maxResource >= 6 && hand.Count <= 2 && bestChargePlan < retainedPlan - 1600f) return null;
         // More than 13 mana can fund multiple summons; stop only when charging gains nothing.
         if(maxResource >= 13 && bestChargePlan <= retainedPlan + 50f)
             return null;
@@ -311,19 +431,20 @@ public class TCardEnemyAIBrain : MonoBehaviour
     }
 
     public List<CardController> OrderAttackers(List<CardController> attackers,
-        int playerWallCount, IReadOnlyList<CardController> playerField = null)
+        int playerWallCount, IReadOnlyList<CardController> playerField = null, int enemyWallCount = 5,
+        IReadOnlyList<CardController> enemyField = null)
     {
-        var plan = BuildAttackPlan(attackers, playerField);
-        int remaining = (1 << plan.attackers.Count) - 1;
-        int blockers = (1 << plan.blockers.Count) - 1;
-        var scores = new Dictionary<CardController, float>();
-        for(int i = 0; i < plan.attackers.Count; i++)
-            scores[plan.attackers[i]] = ScoreAttack(plan, i, remaining, blockers,
-                Mathf.Max(0, playerWallCount));
-        var ordered = new List<CardController>(plan.attackers);
-        ordered.Sort((a, b) => {
-            int compare = scores[b].CompareTo(scores[a]);
-            return compare != 0 ? compare : EvaluateAttackOrder(a, playerWallCount)
+        DefensiveWallCount = enemyWallCount;
+        PrepareBattleDecisions(enemyField ?? attackers, playerField, enemyWallCount, playerWallCount);
+        var ordered = new List<CardController>();
+        if(attackers != null)
+            foreach(var card in attackers)
+                if(IsReadyAttacker(card)) ordered.Add(card);
+        ordered.Sort((a,b) => {
+            float left = lastAttackScores.TryGetValue(a, out var x) ? x : float.MinValue;
+            float right = lastAttackScores.TryGetValue(b, out var y) ? y : float.MinValue;
+            int order = right.CompareTo(left);
+            return order != 0 ? order : EvaluateAttackOrder(a, playerWallCount)
                 .CompareTo(EvaluateAttackOrder(b, playerWallCount));
         });
         return ordered;
@@ -333,30 +454,19 @@ public class TCardEnemyAIBrain : MonoBehaviour
         IReadOnlyList<CardController> playerField, IReadOnlyList<CardController> enemyField)
     {
         if(!IsReadyAttacker(attacker)) return false;
-        var candidates = enemyField != null ? new List<CardController>(enemyField) :
-            new List<CardController>();
-        if(!candidates.Contains(attacker)) candidates.Add(attacker);
-        var plan = BuildAttackPlan(candidates, playerField);
-        int index = plan.attackers.IndexOf(attacker);
-        if(index < 0) return false;
-        float score = ScoreAttack(plan, index, (1 << plan.attackers.Count) - 1,
-            (1 << plan.blockers.Count) - 1, Mathf.Max(0, playerWallCount));
-        if(showDecisionLog) Debug.Log("[AI Tactical Attack] " + attacker.data.cardName +
-            " score=" + score);
-        if(score < 900000f && HasEffect(attacker.data, EffectType.BlockOnly) && playerField != null)
-        {
-            var context = new StrategicSearch();
-            var own = ReadUnits(enemyField);
-            var foes = ReadUnits(playerField);
-            float before = Pressure(foes, own, DefensiveWallCount, context, true);
-            foreach(var guard in own)
-                if(guard.source == attacker) guard.tapped = true;
-            float after = Pressure(foes, own, DefensiveWallCount, context, true);
-            if(after >= 900000f && before < 900000f) return false;
-        }
-        return score > 0f;
+        var allies = enemyField != null ? new List<CardController>(enemyField) : new List<CardController>();
+        if(!allies.Contains(attacker)) allies.Add(attacker);
+        // Preserve the complete attack-only proof of a current-turn win.
+        var immediate = BuildAttackPlan(allies, playerField);
+        int index = immediate.attackers.IndexOf(attacker);
+        if(index >= 0 && ScoreAttack(immediate, index, (1 << immediate.attackers.Count) - 1,
+            (1 << immediate.blockers.Count) - 1, playerWallCount) >= 900000f) return true;
+        PrepareBattleDecisions(allies, playerField, DefensiveWallCount, playerWallCount);
+        bool attack = lastAttackScores.TryGetValue(attacker, out float score) && score > lastStopScore + 5f;
+        if(showDecisionLog) Debug.Log("[AI Counterplay] " + attacker.data.cardName +
+            " attack=" + score + " hold=" + lastStopScore);
+        return attack;
     }
-
     public int DefensiveWallCount { get; set; } = 5;
 
     public CardController SelectDestroyTarget(IReadOnlyList<CardController> playerField,
@@ -388,7 +498,9 @@ public CardController SelectBestBlocker(
     CardController attacker,
     List<CardController> blockers,
     int enemyWallCount,
-    IReadOnlyList<CardController> playerField = null
+    IReadOnlyList<CardController> playerField = null,
+    IReadOnlyList<CardController> enemyField = null,
+    int playerWallCount = 5
 )
 {
     if(attacker == null ||
@@ -403,6 +515,9 @@ public CardController SelectBestBlocker(
         return null;
     }
 
+    if(playerField != null && enemyField != null)
+        return SelectPlannedDefense(attacker, blockers, enemyWallCount, playerWallCount,
+            playerField, enemyField);
     CardController bestBlocker = null;
     float bestScore = float.MinValue;
 
@@ -1087,6 +1202,7 @@ bool CanSpecialBreak(
         return count;
     }
     public CardController PlannedKingBase { get; private set; }
+    public bool PlannedWinningLine { get; private set; }
     public CardController PlannedDestroyTarget { get; private set; }
     public CardController ConsumePlannedDestroyTarget()
     {
@@ -1112,7 +1228,7 @@ bool CanSpecialBreak(
         public int mana, ownWalls, foeWalls, first = -1, slots = 6, kingRecoveries;
         public CardController firstBase;
         public CardController firstTarget;
-        public float effectValue;
+        public float effectValue, handValue;
         public bool extraTurn;
         public StrategicState Copy()
         {
@@ -1127,6 +1243,7 @@ bool CanSpecialBreak(
     sealed class StrategicSearch
     {
         public int nodes;
+        public readonly Dictionary<string, Tuple<float, StrategicState>> finalists = new Dictionary<string, Tuple<float, StrategicState>>();
         public float best = float.MinValue;
         public StrategicState choice;
         public readonly System.Diagnostics.Stopwatch clock = System.Diagnostics.Stopwatch.StartNew();
@@ -1179,6 +1296,25 @@ bool CanSpecialBreak(
         return result;
     }
 
+    float GuardCoverage(List<StrategicUnit> guards, List<StrategicUnit> threats)
+    {
+        float coverage = 0f;
+        foreach(var threat in threats)
+        {
+            if(!CanAttack(threat.data)) continue;
+            float best = 0f;
+            foreach(var guard in guards)
+            {
+                if(guard.tapped || !HasEffect(guard.data, EffectType.BlockOnly)) continue;
+                int result = BattleOutcome(threat.data, guard.data);
+                // A reusable counter matters much more than a one-use losing guard.
+                if(result < 0) best = Mathf.Max(best, Mathf.Min(GetCardValue(threat.data) * 0.3f, 350f + Mathf.Min(800f, GetCardValue(threat.data) * 0.35f)));
+                else if(result == 0) best = Mathf.Max(best, Mathf.Min(100f, GetCardValue(threat.data) * 0.12f));
+            }
+            coverage += best;
+        }
+        return coverage;
+    }
     float EvaluateStrategicState(StrategicState state, StrategicSearch context)
     {
         float offense = Pressure(state.own, state.foe, state.foeWalls, context);
@@ -1198,7 +1334,8 @@ bool CanSpecialBreak(
             if(HasEffect(unit.data, EffectType.BlockOnly)) score += 250f;
         }
         foreach(var unit in state.foe) score -= GetCardValue(unit.data) * 0.65f;
-        score += state.ownWalls * 700f + state.effectValue;
+        score += GuardCoverage(state.own, state.foe) - GuardCoverage(state.foe, state.own) * 0.7f;
+        score += state.ownWalls * 700f + state.effectValue + state.handValue;
         return score;
     }
 
@@ -1220,7 +1357,7 @@ bool CanSpecialBreak(
             if(card.cost > state.mana) yield break;
             for(int target = 0; target < state.foe.Count; target++)
             {
-                var next = StartSummon(state, index, card.cost);
+                var next = StartSummon(state, index, card.cost, card);
                 if(state.first < 0) next.firstTarget = state.foe[target].source;
                 next.foe.RemoveAt(target);
                 yield return next;
@@ -1230,7 +1367,7 @@ bool CanSpecialBreak(
         if(HasEffect(card, EffectType.TapAllEnemyBattle))
         {
             if(card.cost > state.mana) yield break;
-            var next = StartSummon(state, index, card.cost);
+            var next = StartSummon(state, index, card.cost, card);
             foreach(var unit in next.foe) unit.tapped = true;
             // Preserve the no-empty-cast rule, including inside combo searches.
             if(Pressure(next.own, next.foe, next.foeWalls, context) >
@@ -1241,7 +1378,7 @@ bool CanSpecialBreak(
         {
             if(card.cost > state.mana || state.own.Count >= state.slots) yield break;
             bool clear = ChooseProjectedJokerClear(state);
-            var next = StartSummon(state, index, card.cost);
+            var next = StartSummon(state, index, card.cost, card);
             if(clear) { next.own.Clear(); next.foe.Clear(); }
             else next.extraTurn = true;
             yield return next;
@@ -1253,7 +1390,7 @@ bool CanSpecialBreak(
             if(basis >= 0 && !CanRaiseFrom(card, state.own[basis].data)) continue;
             int cost = basis < 0 ? card.cost : Mathf.Max(0, card.cost - state.own[basis].data.power);
             if(cost > state.mana || (basis < 0 && state.own.Count >= state.slots)) continue;
-            var next = StartSummon(state, index, cost);
+            var next = StartSummon(state, index, cost, card);
             if(basis >= 0)
             {
                 if(state.first < 0) next.firstBase = state.own[basis].source;
@@ -1270,10 +1407,11 @@ bool CanSpecialBreak(
         }
     }
 
-    StrategicState StartSummon(StrategicState state, int index, int cost)
+    StrategicState StartSummon(StrategicState state, int index, int cost, CardData card)
     {
         var next = state.Copy();
         next.used[index] = true;
+        next.handValue -= GetCardValue(card) * 0.3f;
         next.mana -= cost;
         if(next.first < 0) next.first = index;
         return next;
@@ -1285,40 +1423,53 @@ bool CanSpecialBreak(
         var context = new StrategicSearch();
         var extra = state.Copy(); extra.extraTurn = true;
         var clear = state.Copy(); clear.own.Clear(); clear.foe.Clear();
-        return EvaluateStrategicState(clear, context) > EvaluateStrategicState(extra, context);
+        var clearForecast = new BattleForecast();
+        var extraForecast = new BattleForecast();
+        return ForecastAttacks(clear, clearForecast, 6) > ForecastAttacks(extra, extraForecast, 6);
     }
 
     void SearchSummons(StrategicState state, List<CardData> hand, StrategicSearch context, int depth)
     {
-        if(context.nodes >= 160 || context.clock.ElapsedMilliseconds > 100) return;
-        context.nodes++;
-        float value = EvaluateStrategicState(state, context);
-        if(value > context.best) { context.best = value; context.choice = state; }
-        if(depth == 0 || value > 10000000f) return;
-        var candidates = new List<StrategicState>();
-        for(int index = 0; index < hand.Count; index++)
-            foreach(var next in SummonSuccessors(state, hand, index, context)) candidates.Add(next);
-        if(state.first < 0)
+        ConsiderSummon(state, EvaluateStrategicState(state, context), context);
+        var frontier = new List<StrategicState> {state};
+        var visited = new HashSet<string>();
+        for(int level = 0; level < depth && frontier.Count > 0; level++)
         {
-            // Every first move is examined before deeper branches consume the budget.
-            // This prevents a high-ranked creature from hiding an immediate removal win.
+            var candidates = new List<Tuple<float, StrategicState>>();
+            foreach(var parent in frontier)
+            {
+                for(int index = 0; index < hand.Count; index++)
+                {
+                    if(level > 0 && (context.nodes >= 2048 || context.clock.ElapsedMilliseconds > 300)) break;
+                    foreach(var next in SummonSuccessors(parent, hand, index, context))
+                    {
+                        if(!visited.Add(PositionKey(next, true))) continue;
+                        context.nodes++;
+                        float value = EvaluateStrategicState(next, context);
+                        ConsiderSummon(next, value, context);
+                        candidates.Add(Tuple.Create(value, next));
+                    }
+                }
+            }
+            candidates.Sort((a,b) => b.Item1.CompareTo(a.Item1));
+            frontier.Clear();
+            // Retain different opening actions before filling the beam by raw score.
+            var openings = new HashSet<int>();
+            var selected = new HashSet<StrategicState>();
             foreach(var candidate in candidates)
             {
-                float immediate = EvaluateStrategicState(candidate, context);
-                if(immediate > context.best) { context.best = immediate; context.choice = candidate; }
+                if(frontier.Count >= 24) break;
+                if(candidate.Item1 >= 10000000f || !openings.Add(candidate.Item2.first)) continue;
+                frontier.Add(candidate.Item2); selected.Add(candidate.Item2);
             }
-            context.clock.Restart();
-            candidates.Sort((a,b) => EvaluateStrategicState(b, context)
-                .CompareTo(EvaluateStrategicState(a, context)));
+            foreach(var candidate in candidates)
+            {
+                if(frontier.Count >= 24) break;
+                if(candidate.Item1 < 10000000f && selected.Add(candidate.Item2)) frontier.Add(candidate.Item2);
+            }
+            if(context.best > 10000000f || context.nodes >= 2048 || context.clock.ElapsedMilliseconds > 300) break;
         }
-        else
-        // Order promising actions first; bounded search also explores keeping the card.
-        candidates.Sort((a,b) => QuickStateValue(b).CompareTo(QuickStateValue(a)));
-        int limit = Mathf.Min(8, candidates.Count);
-        for(int i = 0; i < limit; i++)
-            SearchSummons(candidates[i], hand, context, depth - 1);
     }
-
     float QuickStateValue(StrategicState state)
     {
         float score = state.effectValue + state.ownWalls * 1200f - state.foe.Count * 500f;
@@ -1332,7 +1483,9 @@ bool CanSpecialBreak(
         int foeWalls, IReadOnlyList<CardController> playerField,
         IReadOnlyList<CardController> enemyField, int slots = 6)
     {
-        return new StrategicState { own = ReadUnits(enemyField), foe = ReadUnits(playerField),
+        float reserve = 0f;
+        foreach(var card in hand) if(card != null) reserve += GetCardValue(card) * 0.3f;
+        return new StrategicState { handValue = reserve, own = ReadUnits(enemyField), foe = ReadUnits(playerField),
             used = new bool[hand.Count], mana = mana, ownWalls = ownWalls, foeWalls = foeWalls,
             slots = slots, kingRecoveries = KingRecoveriesAvailable };
     }
@@ -1342,10 +1495,29 @@ bool CanSpecialBreak(
     {
         PlannedKingBase = null;
         PlannedDestroyTarget = null;
+        PlannedWinningLine = false;
         var state = ReadStrategicState(hand, mana, ownWalls, foeWalls, playerField, enemyField, slots);
         var context = new StrategicSearch();
-        int depth = Config != null ? Mathf.Max(1, Mathf.Min(6, Config.lookaheadDepth)) : 5;
+        int depth = Config != null ? Mathf.Max(1, Mathf.Min(6, Config.lookaheadDepth)) : 6;
         SearchSummons(state, hand, context, depth);
+        if(context.best < 10000000f)
+        {
+            var forecasts = new List<Tuple<float, StrategicState>>(context.finalists.Values);
+            forecasts.Sort((a,b) => b.Item1.CompareTo(a.Item1));
+            var hold = new BattleForecast();
+            float bestBattle = ForecastAttacks(state, hold, 6) + state.effectValue + state.handValue;
+            StrategicState battleChoice = state;
+            for(int i = 0; i < Mathf.Min(6, forecasts.Count); i++)
+            {
+                var candidate = forecasts[i].Item2;
+                var forecast = new BattleForecast();
+                float score = ForecastAttacks(candidate, forecast, 6) + candidate.effectValue + candidate.handValue;
+                if(score > bestBattle) { bestBattle = score; battleChoice = candidate; }
+            }
+            context.choice = battleChoice;
+            context.best = bestBattle;
+        }
+        PlannedWinningLine = context.best >= 10000000f;
         if(context.choice == null || context.choice.first < 0) return null;
         PlannedKingBase = context.choice.firstBase;
         PlannedDestroyTarget = context.choice.firstTarget;
@@ -1372,6 +1544,307 @@ bool CanSpecialBreak(
             if(score > bestScore) { bestScore = score; best = unit; }
         }
         return best;
+    }
+
+    sealed class DefenseForecast
+    {
+        public int nodes;
+        public readonly System.Diagnostics.Stopwatch clock = System.Diagnostics.Stopwatch.StartNew();
+        public readonly StrategicSearch pressure = new StrategicSearch();
+        public readonly Dictionary<string, float> memo = new Dictionary<string, float>();
+    }
+
+    CardController SelectPlannedDefense(CardController attacker, List<CardController> blockers,
+        int ownWalls, int foeWalls, IReadOnlyList<CardController> playerField,
+        IReadOnlyList<CardController> enemyField)
+    {
+        var state = ReadStrategicState(new List<CardData>(), 0, ownWalls, foeWalls, playerField, enemyField);
+        int attack = state.foe.FindIndex(u => u.source == attacker);
+        if(attack < 0 || ownWalls <= 0) return null;
+        // The attacking card may already be tapped by the live battle animation.
+        state.foe[attack].tapped = true;
+        var shared = new DefenseForecast();
+        float best = ForecastDefense(ResolveIncoming(state, attack, -1), shared, 6);
+        CardController chosen = null;
+        foreach(var blocker in blockers)
+        {
+            int guard = state.own.FindIndex(u => u.source == blocker);
+            if(guard < 0 || state.own[guard].tapped || !HasEffect(blocker.data, EffectType.BlockOnly)) continue;
+            // Give each root choice the same search budget.
+            var search = new DefenseForecast();
+            float score = ForecastDefense(ResolveIncoming(state, attack, guard), search, 6);
+            if(score > best + 1f) { best = score; chosen = blocker; }
+        }
+        // A doomed projection must not turn into automatic surrender. Wall triggers and
+        // future draws are unknown, so preserve chances with the best immediate defense.
+        if(best <= -10000000f)
+        {
+            float fallback = 0f;
+            foreach(var blocker in blockers)
+            {
+                if(blocker == null || blocker.data == null || blocker.isTapped || !HasEffect(blocker.data, EffectType.BlockOnly)) continue;
+                float value = EvaluateBlock(attacker, blocker, ownWalls);
+                if(BattleOutcome(attacker.data, blocker.data) < 0) value += 3000f;
+                if(value > fallback) { fallback = value; chosen = blocker; }
+            }
+        }
+        if(showDecisionLog) Debug.Log("[AI Defense plan] " + (chosen == null ? "pass" : chosen.data.cardName) + " score=" + best);
+        return chosen;
+    }
+
+    StrategicState ResolveIncoming(StrategicState state, int attack, int guard)
+    {
+        var next = state.Copy();
+        var data = next.foe[attack].data;
+        next.foe[attack].tapped = true;
+        if(guard < 0)
+            next.ownWalls = Mathf.Max(0, next.ownWalls - (HasEffect(data, EffectType.DoubleWallBreak) ? 2 : 1));
+        else
+        {
+            int outcome = BattleOutcome(data, next.own[guard].data);
+            if(outcome >= 0) next.own.RemoveAt(guard);
+            if(outcome <= 0) next.foe.RemoveAt(attack);
+        }
+        return next;
+    }
+
+    float DefenseTerminal(StrategicState state, DefenseForecast search)
+    {
+        // CPU untaps first on its next turn; the player's surviving attackers stay tapped.
+        var counter = state.Copy();
+        foreach(var unit in counter.own) { unit.tapped = false; unit.sick = false; }
+        float pressure = Pressure(counter.own, counter.foe, counter.foeWalls, search.pressure, false);
+        bool winningCounter = pressure >= 900000f;
+        float value = counter.ownWalls * 1100f + Mathf.Min(pressure, 12000f) * 0.8f;
+        foreach(var unit in counter.own) value += GetCardValue(unit.data);
+        foreach(var unit in counter.foe) value -= GetCardValue(unit.data) * 0.9f;
+        return value + (winningCounter ? 3000000f : 0f);
+    }
+
+    float ForecastDefense(StrategicState state, DefenseForecast search, int depth)
+    {
+        string key = depth + ":" + PositionKey(state);
+        if(search.memo.TryGetValue(key, out float cached)) return cached;
+        float worst = DefenseTerminal(state, search);
+        bool limited = depth == 0 || search.nodes >= 768 || search.clock.ElapsedMilliseconds > 150;
+        search.nodes++;
+        for(int a = 0; a < state.foe.Count; a++)
+        {
+            var attacker = state.foe[a];
+            if(attacker.tapped || attacker.sick || !CanAttack(attacker.data)) continue;
+            if(state.ownWalls == 0) return -11000000f - depth * 10000f;
+            if(limited)
+            {
+                // At the budget boundary still prove immediate lethal instead of valuing a doomed board.
+                float danger = Pressure(state.foe, state.own, state.ownWalls, search.pressure, false);
+                return danger >= 900000f ? -11000000f - depth * 10000f : worst - Mathf.Min(danger, 12000f);
+            }
+            float best = ForecastDefense(ResolveIncoming(state, a, -1), search, depth - 1);
+            for(int b = 0; b < state.own.Count; b++)
+            {
+                var guard = state.own[b];
+                if(guard.tapped || !HasEffect(guard.data, EffectType.BlockOnly)) continue;
+                best = Mathf.Max(best, ForecastDefense(ResolveIncoming(state, a, b), search, depth - 1));
+            }
+            worst = Mathf.Min(worst, best);
+        }
+        search.memo[key] = worst;
+        return worst;
+    }
+    sealed class BattleForecast
+    {
+        public int nodes;
+        public bool useReserve;
+        public readonly StrategicSearch position;
+        public readonly System.Diagnostics.Stopwatch clock = System.Diagnostics.Stopwatch.StartNew();
+        public readonly Dictionary<string, float> memo = new Dictionary<string, float>();
+        public BattleForecast(StrategicSearch sharedPosition = null)
+        {
+            position = sharedPosition ?? new StrategicSearch();
+        }
+    }
+
+    float QuickAfterBattleScore(StrategicState state)
+    {
+        int attackers = 0, breaks = 0;
+        bool reusableGuard = false;
+        foreach(var enemy in state.foe)
+            if(CanAttack(enemy.data))
+            { attackers++; breaks += HasEffect(enemy.data, EffectType.DoubleWallBreak) ? 2 : 1; }
+        int guards = 0;
+        foreach(var guard in state.own)
+        {
+            if(guard.tapped || !HasEffect(guard.data, EffectType.BlockOnly)) continue;
+            guards++;
+            bool winsAll = true;
+            foreach(var enemy in state.foe)
+                if(CanAttack(enemy.data) && BattleOutcome(enemy.data, guard.data) >= 0) winsAll = false;
+            if(winsAll) reusableGuard = true;
+        }
+        float score = (9 - state.foeWalls) * 1600f + state.ownWalls * 900f;
+        foreach(var unit in state.own)
+            score += GetCardValue(unit.data) * 0.7f + (CanAttack(unit.data) ? 500f : 0f);
+        foreach(var unit in state.foe) score -= GetCardValue(unit.data) * 0.75f;
+        if(!state.extraTurn && attackers > 0 && state.ownWalls == 0) score -= 2000000f;
+        else if(!state.extraTurn && guards == 0 && attackers > 1 && breaks - 1 >= state.ownWalls)
+            score -= 2000000f;
+        else if(!reusableGuard) score -= Mathf.Max(0, breaks - guards) * 700f;
+        if(state.extraTurn) score += 2500f;
+        return score;
+    }
+
+    string PositionKey(StrategicState state, bool includeHand = false)
+    {
+        var key = new System.Text.StringBuilder();
+        key.Append(state.ownWalls).Append('/').Append(state.foeWalls).Append('/').Append(state.extraTurn);
+        var allies = new List<string>();
+        var foes = new List<string>();
+        foreach(var unit in state.own)
+            allies.Add(unit.data.cardName + ':' + unit.tapped + ':' + unit.sick);
+        foreach(var unit in state.foe)
+            foes.Add(unit.data.cardName + ':' + unit.tapped + ':' + unit.sick);
+        allies.Sort(StringComparer.Ordinal); foes.Sort(StringComparer.Ordinal);
+        foreach(var unit in allies) key.Append('|').Append(unit);
+        key.Append('/');
+        foreach(var unit in foes) key.Append('|').Append(unit);
+        if(includeHand)
+        {
+            key.Append('/').Append(state.mana).Append('/').Append(state.kingRecoveries).Append('/').Append(state.effectValue);
+            foreach(bool used in state.used) key.Append(used ? '1' : '0');
+        }
+        return key.ToString();
+    }
+
+    float ScoreAfterBattle(StrategicState state, BattleForecast forecast)
+    {
+        float reply = Pressure(state.foe, state.own, state.ownWalls, forecast.position, true);
+        float future = Pressure(state.own, state.foe, state.foeWalls, forecast.position, true);
+        if(state.extraTurn && future >= 900000f) return 11000000f;
+        float score = (9 - state.foeWalls) * 1600f + state.ownWalls * 900f;
+        score -= reply >= 900000f ? (state.extraTurn ? 18000f : 2000000f) : reply * 1.1f;
+        score += Mathf.Min(future, 12000f) * (state.extraTurn ? 0.7f : 0.12f);
+        if(state.extraTurn) score += 2500f;
+        foreach(var unit in state.own)
+            score += GetCardValue(unit.data) * 0.7f + (CanAttack(unit.data) ? 500f : 0f);
+        foreach(var unit in state.foe) score -= GetCardValue(unit.data) * 0.75f;
+        score += GuardCoverage(state.own, state.foe) - GuardCoverage(state.foe, state.own) * 0.7f;
+        if(forecast.useReserve) score += reserveDevelopment[Mathf.Max(0, Mathf.Min(6, state.slots - state.own.Count))];
+        return score;
+    }
+
+    float ForecastAttacks(StrategicState state, BattleForecast forecast, int depth)
+    {
+        string key = depth + ":" + PositionKey(state);
+        if(forecast.memo.TryGetValue(key, out float cached)) return cached;
+        bool smallPosition = state.own.Count + state.foe.Count <= 6;
+        int nodeLimit = smallPosition ? 256 : 48;
+        int timeLimit = smallPosition ? 100 : 50;
+        if(forecast.nodes >= nodeLimit || forecast.clock.ElapsedMilliseconds > timeLimit)
+        {
+            float limited = QuickAfterBattleScore(state);
+            if(forecast.useReserve) limited += reserveDevelopment[Mathf.Max(0, Mathf.Min(6, state.slots - state.own.Count))];
+            forecast.memo[key] = limited;
+            return limited;
+        }
+        forecast.nodes++;
+        float best = ScoreAfterBattle(state, forecast);
+        if(depth == 0)
+        {
+            forecast.memo[key] = best;
+            return best;
+        }
+        for(int i = 0; i < state.own.Count; i++)
+        {
+            if(forecast.nodes >= nodeLimit || forecast.clock.ElapsedMilliseconds > timeLimit) break;
+            var unit = state.own[i];
+            if(unit.tapped || unit.sick || !CanAttack(unit.data)) continue;
+            best = Mathf.Max(best, ForecastAttack(state, i, forecast, depth));
+        }
+        forecast.memo[key] = best;
+        return best;
+    }
+
+    float ForecastAttack(StrategicState state, int index, BattleForecast forecast, int depth)
+    {
+        if(state.foeWalls == 0) return 11000000f;
+        CardData attack = state.own[index].data;
+        var passed = state.Copy();
+        passed.own[index].tapped = true;
+        passed.foeWalls = Mathf.Max(0, passed.foeWalls -
+            (HasEffect(attack, EffectType.DoubleWallBreak) ? 2 : 1));
+        float worst = ForecastAttacks(passed, forecast, depth - 1);
+        for(int i = 0; i < state.foe.Count; i++)
+        {
+            var blocker = state.foe[i];
+            if(blocker.tapped || !HasEffect(blocker.data, EffectType.BlockOnly)) continue;
+            var blocked = state.Copy();
+            blocked.own[index].tapped = true;
+            int result = BattleOutcome(attack, blocker.data);
+            if(result >= 0) blocked.foe.RemoveAt(i);
+            if(result <= 0) blocked.own.RemoveAt(index);
+            // A surviving blocker remains untapped and may block the next attack.
+            worst = Mathf.Min(worst, ForecastAttacks(blocked, forecast, depth - 1));
+        }
+        return worst;
+    }
+
+    readonly float[] reserveDevelopment = new float[7];
+    public void ConfigureBattleReserve(List<CardData> hand, int nextTurnMana)
+    {
+        Array.Clear(reserveDevelopment, 0, reserveDevelopment.Length);
+        int budget = Mathf.Max(0, Mathf.Min(128, nextTurnMana));
+        var values = new float[7, budget + 1];
+        if(hand != null)
+            foreach(var card in hand)
+            {
+                if(card == null || IsSpell(card) || HasEffect(card, EffectType.JokerClearBattleArea)) continue;
+                card.SetCostFromName(); card.SetPowerFromName();
+                if(card.cost > budget) continue;
+                float value = (GetCardValue(card) * 0.7f + (CanAttack(card) ? 500f : 0f)) * 0.75f;
+                if(HasEffect(card, EffectType.Draw1)) value += 350f;
+                if(HasEffect(card, EffectType.ChargeTopDeck)) value += 450f;
+                for(int slots = 6; slots >= 1; slots--)
+                    for(int mana = budget; mana >= card.cost; mana--)
+                        values[slots, mana] = Mathf.Max(values[slots, mana], values[slots - 1, mana - card.cost] + value);
+            }
+        for(int slots = 0; slots <= 6; slots++) reserveDevelopment[slots] = values[slots, budget];
+        // The same board can require a different attack after the hand changes.
+        lastBattleKey = null;
+    }
+    string lastBattleKey;
+    readonly Dictionary<CardController, float> lastAttackScores = new Dictionary<CardController, float>();
+    float lastStopScore;
+
+    void PrepareBattleDecisions(IReadOnlyList<CardController> own,
+        IReadOnlyList<CardController> foe, int ownWalls, int foeWalls)
+    {
+        var state = ReadStrategicState(new List<CardData>(), 0, ownWalls, foeWalls, foe, own);
+        string key = PositionKey(state);
+        foreach(var unit in state.own)
+            key += ":" + (unit.source != null ? unit.source.GetHashCode().ToString() : "-");
+        if(key == lastBattleKey && lastAttackScores.Count > 0) return;
+        lastBattleKey = key;
+        lastAttackScores.Clear();
+        var baseline = new BattleForecast { useReserve = true };
+        lastStopScore = ScoreAfterBattle(state, baseline);
+        for(int i = 0; i < state.own.Count; i++)
+        {
+            var unit = state.own[i];
+            if(unit.source == null || unit.tapped || unit.sick || !CanAttack(unit.data)) continue;
+            // Each first attack gets a fresh budget, so list order cannot starve a winning move.
+            var forecast = new BattleForecast(baseline.position) { useReserve = true };
+            lastAttackScores[unit.source] = ForecastAttack(state, i, forecast, 6);
+        }
+    }
+
+    void ConsiderSummon(StrategicState state, float value, StrategicSearch context)
+    {
+        if(value > context.best) { context.best = value; context.choice = state; }
+        if(state.first < 0) return;
+        string action = state.first + ":" + (state.firstBase != null ? state.firstBase.data.cardName : "") +
+            ":" + (state.firstTarget != null ? state.firstTarget.data.cardName : "");
+        if(!context.finalists.TryGetValue(action, out var old) || value > old.Item1)
+            context.finalists[action] = Tuple.Create(value, state);
     }
 
 }

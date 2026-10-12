@@ -8701,6 +8701,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   resourceText: {fileID: 1407204560}
+  resourceHeartSprite: {fileID: 4606908045521496030, guid: 4e05ac200e674c0489a68aa85701b596, type: 3}
+  resourceHeartMaterial: {fileID: 2100000, guid: 8ef3fee7716343a0a640262e2b784c06, type: 2}
+  resourceHeartVerticalOffset: 4
+  resourceHeartSize: 32
+  resourceHeartSpacing: 10
   currentResource: 0
 --- !u!1 &1168728411
 GameObject:
@@ -10435,7 +10440,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 100, y: -10}
+  m_AnchoredPosition: {x: 147, y: -10}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1407204560

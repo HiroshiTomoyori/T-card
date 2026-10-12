@@ -16,6 +16,7 @@ public void RefreshProLayout()
         return;
 
     lastProCardCount = proHandGroup.cards.Count;
+    layoutSettingsChanged = false;
 
     if (isIdle)
     {
@@ -32,14 +33,9 @@ public void RefreshProLayout()
     }
     else
     {
-        proHandGroup.SetTCardLayout(
-            expandMaxWidth,
-            expandMaxSpacing,
-            expandScale,
-            expandArcHeight,
-            expandAngleStep,
-            Vector2.zero
-        );
+        GetExpandedLayout(proHandGroup.cards.Count, out float width, out float spacing,
+            out float arcHeight, out float angleStep);
+        proHandGroup.SetTCardLayout(width, spacing, expandScale, arcHeight, angleStep, Vector2.zero);
     }
 }
 
@@ -67,6 +63,46 @@ public void RefreshProLayout()
     public float expandArcHeight = 12f;
     public float expandAngleStep = 8f;
 
+    [Header("展開手札・枚数に応じた圧縮")]
+    [Min(2), Tooltip("この枚数を超えると、カードの間隔と扇の開きを徐々に狭めます")]
+    public int expandCompressionStartCount = 5;
+    [Min(0f), Tooltip("1枚増えるごとの間隔の圧縮率。大きいほど密に並びます")]
+    public float expandSpacingCompression = 0.12f;
+    [Min(0f), Tooltip("1枚増えるごとの扇形の圧縮率。角度と弧の深さを抑えます")]
+    public float expandFanCompression = 0.12f;
+    [Min(0f), Tooltip("カード間隔の下限。表示幅を超える場合は幅の制限を優先します")]
+    public float expandMinSpacing = 24f;
+    [Range(0f, 45f), Tooltip("左右の端のカードが傾く角度の上限")]
+    public float expandMaxFanAngle = 15f;
+    [Min(0f), Tooltip("表示幅の左右に確保する、カードの端のための余白")]
+    public float expandEdgePadding = 120f;
+
+    bool layoutSettingsChanged;
+    void OnValidate()
+    {
+        layoutSettingsChanged = true;
+    }
+
+    void GetExpandedLayout(int count, out float width, out float spacing,
+        out float arcHeight, out float angleStep)
+    {
+        int startCount = Mathf.Max(2, expandCompressionStartCount);
+        int extra = Mathf.Max(0, count - startCount);
+        width = Mathf.Max(0f, expandMaxWidth - Mathf.Max(0f, expandEdgePadding) * 2f);
+        spacing = Mathf.Max(Mathf.Max(0f, expandMinSpacing),
+            Mathf.Max(0f, expandMaxSpacing) / (1f + extra * Mathf.Max(0f, expandSpacingCompression)));
+        spacing = Mathf.Min(spacing, Mathf.Max(0f, expandMaxSpacing));
+        if(count > 1) spacing = Mathf.Min(spacing, width / (count - 1));
+        else spacing = 0f;
+        float fanFactor = 1f / (1f + extra * Mathf.Max(0f, expandFanCompression));
+        float countFactor = count > startCount ? (startCount - 1f) / (count - 1f) : 1f;
+        arcHeight = expandArcHeight * fanFactor * countFactor;
+        angleStep = expandAngleStep * fanFactor * countFactor;
+        if(count > 1)
+            angleStep = Mathf.Clamp(angleStep,
+                -Mathf.Max(0f, expandMaxFanAngle) * 2f / (count - 1),
+                Mathf.Max(0f, expandMaxFanAngle) * 2f / (count - 1));
+    }
     [Header("初期手札確認レイアウト")]
     public float openingMaxWidth = 760f;
     public float openingMaxSpacing = 110f;
@@ -161,7 +197,7 @@ void Start()
     {
         if (proHandGroup != null)
         {
-            if (lastProCardCount != proHandGroup.cards.Count)
+            if (layoutSettingsChanged || lastProCardCount != proHandGroup.cards.Count)
             {
                 RefreshProLayout();
             }
@@ -410,14 +446,9 @@ public void RegisterHandCardClick()
 
     void ApplyExpandLayout()
     {
-        ApplyLayout(
-            expandMaxWidth,
-            expandMaxSpacing,
-            expandScale,
-            expandArcHeight,
-            expandAngleStep,
-            Vector2.zero
-        );
+        GetExpandedLayout(transform.childCount, out float width, out float spacing,
+            out float arcHeight, out float angleStep);
+        ApplyLayout(width, spacing, expandScale, arcHeight, angleStep, Vector2.zero);
     }
 
     void ApplyLayout(

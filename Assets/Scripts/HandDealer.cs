@@ -79,6 +79,36 @@ public class HandDealer : MonoBehaviour
     int playerWallAliveCount = 0;
     int enemyWallAliveCount = 0;
 
+    [Header("CPU Draw Strength")]
+    public bool assistEnemyDraws = true;
+    [Range(0f, 1f)] public float enemyDrawAssistChance = 1f;
+    [Min(1)] public int enemyDrawCandidateCount = 64;
+
+    int SelectEnemyHandDrawIndex()
+    {
+        int fallback = Random.Range(0, enemyDeck.Count);
+        if(!assistEnemyDraws || enemyDrawAssistChance <= 0f || (enemyDrawAssistChance < 1f && Random.value >= enemyDrawAssistChance)) return fallback;
+        var brain = turnManager != null ? turnManager.enemyAIBrain : TCardEnemyAIBrain.I;
+        if(brain == null) return fallback;
+        var indices = new List<int>();
+        for(int i = 0; i < enemyDeck.Count; i++) indices.Add(i);
+        int count = Mathf.Min(Mathf.Max(1, enemyDrawCandidateCount), indices.Count);
+        for(int i = 0; i < count; i++)
+        {
+            int swap = Random.Range(i, indices.Count);
+            int saved = indices[i]; indices[i] = indices[swap]; indices[swap] = saved;
+        }
+        if(count < indices.Count) indices.RemoveRange(count, indices.Count - count);
+        brain.KingRecoveriesAvailable = EnemyKingRecoveryRemaining;
+        int selected = brain.SelectAssistedDrawIndex(enemyDeck, enemyHandCards,
+            turnManager != null && turnManager.enemyResourceManager != null ? turnManager.enemyResourceManager.maxResource : 0,
+            turnManager != null ? turnManager.EnemyWallCountForAI : enemyWallAliveCount,
+            turnManager != null ? turnManager.PlayerWallCountForAI : playerWallAliveCount,
+            turnManager != null ? TCardAIUnityBridge.GetCards(turnManager.playerBattleArea) : null,
+            turnManager != null ? TCardAIUnityBridge.GetCards(turnManager.enemyBattleArea) : null, indices,
+            turnManager != null && turnManager.enemyResourceManager != null ? turnManager.enemyResourceManager.currentResource : 0);
+        return selected >= 0 && selected < enemyDeck.Count ? selected : fallback;
+    }
     [Header("Enemy Q Debug")]
     public bool debugForceEnemyQ = false;
 
@@ -1775,7 +1805,7 @@ if (redrawButton != null)
             Destroy(moveCard);
 
             int randomIndex =
-                Random.Range(0, enemyDeck.Count);
+                SelectEnemyHandDrawIndex();
 
             CardData drawn =
                 enemyDeck[randomIndex];

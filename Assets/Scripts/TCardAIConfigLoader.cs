@@ -13,8 +13,8 @@ public class TCardAIRankWeight
 [Serializable]
 public class TCardAIConfig
 {
-    public string configVersion = "2.0";
-    public int lookaheadDepth = 5;
+    public string configVersion = "2.1";
+    public int lookaheadDepth = 6;
     public int maxSummonsPerTurn = 10;
 
     public string attackOrderMode = "Adaptive";
