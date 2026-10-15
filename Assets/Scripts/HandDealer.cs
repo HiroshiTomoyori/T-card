@@ -28,7 +28,7 @@ public class HandDealer : MonoBehaviour
 
     [Header("Card Size")]
     public Vector2 handCardSize = new Vector2(75, 112);
-    public Vector2 wallCardSize = new Vector2(70, 105);
+    [HideInInspector] public Vector2 wallCardSize = new Vector2(70, 105);
 
     [Header("Prefab")]
     public GameObject cardPrefab;
@@ -326,6 +326,11 @@ else
         ClearWall();
         HideButtons();
 
+        // Finish placing both sides' walls before dealing the opening hand.
+        CreateWallCards();
+        CreateEnemyWallCards();
+        yield return new WaitUntil(() => !IsWallPlacementRunning && !IsHandLimitSelecting);
+
         for (int i = 0; i < dealCount; i++)
         {
             if (currentDeck.Count <= 0)
@@ -376,9 +381,6 @@ else
             yield return new WaitForSeconds(dealInterval);
         }
 
-        CreateWallCards();
-        CreateEnemyWallCards();
-        yield return new WaitUntil(() => !IsWallPlacementRunning && !IsHandLimitSelecting);
 
         if(showButtonsAfterDeal)
         {
@@ -724,7 +726,7 @@ IEnumerator AnimateCardToHand(RectTransform cardRect)
             cardPrefab == null || cardBackSprite == null) return false;
         GameObject wall = Instantiate(cardPrefab, area);
         wall.name = (enemy ? "EnemyWallCard_" : "PlayerWallCard_") + data.cardName;
-        SetupCardSize(wall, wallCardSize);
+        SetupCardSize(wall, layout.CardSize);
         DisableWallInput(wall);
         CardController controller = wall.GetComponent<CardController>();
         if (controller == null)
@@ -772,7 +774,7 @@ IEnumerator AnimateCardToHand(RectTransform cardRect)
             image.raycastTarget = false;
             glow.SetActive(false);
         }
-        if (layout.AddWall(wall, fromKing, wallCardSize)) return true;
+        if (layout.AddWall(wall, fromKing)) return true;
         wall.SetActive(false);
         Destroy(wall);
         return false;

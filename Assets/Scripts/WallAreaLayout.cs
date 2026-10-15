@@ -11,6 +11,7 @@ public class WallAreaLayout : MonoBehaviour
     [SerializeField] float overlapLimit = 60f;
     [Header("Wall slots / CCP")]
     [SerializeField, Range(1, 9)] int slotCount = 9;
+    [Tooltip("Card width (X) and height (Y) in UI units. Each side can be configured independently.")]
     [SerializeField] Vector2 cardSize = new Vector2(70f, 105f);
     [SerializeField] Vector2 layoutCenter;
     [Header("Wall gaps by count")]
@@ -34,6 +35,7 @@ public class WallAreaLayout : MonoBehaviour
 
     struct Placement { public CCP.Card card; public int slot; public bool king; }
     public bool IsAnimating => placementRoutine != null;
+    public Vector2 CardSize => new Vector2(Mathf.Max(1f, cardSize.x), Mathf.Max(1f, cardSize.y));
     public int Capacity => Mathf.Clamp(slotCount, 1, 9);
 
     void Awake() { Prepare(); }
@@ -101,15 +103,16 @@ public class WallAreaLayout : MonoBehaviour
             spacing = Mathf.Min(spacing, Mathf.Max(1f, maxWidth - cardSize.x) / (count - 1));
         return new Vector3(layoutCenter.x + (order - (count - 1) * 0.5f) * spacing, layoutCenter.y, 0f);
     }
-    public bool AddWall(GameObject wall, bool fromKing, Vector2 size)
+    public bool AddWall(GameObject wall, bool fromKing)
     {
         Prepare();
         ReleaseBrokenWalls();
         int index = FindFreeSlot(false);
         if (wall == null || index < 0) return false;
 
-        cardSize = size;
+
         wall.transform.SetParent(transform, false);
+        ApplyCardSize(wall);
         CCP.Card card = wall.GetComponent<CCP.Card>();
         if (card == null) card = wall.AddComponent<CCP.Card>();
         card.enabled = false; // Target selection remains with EnemyWallClick.
@@ -166,15 +169,36 @@ public class WallAreaLayout : MonoBehaviour
         for(int i = 0; i < slots.Length; i++)
         {
             CCP.Card card = slots[i];
-            if(card == null || card.isBeingMovedManually) continue;
+            if(card == null) continue;
+            ApplyCardSize(card.gameObject);
+            if(card.isBeingMovedManually) continue;
             card.transform.localPosition = SlotPosition(i);
             card.transform.localRotation = Quaternion.identity;
             card.transform.localScale = Vector3.one;
         }
     }
 
+    void ApplyCardSize(GameObject wall)
+    {
+        Vector2 size = CardSize;
+        RectTransform rect = wall.GetComponent<RectTransform>();
+        if (rect != null)
+        {
+            if (!Mathf.Approximately(rect.rect.width, size.x))
+                rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, size.x);
+            if (!Mathf.Approximately(rect.rect.height, size.y))
+                rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, size.y);
+        }
+        LayoutElement element = wall.GetComponent<LayoutElement>();
+        if (element == null) element = wall.AddComponent<LayoutElement>();
+        element.ignoreLayout = true;
+        element.preferredWidth = element.minWidth = size.x;
+        element.preferredHeight = element.minHeight = size.y;
+    }
+
     void OnValidate()
     {
+        cardSize = CardSize;
         maxWidth = Mathf.Max(1f, maxWidth);
         slotCount = Mathf.Clamp(slotCount, 1, 9);
         if(gapsByCount == null) gapsByCount = new float[9];

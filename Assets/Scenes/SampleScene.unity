@@ -8633,7 +8633,7 @@ MonoBehaviour:
   maxWidth: 850
   overlapLimit: 90
   slotCount: 9
-  cardSize: {x: 70, y: 105}
+  cardSize: {x: 58, y: 89}
   layoutCenter: {x: 0, y: 0}
   placementInterval: 0.06
   normalPlacement:
@@ -9921,7 +9921,7 @@ MonoBehaviour:
   maxWidth: 850
   overlapLimit: 90
   slotCount: 9
-  cardSize: {x: 70, y: 105}
+  cardSize: {x: 58, y: 89}
   layoutCenter: {x: 0, y: 0}
   placementInterval: 0.06
   normalPlacement:
