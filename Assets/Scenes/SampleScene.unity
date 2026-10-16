@@ -11656,8 +11656,8 @@ MonoBehaviour:
   proHandGroup: {fileID: 1560023924}
   idlePosition: {x: 0, y: -570, z: 0}
   expandPosition: {x: 0, y: -310, z: 0}
-  idleScale: 1.3
-  expandScale: 1.8
+  idleScale: 1.2
+  expandScale: 1.6
   idleMaxWidth: 200
   idleMaxSpacing: 20
   idleMinSpacing: 50
