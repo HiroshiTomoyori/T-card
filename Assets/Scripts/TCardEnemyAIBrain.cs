@@ -8,6 +8,19 @@ public class TCardEnemyAIBrain : MonoBehaviour
 
     [Header("Debug")]
     public bool showDecisionLog = true;
+    [Header("Decision variety")]
+    public bool varyCloseDecisions = true;
+    [Tooltip("評価が最善手からこの範囲以内の行動を重み付き抽選します。0で最善手を固定します。")]
+    [Min(0f)] public float actionVarietyWindow = 350f;
+    [Min(0f)] public float drawVarietyWindow = 450f;
+    [Tooltip("出したばかりのバニラ7を直ちにレイズ素材へ消費する手順の減点。勝ち筋や緊急防御は評価上優先できます。")]
+    [Min(0f)] public float freshVanillaRaisePenalty = 3000f;
+
+    int ChooseVariedScore(List<float> scores, float window, float winningThreshold = 10000000f)
+    {
+        bool varied = varyCloseDecisions && window > 0f;
+        return CpuVarietySelector.Choose(scores, varied ? window : 0f, varied ? UnityEngine.Random.value : 0f, winningThreshold);
+    }
 
     TCardAIConfig Config
     {
@@ -36,13 +49,17 @@ public class TCardEnemyAIBrain : MonoBehaviour
         float offense = Pressure(state.own, state.foe, foeWalls, search);
         float danger = Pressure(state.foe, state.own, ownWalls, search, true);
         int best = -1; float bestScore = float.MinValue;
+        var drawIndices = new List<int>();
+        var drawScores = new List<float>();
         foreach(int index in candidates)
         {
             if(index < 0 || index >= deck.Count || deck[index] == null) continue;
             float score = EvaluateDrawCandidate(deck[index], hand, resource, state, search, offense, danger);
+            drawIndices.Add(index); drawScores.Add(score);
             if(score > bestScore) { bestScore = score; best = index; }
         }
-        return best;
+        int variedDraw = ChooseVariedScore(drawScores, drawVarietyWindow);
+        return variedDraw >= 0 ? drawIndices[variedDraw] : best;
     }
 
     float EvaluateDrawCandidate(CardData card, List<CardData> hand, int resource,
@@ -111,7 +128,12 @@ public class TCardEnemyAIBrain : MonoBehaviour
         if(raised)
         {
             int basis = developed.own.FindIndex(u => CanRaiseFrom(card, u.data) && card.cost - u.data.power == cost);
-            if(basis >= 0) developed.own.RemoveAt(basis);
+            if(basis >= 0)
+            {
+                if (developed.own[basis].sick && IsVanillaSeven(developed.own[basis].data))
+                    score -= Mathf.Max(0f, freshVanillaRaisePenalty);
+                developed.own.RemoveAt(basis);
+            }
         }
         developed.own.Add(new StrategicUnit { data = card,
             sick = !raised && !HasEffect(card, EffectType.NoSummonSickness) });
@@ -161,6 +183,8 @@ public class TCardEnemyAIBrain : MonoBehaviour
             }
         }
         float bestChargePlan = float.MinValue;
+        var chargeCards = new List<CardData>();
+        var chargeScores = new List<float>();
         foreach(CardData card in hand)
         {
             if(card == null)
@@ -195,6 +219,11 @@ public class TCardEnemyAIBrain : MonoBehaviour
                 chargePlan = ForecastAttacks(search.choice, forecast, 6) + search.choice.effectValue + search.choice.handValue;
             }
             score += chargePlan * 0.8f;
+            bool safeCharge = !(retainedPlan >= 10000000f && chargePlan < 10000000f) &&
+                !(retainedPlan > -1000000f && chargePlan <= -1000000f) &&
+                !(maxResource >= 6 && hand.Count <= 2 && chargePlan < retainedPlan - 1600f) &&
+                !(maxResource >= 13 && chargePlan <= retainedPlan + 50f);
+            if (safeCharge) { chargeCards.Add(card); chargeScores.Add(score); }
             if(showDecisionLog)
             {
                 Debug.Log(
@@ -221,7 +250,8 @@ public class TCardEnemyAIBrain : MonoBehaviour
         if(maxResource >= 13 && bestChargePlan <= retainedPlan + 50f)
             return null;
 
-        return best;
+        int variedCharge = ChooseVariedScore(chargeScores, actionVarietyWindow);
+        return variedCharge >= 0 ? chargeCards[variedCharge] : best;
     }
 
     public CardData SelectSummonCard(
@@ -447,6 +477,11 @@ public class TCardEnemyAIBrain : MonoBehaviour
             return order != 0 ? order : EvaluateAttackOrder(a, playerWallCount)
                 .CompareTo(EvaluateAttackOrder(b, playerWallCount));
         });
+        var orderScores = new List<float>();
+        foreach (var card in ordered)
+            orderScores.Add(lastAttackScores.TryGetValue(card, out var score) ? score : float.MinValue);
+        int first = ChooseVariedScore(orderScores, actionVarietyWindow, 900000f);
+        if (first > 0) { var card = ordered[first]; ordered.RemoveAt(first); ordered.Insert(0, card); }
         return ordered;
     }
 
@@ -475,6 +510,8 @@ public class TCardEnemyAIBrain : MonoBehaviour
         if(playerField == null) return null;
         CardController best = null;
         float bestScore = float.MinValue;
+        var targets = new List<CardController>();
+        var targetScores = new List<float>();
         var plan = BuildAttackPlan(enemyField, playerField);
         int remaining = (1 << plan.attackers.Count) - 1;
         int blockers = (1 << plan.blockers.Count) - 1;
@@ -490,9 +527,11 @@ public class TCardEnemyAIBrain : MonoBehaviour
             if(CanAttack(target.data) && !IsSpell(target.data))
                 score += (enemyWalls <= 2 ? 1800f : 350f) *
                     (HasEffect(target.data, EffectType.DoubleWallBreak) ? 2 : 1);
+            targets.Add(target); targetScores.Add(score);
             if(score > bestScore) { bestScore = score; best = target; }
         }
-        return best;
+        int variedTarget = ChooseVariedScore(targetScores, actionVarietyWindow, 900000f);
+        return variedTarget >= 0 ? targets[variedTarget] : best;
     }
 public CardController SelectBestBlocker(
     CardController attacker,
@@ -513,6 +552,19 @@ public CardController SelectBestBlocker(
        blockers.Count == 0)
     {
         return null;
+    }
+
+    if (enemyWallCount <= 0)
+    {
+        CardController emergency = null;
+        float bestEmergency = float.MinValue;
+        foreach (CardController blocker in blockers)
+        {
+            if (!CardActionIcon.CanBlock(blocker) || !blocker.gameObject.activeInHierarchy) continue;
+            float score = -BattleOutcome(attacker.data, blocker.data) * 10000f - GetCardValue(blocker.data) * 0.01f;
+            if (score > bestEmergency) { bestEmergency = score; emergency = blocker; }
+        }
+        return emergency;
     }
 
     if(playerField != null && enemyField != null)
@@ -1339,6 +1391,14 @@ bool CanSpecialBreak(
         return score;
     }
 
+    bool IsVanillaSeven(CardData card)
+    {
+        if (card == null) return false;
+        card.SetPowerFromName();
+        return card.power == 7 && (card.effectTypes == null ||
+            Array.TrueForAll(card.effectTypes, effect => effect == EffectType.None || effect == EffectType.ShieldTrigger));
+    }
+
     bool CanRaiseFrom(CardData king, CardData basis)
     {
         if(!HasEffect(king, EffectType.SpecialSummonK) || basis == null) return false;
@@ -1394,6 +1454,8 @@ bool CanSpecialBreak(
             if(basis >= 0)
             {
                 if(state.first < 0) next.firstBase = state.own[basis].source;
+                if (state.own[basis].sick && IsVanillaSeven(state.own[basis].data))
+                    next.effectValue -= Mathf.Max(0f, freshVanillaRaisePenalty);
                 next.own.RemoveAt(basis);
             }
             next.own.Add(new StrategicUnit {data = card,
@@ -1507,15 +1569,19 @@ bool CanSpecialBreak(
             var hold = new BattleForecast();
             float bestBattle = ForecastAttacks(state, hold, 6) + state.effectValue + state.handValue;
             StrategicState battleChoice = state;
+            var choices = new List<StrategicState> { state };
+            var scores = new List<float> { bestBattle };
             for(int i = 0; i < Mathf.Min(6, forecasts.Count); i++)
             {
                 var candidate = forecasts[i].Item2;
                 var forecast = new BattleForecast();
                 float score = ForecastAttacks(candidate, forecast, 6) + candidate.effectValue + candidate.handValue;
+                choices.Add(candidate); scores.Add(score);
                 if(score > bestBattle) { bestBattle = score; battleChoice = candidate; }
             }
-            context.choice = battleChoice;
-            context.best = bestBattle;
+            int varied = ChooseVariedScore(scores, actionVarietyWindow);
+            context.choice = varied >= 0 ? choices[varied] : battleChoice;
+            context.best = varied >= 0 ? scores[varied] : bestBattle;
         }
         PlannedWinningLine = context.best >= 10000000f;
         if(context.choice == null || context.choice.first < 0) return null;
@@ -1560,12 +1626,14 @@ bool CanSpecialBreak(
     {
         var state = ReadStrategicState(new List<CardData>(), 0, ownWalls, foeWalls, playerField, enemyField);
         int attack = state.foe.FindIndex(u => u.source == attacker);
-        if(attack < 0 || ownWalls <= 0) return null;
+        if(attack < 0) return null;
         // The attacking card may already be tapped by the live battle animation.
         state.foe[attack].tapped = true;
         var shared = new DefenseForecast();
         float best = ForecastDefense(ResolveIncoming(state, attack, -1), shared, 6);
         CardController chosen = null;
+        var defenses = new List<CardController> { null };
+        var defenseScores = new List<float> { best };
         foreach(var blocker in blockers)
         {
             int guard = state.own.FindIndex(u => u.source == blocker);
@@ -1573,6 +1641,7 @@ bool CanSpecialBreak(
             // Give each root choice the same search budget.
             var search = new DefenseForecast();
             float score = ForecastDefense(ResolveIncoming(state, attack, guard), search, 6);
+            defenses.Add(blocker); defenseScores.Add(score);
             if(score > best + 1f) { best = score; chosen = blocker; }
         }
         // A doomed projection must not turn into automatic surrender. Wall triggers and
@@ -1587,6 +1656,11 @@ bool CanSpecialBreak(
                 if(BattleOutcome(attacker.data, blocker.data) < 0) value += 3000f;
                 if(value > fallback) { fallback = value; chosen = blocker; }
             }
+        }
+        else
+        {
+            int variedDefense = ChooseVariedScore(defenseScores, actionVarietyWindow);
+            if (variedDefense >= 0) chosen = defenses[variedDefense];
         }
         if(showDecisionLog) Debug.Log("[AI Defense plan] " + (chosen == null ? "pass" : chosen.data.cardName) + " score=" + best);
         return chosen;
@@ -1847,4 +1921,40 @@ bool CanSpecialBreak(
             context.finalists[action] = Tuple.Create(value, state);
     }
 
+}
+
+// Bounded weighted choice: variety cannot cross a winning/losing boundary.
+public static class CpuVarietySelector
+{
+    public static int Choose(IReadOnlyList<float> scores, float window, float roll, float winningThreshold = 10000000f)
+    {
+        if (scores == null || scores.Count == 0) return -1;
+        int best = -1;
+        for (int i = 0; i < scores.Count; i++)
+            if (!float.IsNaN(scores[i]) && !float.IsInfinity(scores[i]) &&
+                (best < 0 || scores[i] > scores[best])) best = i;
+        if (best < 0 || window <= 0f) return best;
+        double total = 0;
+        double temperature = Math.Max(0.001, window * 0.45);
+        for (int i = 0; i < scores.Count; i++)
+            if (Eligible(scores[i], scores[best], window, winningThreshold))
+                total += Math.Exp((scores[i] - scores[best]) / temperature);
+        double target = Math.Max(0, Math.Min(1, roll)) * total;
+        int last = best;
+        for (int i = 0; i < scores.Count; i++)
+        {
+            if (!Eligible(scores[i], scores[best], window, winningThreshold)) continue;
+            last = i;
+            double weight = Math.Exp((scores[i] - scores[best]) / temperature);
+            if (target < weight) return i;
+            target -= weight;
+        }
+        return last;
+    }
+    static bool Eligible(float score, float best, float window, float winningThreshold)
+    {
+        return !float.IsNaN(score) && !float.IsInfinity(score) && best - score <= window &&
+            !(best >= winningThreshold && score < winningThreshold) &&
+            !(best > -1000000f && score <= -1000000f);
+    }
 }

@@ -11489,9 +11489,9 @@ MonoBehaviour:
   enemyDeckImage: {fileID: 1377010475}
   enemyHandCount: 0
   assistEnemyDraws: 1
-  enemyDrawAssistChance: 1
-  enemyDrawCandidateCount: 64
-  debugForceEnemyQ: 1
+  enemyDrawAssistChance: 0.55
+  enemyDrawCandidateCount: 12
+  debugForceEnemyQ: 0
   turnManager: {fileID: 1118434680}
   targetGlowSprite: {fileID: 8891656711315780718, guid: e975302d61612ac44b483c0f2eef629a, type: 3}
   slashSprite: {fileID: 21300000, guid: 4852a4e32ff3bcf4daf47206bcf1bc0c, type: 3}

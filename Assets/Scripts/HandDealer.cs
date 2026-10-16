@@ -91,12 +91,14 @@ public class HandDealer : MonoBehaviour
 
     [Header("CPU Draw Strength")]
     public bool assistEnemyDraws = true;
-    [Range(0f, 1f)] public float enemyDrawAssistChance = 1f;
-    [Min(1)] public int enemyDrawCandidateCount = 64;
+    [Range(0f, 1f)] public float enemyDrawAssistChance = 0.55f;
+    [Min(1)] public int enemyDrawCandidateCount = 12;
+    int openingEnemyDrawsRemaining;
 
     int SelectEnemyHandDrawIndex()
     {
         int fallback = Random.Range(0, enemyDeck.Count);
+        if (openingEnemyDrawsRemaining > 0) { openingEnemyDrawsRemaining--; return fallback; }
         if(!assistEnemyDraws || enemyDrawAssistChance <= 0f || (enemyDrawAssistChance < 1f && Random.value >= enemyDrawAssistChance)) return fallback;
         var brain = turnManager != null ? turnManager.enemyAIBrain : TCardEnemyAIBrain.I;
         if(brain == null) return fallback;
@@ -234,6 +236,7 @@ public Transform playerWallArea;
         currentDeck = new List<CardData>(cardList);
         enemyDeck = new List<CardData>(cardList);
         enemyHandCount = 0;
+        openingEnemyDrawsRemaining = 5;
 
         if (enemyDeckImage != null)
             enemyDeckImage.gameObject.SetActive(true);

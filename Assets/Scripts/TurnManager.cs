@@ -623,6 +623,19 @@ CardController SelectEnemyBlocker(
         return guard;
     }
 
+    if (enemyWallCount <= 0 && blockers.Count > 0)
+    {
+        // Passing a direct hit loses immediately. A legal guard must intercept.
+        CardController guard = null;
+        int bestDefense = int.MinValue;
+        foreach (CardController candidate in blockers)
+        {
+            int score = -CompareBattleCards(attacker, candidate) * 10000 - candidate.data.power;
+            if (score > bestDefense) { bestDefense = score; guard = candidate; }
+        }
+        return guard;
+    }
+
     if(enemyAIBrain != null)
     {
         return enemyAIBrain
@@ -1154,7 +1167,7 @@ void UntapPlayerBattleCards()
         currentAttacker = null;
         HideAttackArrow();
 
-        StartBattleEndResult();
+        if (attackerCard != null) StartCoroutine(PlayerDirectAttackWithGuard(attackerCard));
     }
 
 void ShowAttackableCards()
@@ -2252,18 +2265,34 @@ IEnumerator EnemyBattlePhase()
                 );
             }
 
-            yield return new WaitForSeconds(1.2f);
-
-            HideAttackArrow();
-
-            if(attacker != null)
+            pendingEnemyAttacker = attacker;
+            pendingEnemyTargetWall = null;
+            pendingEnemyRestedTarget = null;
+            enemyAttackBlocked = false;
+            attacker.Tap();
+            yield return new WaitForSeconds(0.6f);
+            if (HasUntappedPlayerBlocker())
             {
-                attacker.Tap();
+                waitingBlockSelect = true;
+                ShowBlockableCards();
+                ShowNoBlockButton(attacker.GetComponent<RectTransform>());
+                while (waitingBlockSelect || resolvingEnemyBlock) yield return null;
             }
-
-            StartBattleEndResult(true);
-
-            yield break;
+            HideNoBlockButton();
+            HideAllCardIcons();
+            HideAttackArrow();
+            bool blocked = enemyAttackBlocked;
+            pendingEnemyAttacker = null;
+            pendingEnemyTargetWall = null;
+            waitingBlockSelect = false;
+            enemyAttackBlocked = false;
+            if (!blocked)
+            {
+                StartBattleEndResult(true);
+                yield break;
+            }
+            yield return new WaitForSeconds(0.4f);
+            continue;
         }
 
         // 現状は攻撃対象Wallをランダム選択
@@ -4910,6 +4939,7 @@ public partial class TurnManager
     public bool RequestPlayerDecision(string key, string message, System.Action accept, System.Action cancel = null)
     {
         if (IsBattleEnded) return true;
+        if (TitleManager.SkipActionConfirmations) return false;
         if (automaticDecisionDepth > 0 || approvedPlayerDecisionKey == key) return false;
         if (IsPlayerDecisionOpen) return true;
         EnsurePlayerDecisionUi();
@@ -5017,5 +5047,32 @@ public partial class TurnManager
         if (board != null) playerDecisionBody.position = board.TransformPoint(board.rect.center);
         else playerDecisionBody.anchoredPosition = Vector2.zero;
         playerDecisionOverlay.SetAsLastSibling();
+    }
+}
+
+public partial class TurnManager
+{
+    IEnumerator PlayerDirectAttackWithGuard(CardController attacker)
+    {
+        if (attacker == null || IsBattleEnded) yield break;
+        resolvingPlayerCardAttack = true;
+        try
+        {
+            CardController blocker = SelectEnemyBlocker(attacker);
+            if (blocker != null)
+            {
+                if (attackArrowManager != null)
+                    attackArrowManager.ShowPlayerArrow(attacker.GetComponent<RectTransform>(), blocker.GetComponent<RectTransform>());
+                yield return PlayBlockerSlash(blocker.gameObject);
+                if (!IsBattleEnded && attacker != null && blocker != null) ResolveCardBattle(attacker, blocker);
+            }
+            else StartBattleEndResult();
+        }
+        finally
+        {
+            resolvingPlayerCardAttack = false;
+            HideAttackArrow();
+            if (!IsBattleEnded) ShowAttackableCards();
+        }
     }
 }
