@@ -22,6 +22,16 @@ public class ReverseChoiceManager : MonoBehaviour
     int orderSelection = -1;
 
     bool isChoosing = false;
+    bool choosingOrder;
+    public bool IsChoosing => isChoosing;
+    public bool IsChoosingOrder => isChoosing && choosingOrder;
+    public int ChoiceRevision { get; private set; }
+    public void ResolveInactivity()
+    {
+        if (!isChoosing) return;
+        if (choosingOrder) orderSelection = 0;
+        else OnHandSelected();
+    }
     bool result = false;
 
     [Header("Preview")]
@@ -49,6 +59,8 @@ public IEnumerator ShowChoiceRoutine(
     if (choicePanel == null || useButton == null || handButton == null)
         throw new InvalidOperationException("Shield choice UI is not configured" );
     isChoosing = true;
+    choosingOrder = false;
+    ChoiceRevision++;
     result = false;
     callback = onSelected;
 
@@ -136,10 +148,12 @@ public IEnumerator ShowChoiceRoutine(
         firstOrderPreview.preserveAspect = secondOrderPreview.preserveAspect = true;
         orderSelection = -1;
         isChoosing = true;
+        choosingOrder = true;
+        ChoiceRevision++;
         firstOrderButton.onClick.RemoveAllListeners();
         secondOrderButton.onClick.RemoveAllListeners();
-        firstOrderButton.onClick.AddListener(() => orderSelection = 0);
-        secondOrderButton.onClick.AddListener(() => orderSelection = 1);
+        firstOrderButton.onClick.AddListener(() => SelectShieldOrder(0));
+        secondOrderButton.onClick.AddListener(() => SelectShieldOrder(1));
         orderPanel.transform.SetAsLastSibling();
         orderPanel.SetActive(true);
         try
@@ -150,6 +164,7 @@ public IEnumerator ShowChoiceRoutine(
         finally
         {
             isChoosing = false;
+            choosingOrder = false;
             orderPanel.SetActive(false);
             firstOrderButton.onClick.RemoveAllListeners();
             secondOrderButton.onClick.RemoveAllListeners();
@@ -157,6 +172,9 @@ public IEnumerator ShowChoiceRoutine(
     }
     void OnUseSelected()
     {
+        if (!isChoosing || choosingOrder) return;
+        TurnManager manager = FindFirstObjectByType<TurnManager>();
+        if (manager != null && manager.RequestPlayerDecision("shield-use", "シールド効果を使用します。\nよろしいですか？", OnUseSelected)) return;
         result = true;
         isChoosing = false;
 
@@ -165,9 +183,21 @@ public IEnumerator ShowChoiceRoutine(
 
     void OnHandSelected()
     {
+        if (!isChoosing || choosingOrder) return;
+        TurnManager manager = FindFirstObjectByType<TurnManager>();
+        if (manager != null && manager.RequestPlayerDecision("shield-hand", "このシールドを手札に加えます。\nよろしいですか？", OnHandSelected)) return;
         result = false;
         isChoosing = false;
 
         Debug.Log("リバース選択：手札に加える");
+    }
+
+    void SelectShieldOrder(int index)
+    {
+        if (!IsChoosingOrder) return;
+        TurnManager manager = FindFirstObjectByType<TurnManager>();
+        if (manager != null && manager.RequestPlayerDecision("shield-order:" + index,
+            "選択したシールドから先に処理します。\nよろしいですか？", () => SelectShieldOrder(index))) return;
+        orderSelection = index;
     }
 }

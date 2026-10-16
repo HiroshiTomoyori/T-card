@@ -34,7 +34,7 @@ public bool CanDragPlayerHand
             resourcePhaseManager != null &&
             resourcePhaseManager.IsRunning();
 
-        return (CardEffectManager.I == null || !CardEffectManager.I.IsResolvingNine) && (handDealer == null || (!handDealer.IsWallPlacementRunning && !handDealer.IsResolvingWallAttack)) && isPlayerTurnActive &&
+        return !IsPlayerDecisionOpen && (CardEffectManager.I == null || !CardEffectManager.I.IsResolvingNine) && (handDealer == null || (!handDealer.IsTurnDrawAnimating && !handDealer.IsWallPlacementRunning && !handDealer.IsResolvingWallAttack)) && isPlayerTurnActive &&
                !isEndingTurn &&
                !isBattlePhase &&
                !HandDealer.IsRedrawSelecting &&
@@ -136,6 +136,12 @@ public bool CanDragPlayerHand
     public Transform enemyWallArea;
 
     bool isEndingTurn = false;
+    public bool IsBattleEnded { get; private set; }
+    bool battleFrozen;
+    float timeScaleBeforeResult = 1f;
+    readonly List<Tween> frozenTweens = new List<Tween>();
+    readonly List<Animator> frozenAnimators = new List<Animator>();
+    readonly List<ParticleSystem> frozenParticles = new List<ParticleSystem>();
 
     // プレイヤーターンの唯一の状態フラグ。
     // ボタン表示・入力可否・二重ターン開始の防止に共通利用する。
@@ -155,7 +161,7 @@ public bool CanDragPlayerHand
     CardController pendingJokerEffectCard;
     //bool playerExtraTurnRequested = false;
 
-    public float resultWaitTime = 1.5f;
+    public float resultWaitTime = 3f;
 
     void Awake()
     {
@@ -184,6 +190,8 @@ public bool CanDragPlayerHand
 
     void LateUpdate()
     {
+        PositionPlayerDecisionPanel();
+        TickDecisionTimer();
         // Animatorや別UI処理に再表示されても、自ターン以外では必ず隠す。
         SyncEndTurnButtonVisibility();
 
@@ -217,6 +225,8 @@ public bool CanDragPlayerHand
     bool enemyAttackBlocked = false;
     CardController pendingEnemyAttacker;
     GameObject pendingEnemyTargetWall;
+    CardController pendingEnemyRestedTarget;
+    bool resolvingPlayerCardAttack;
 
 IEnumerator FirstTurnRoutine()
 {
@@ -296,8 +306,20 @@ IEnumerator FirstTurnRoutine()
         }
     }
 
+    void StartPlayerBattlePhase()
+    {
+        if (IsBattleEnded || !isPlayerTurnActive || isEndingTurn || isBattlePhase) return;
+        if (mainPhaseManager != null) mainPhaseManager.EndMainPhase();
+        isPlayerMainPhase = false;
+        isBattlePhase = true;
+        if (battlePhaseManager != null) battlePhaseManager.StartBattlePhase();
+        LockPlayerHand(true);
+        ShowAttackableCards();
+    }
+
 public void StartBattleByAttackSelect(GameObject attacker)
 {
+    if (IsBattleEnded || IsPlayerDecisionOpen || !isPlayerTurnActive || isEndingTurn || resolvingPlayerCardAttack) return;
     if (handDealer != null && (handDealer.IsWallPlacementRunning || handDealer.IsResolvingWallAttack)) return;
     if(attacker == null)
         return;
@@ -410,21 +432,7 @@ public void StartBattleByAttackSelect(GameObject attacker)
 
     if(!isBattlePhase)
     {
-        if(mainPhaseManager != null)
-        {
-            mainPhaseManager.EndMainPhase();
-        }
-
-        if(battlePhaseManager != null)
-        {
-            battlePhaseManager.StartBattlePhase();
-        }
-
-        isBattlePhase = true;
-
-        LockPlayerHand(true);
-
-        ShowAttackableCards();
+        StartPlayerBattlePhase();
     }
 
     Debug.Log("攻撃カード選択：" + attacker.name);
@@ -454,6 +462,9 @@ public void SelectAttackTarget(GameObject target)
         target.name +
         " を攻撃"
     );
+
+    if (RequestPlayerDecision("attack-wall:" + target.GetInstanceID(),
+        GetCardName(attackerCard.data) + "でウォールを攻撃します。\nよろしいですか？", () => SelectAttackTarget(target))) return;
 
     CardController blocker =
         SelectEnemyBlocker(attackerCard);
@@ -550,7 +561,8 @@ public void SelectAttackTarget(GameObject target)
 }
 
 CardController SelectEnemyBlocker(
-    CardController attacker
+    CardController attacker,
+    CardController protectedTarget = null
 )
 {
     if(attacker == null ||
@@ -582,7 +594,7 @@ CardController SelectEnemyBlocker(
                 continue;
             }
 
-            if(card.isTapped)
+            if(card.isTapped || !card.gameObject.activeInHierarchy)
                 continue;
 
             if(!IsGuardCard(card.data))
@@ -590,6 +602,25 @@ CardController SelectEnemyBlocker(
 
             blockers.Add(card);
         }
+    }
+
+    if (protectedTarget != null)
+    {
+        // Protect a rested ally when blocking wins, trades, or saves a more valuable card.
+        if (CompareBattleCards(attacker, protectedTarget) < 0) return null;
+        CardController guard = null;
+        int bestProtection = int.MinValue;
+        foreach (CardController candidate in blockers)
+        {
+            int outcome = CompareBattleCards(attacker, candidate);
+            candidate.data.SetPowerFromName();
+            protectedTarget.data.SetPowerFromName();
+            int savedValue = protectedTarget.data.power - candidate.data.power;
+            if (outcome > 0 && savedValue <= 0) continue;
+            int score = (outcome < 0 ? 10000 : outcome == 0 ? 5000 : 0) + savedValue;
+            if (score > bestProtection) { bestProtection = score; guard = candidate; }
+        }
+        return guard;
     }
 
     if(enemyAIBrain != null)
@@ -683,6 +714,7 @@ int GetAliveEnemyWallCount()
 }
     public void SelectEnemyBattleCardTarget(GameObject target)
     {
+        if (IsBattleEnded || !isPlayerTurnActive || resolvingPlayerCardAttack) return;
         if(!selectingTarget)
             return;
 
@@ -707,6 +739,20 @@ int GetAliveEnemyWallCount()
         if(!targetCard.isTapped)
             return;
 
+        if (enemyBattleArea == null || !targetCard.transform.IsChildOf(enemyBattleArea) ||
+            playerBattleArea == null || !attackerCard.transform.IsChildOf(playerBattleArea) || attackerCard.isTapped)
+            return;
+
+        if (RequestPlayerDecision("attack-card:" + target.GetInstanceID(),
+            GetCardName(attackerCard.data) + "で" + GetCardName(targetCard.data) + "を攻撃します。\nよろしいですか？",
+            () => SelectEnemyBattleCardTarget(target))) return;
+
+        selectingTarget = false;
+        pendingWallTargets.Clear();
+        wallBreakCount = 0;
+        maxWallBreakCount = 1;
+        SetEnemyWallClickable(false);
+
         StartCoroutine(
             BattleCardVsCardRoutine(
                 attackerCard,
@@ -714,7 +760,6 @@ int GetAliveEnemyWallCount()
             )
         );
 
-        selectingTarget = false;
     }
     IEnumerator DestroyEnemyBattleCardRoutine(
     CardController attackerCard,
@@ -773,74 +818,30 @@ int GetAliveEnemyWallCount()
         HideAttackArrow();
     }
 
-    IEnumerator BattleCardVsCardRoutine(
-    CardController attackerCard,
-    CardController targetCard
-)
-{
-    if(attackerCard == null || targetCard == null)
-        yield break;
-
-    int attackerPower = attackerCard.data.power;
-    int targetPower = targetCard.data.power;
-
-    Debug.Log(
-        "バトル比較：" +
-        attackerPower +
-        " VS " +
-        targetPower
-    );
-
-    yield return StartCoroutine(
-        PlayBlockerSlash(targetCard.gameObject)
-    );
-
-    if(attackerPower > targetPower)
+    IEnumerator BattleCardVsCardRoutine(CardController attackerCard, CardController targetCard)
     {
-        Debug.Log("攻撃側勝利");
-
-        SendToGraveyard(
-            targetCard.gameObject,
-            enemyGraveyard
-        );
-
+        if (attackerCard == null || targetCard == null) yield break;
+        resolvingPlayerCardAttack = true;
         attackerCard.Tap();
         attackerCard.SetAttackable(false);
-
-        CardActionIcon icon =
-            attackerCard.GetComponent<CardActionIcon>();
-
-        if(icon != null)
-            icon.HideAll();
+        try
+        {
+            CardController blocker = SelectEnemyBlocker(attackerCard, targetCard);
+            CardController defender = blocker != null ? blocker : targetCard;
+            if (attackArrowManager != null)
+                attackArrowManager.ShowPlayerArrow(attackerCard.GetComponent<RectTransform>(), defender.GetComponent<RectTransform>());
+            yield return PlayBlockerSlash(defender.gameObject);
+            if (!IsBattleEnded && attackerCard != null && defender != null)
+                ResolveCardBattle(attackerCard, defender);
+        }
+        finally
+        {
+            resolvingPlayerCardAttack = false;
+            currentAttacker = null;
+            HideAttackArrow();
+            if (!IsBattleEnded) ShowAttackableCards();
+        }
     }
-    else if(attackerPower < targetPower)
-    {
-        Debug.Log("防御側勝利");
-
-        SendToGraveyard(
-            attackerCard.gameObject,
-            playerGraveyard
-        );
-    }
-    else
-    {
-        Debug.Log("相打ち");
-
-        SendToGraveyard(
-            targetCard.gameObject,
-            enemyGraveyard
-        );
-
-        SendToGraveyard(
-            attackerCard.gameObject,
-            playerGraveyard
-        );
-    }
-
-    currentAttacker = null;
-
-    HideAttackArrow();
-}
 IEnumerator AttackRoutine(
     CardController attackerCard,
     GameObject target
@@ -893,7 +894,7 @@ if(handDealer != null)
         if (ShouldAutoEndEarlyTurn())
         {
             Debug.Log("最初の5ターン・行動不能のため自動ターン終了");
-            EndPlayerTurn();
+            RunAutomaticDecision(EndPlayerTurn);
             return;
         }
 
@@ -951,6 +952,7 @@ public void HideAttackArrow()
 
     public void EndPlayerTurn()
     {    
+        if (resolvingPlayerCardAttack) return;
         // マッチ開始前・敵ターン中・二重クリックからの呼び出しを拒否する。
         if(!isPlayerTurnActive || isEndingTurn || (CardEffectManager.I != null && CardEffectManager.I.IsResolvingNine) || (handDealer != null && (handDealer.IsWallPlacementRunning || handDealer.IsResolvingWallAttack)))
         {
@@ -964,6 +966,8 @@ public void HideAttackArrow()
         return;
     }
 
+
+    if (RequestPlayerDecision("end-turn", "ターンを終了します。\nよろしいですか？", EndPlayerTurn)) return;
 
     ResourcePhaseManager resourcePhase =
     FindFirstObjectByType<ResourcePhaseManager>();
@@ -1045,6 +1049,7 @@ isEndingTurn = false;
 
 void StartPlayerTurn(bool firstTurn = false)
 {
+    if (IsBattleEnded) return;
     // 同じターン開始イベントが重複しても、ドロー等を二重実行しない。
     if(isPlayerTurnActive)
     {
@@ -1073,14 +1078,16 @@ void StartPlayerTurn(bool firstTurn = false)
         rm.RecoverResource();
     }
 
-    // 初ターン先攻だけドローしない
-    if(!(isPlayerFirst && turnCount == 1))
-    {
-        StartDrawPhase();
-    }
+    StartCoroutine(StartPlayerTurnDrawRoutine());
+}
 
+IEnumerator StartPlayerTurnDrawRoutine()
+{
+    SetEndTurnButton(false);
+    isPlayerMainPhase = false;
+    if (!(isPlayerFirst && turnCount == 1) && handDealer != null)
+        yield return handDealer.DrawTurnStartCard();
     SetEndTurnButton(true);
-
     StartResourcePhase();
 }
 
@@ -1124,6 +1131,9 @@ void UntapPlayerBattleCards()
             return;
         }
 
+        if (RequestPlayerDecision("direct-attack", "相手に直接攻撃します。\nよろしいですか？",
+            () => SelectDirectAttackTarget(target))) return;
+
         Debug.Log(
             currentAttacker.name +
             " が敵本体へ直接攻撃"
@@ -1143,11 +1153,6 @@ void UntapPlayerBattleCards()
         selectingTarget = false;
         currentAttacker = null;
         HideAttackArrow();
-
-        if(handDealer != null)
-        {
-            handDealer.StartVictorySequence();
-        }
 
         StartBattleEndResult();
     }
@@ -2177,6 +2182,14 @@ IEnumerator EnemyBattlePhase()
             continue;
         }
 
+        CardController restedTarget = GetEnemyRestedAttackTarget(attacker);
+        if (restedTarget != null)
+        {
+            yield return EnemyAttackRestedCardRoutine(attacker, restedTarget);
+            if (IsBattleEnded) yield break;
+            continue;
+        }
+
         if(!ShouldEnemyAttack(attacker))
         {
             Debug.Log(
@@ -2248,12 +2261,7 @@ IEnumerator EnemyBattlePhase()
                 attacker.Tap();
             }
 
-            if(handDealer != null)
-            {
-                handDealer.StartDefeatSequence();
-            }
-
-            StartBattleEndResult();
+            StartBattleEndResult(true);
 
             yield break;
         }
@@ -2702,11 +2710,17 @@ void ShowEnemyAttackArrow(GameObject attacker, GameObject target)
         if(blockerCard == null)
             return;
 
+        if (playerBattleArea == null || !blockerCard.transform.IsChildOf(playerBattleArea) ||
+            !CardActionIcon.CanBlock(blockerCard)) return;
+
         if(blockerCard.isTapped)
         {
             Debug.Log("タップ済みカードはブロック不可");
             return;
         }
+
+        if (RequestPlayerDecision("block:" + blocker.GetInstanceID(),
+            GetCardName(blockerCard.data) + "でブロックします。\nよろしいですか？", () => SelectBlocker(blocker))) return;
 
         enemyAttackBlocked = true;
         waitingBlockSelect = false;
@@ -2740,6 +2754,7 @@ void ShowEnemyAttackArrow(GameObject attacker, GameObject target)
 
             pendingEnemyAttacker = null;
             pendingEnemyTargetWall = null;
+            pendingEnemyRestedTarget = null;
 
             yield break;
         }
@@ -2757,6 +2772,7 @@ void ShowEnemyAttackArrow(GameObject attacker, GameObject target)
 
         pendingEnemyAttacker = null;
         pendingEnemyTargetWall = null;
+        pendingEnemyRestedTarget = null;
             }
         finally { resolvingEnemyBlock = false; }
     }
@@ -2932,6 +2948,8 @@ void ShowBlockableCards()
     {
         if(!waitingBlockSelect)
             return;
+
+        if (RequestPlayerDecision("no-block", "ブロックせずに攻撃を受けます。\nよろしいですか？", OnNoBlockButtonClicked)) return;
 
         Debug.Log("ブロックしない");
 
@@ -3457,6 +3475,9 @@ public bool TrySelectDestroyTarget(
         return false;
     }
 
+    if (sourceIsPlayer && RequestPlayerDecision("destroy-target:" + target.GetInstanceID(),
+        GetCardName(target.data) + "を効果で破壊します。\nよろしいですか？", () => TrySelectDestroyTarget(target))) return true;
+
     Debug.Log(
         "選択破壊：" +
         GetCardName(target.data)
@@ -3738,16 +3759,38 @@ public bool IsSelectingDestroyTarget()
         Debug.Log("敵召喚酔い解除");
     }
 
-    public void StartBattleEndResult()
+    public void StartBattleEndResult() { StartBattleEndResult(false); }
+
+    void StartBattleEndResult(bool playerDefeated)
     {
+        if (IsBattleEnded) return;
+        IsBattleEnded = true;
+        DismissPlayerDecision();
+        resultPlayerDefeated = playerDefeated;
+        PrepareResultChoicePanel();
+        if (resultPanel != null) resultPanel.SetActive(false);
+        // Cancel the whole turn chain, including the parent enemy-turn coroutine.
+        StopAllCoroutines();
         battleIconsEnded = true;
         enemyBattleIconsActive = false;
         HideAllCardIcons();
         //Debug.LogError("★★ StartBattleEndResult 呼ばれた ★★");
 
         isPlayerTurnActive = false;
+        isPlayerMainPhase = false;
+        isBattlePhase = false;
         isEndingTurn = true;
         SetEndTurnButton(false);
+        HideAttackArrow();
+        HideNoBlockButton();
+        if (jokerEffectPanel != null) jokerEffectPanel.SetActive(false);
+
+        FreezeBattleAtResult();
+        if (handDealer != null)
+        {
+            if (playerDefeated) handDealer.StartDefeatSequence();
+            else handDealer.StartVictorySequence();
+        }
 
         StartCoroutine(
             BattleEndResultRoutine()
@@ -3756,6 +3799,7 @@ public bool IsSelectingDestroyTarget()
 
     void SetEndTurnButton(bool value)
     {
+        value = value && !IsBattleEnded;
         if(endTurnButton == null)
             return;
 
@@ -3783,26 +3827,7 @@ IEnumerator BattleEndResultRoutine()
 {
     Debug.Log("BattleEndResultRoutine 開始");
 
-    yield return new WaitForSeconds(
-        resultWaitTime
-    );
-
-    if(playerBattleArea != null)
-        ClearArea(playerBattleArea);
-
-    if(enemyBattleArea != null)
-        ClearArea(enemyBattleArea);
-
-    if(playerWallArea != null)
-        ClearArea(playerWallArea);
-
-    if(handDealer != null &&
-    handDealer.enemyWallArea != null)
-    {
-        ClearArea(
-            handDealer.enemyWallArea
-        );
-    }
+    yield return new WaitForSecondsRealtime(Mathf.Max(0f, resultWaitTime));
 
     HideAttackArrow();
     HideNoBlockButton();
@@ -3842,7 +3867,78 @@ IEnumerator BattleEndResultRoutine()
     if(exitButton != null)
         exitButton.SetActive(true);
 
+    resultChoiceVisible = true;
     Debug.Log("戦闘終了UI表示");
+}
+
+bool IsResultUi(Transform target)
+{
+    return (resultPanel != null && target.IsChildOf(resultPanel.transform)) ||
+        (retryButton != null && target.IsChildOf(retryButton.transform)) ||
+        (exitButton != null && target.IsChildOf(exitButton.transform)) ||
+        (handDealer != null && handDealer.defeatLogo != null && target.IsChildOf(handDealer.defeatLogo.transform)) ||
+        (handDealer != null && handDealer.victoryLogo != null && target.IsChildOf(handDealer.victoryLogo.transform));
+}
+
+void FreezeBattleAtResult()
+{
+    battleFrozen = true;
+    timeScaleBeforeResult = Time.timeScale;
+    // Stop gameplay coroutines even when they use unscaled time or WaitUntil.
+    foreach (MonoBehaviour behaviour in FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None))
+    {
+        if (behaviour == null || behaviour == this || behaviour.gameObject.scene != gameObject.scene ||
+            behaviour.GetType().Assembly != typeof(TurnManager).Assembly || IsResultUi(behaviour.transform)) continue;
+        behaviour.StopAllCoroutines();
+    }
+    List<Tween> playing = DOTween.PlayingTweens();
+    if (playing != null)
+    {
+        foreach (Tween tween in playing)
+        {
+            // Existing board tweens may use unscaled time. Result UI starts separately.
+            if (tween.target is Component target && IsResultUi(target.transform)) continue;
+            tween.Pause();
+            frozenTweens.Add(tween);
+        }
+    }
+    foreach (Animator animator in FindObjectsByType<Animator>(FindObjectsSortMode.None))
+    {
+        if (!animator.enabled || animator.gameObject.scene != gameObject.scene || IsResultUi(animator.transform)) continue;
+        animator.enabled = false;
+        frozenAnimators.Add(animator);
+    }
+    foreach (ParticleSystem particles in FindObjectsByType<ParticleSystem>(FindObjectsSortMode.None))
+    {
+        if (!particles.isPlaying || particles.gameObject.scene != gameObject.scene || IsResultUi(particles.transform)) continue;
+        particles.Pause(false);
+        frozenParticles.Add(particles);
+    }
+    foreach (CardController card in FindObjectsByType<CardController>(FindObjectsSortMode.None))
+    {
+        if (card.gameObject.scene != gameObject.scene) continue;
+        CanvasGroup group = card.GetComponent<CanvasGroup>();
+        if (group == null) group = card.gameObject.AddComponent<CanvasGroup>();
+        group.blocksRaycasts = false;
+        group.interactable = false;
+    }
+    Time.timeScale = 0f;
+}
+
+void OnDestroy()
+{
+    if (playerDecisionOverlay != null) Destroy(playerDecisionOverlay.gameObject);
+    if (ownsResultChoiceFont && resultChoiceFont != null) Destroy(resultChoiceFont);
+        if (decisionTimerPanel != null) Destroy(decisionTimerPanel.gameObject);
+    if (!battleFrozen) return;
+    // A scene reload/retry must not inherit the frozen clock.
+    Time.timeScale = timeScaleBeforeResult;
+    foreach (Tween tween in frozenTweens)
+        if (tween != null && tween.IsActive()) tween.Play();
+    foreach (Animator animator in frozenAnimators)
+        if (animator != null) animator.enabled = true;
+    foreach (ParticleSystem particles in frozenParticles)
+        if (particles != null) particles.Play(false);
 }
 
 void ClearArea(Transform area)
@@ -3898,6 +3994,7 @@ public void ShowJokerEffectSelectPanel(CardController jokerCard)
 
 void OnSelectJokerClear()
 {
+    if (RequestPlayerDecision("joker-clear", "Jokerの効果で場のカードを一掃します。\nよろしいですか？", OnSelectJokerClear)) return;
     if(jokerEffectPanel != null)
         jokerEffectPanel.SetActive(false);
 
@@ -3912,6 +4009,7 @@ void OnSelectJokerClear()
 
     public void OnSelectJokerExtraTurn()
     {
+        if (RequestPlayerDecision("joker-extra", "Jokerの効果で追加ターンを選びます。\nよろしいですか？", OnSelectJokerExtraTurn)) return;
         if(jokerEffectPanel != null)
             jokerEffectPanel.SetActive(false);
 
@@ -4185,5 +4283,739 @@ void OnSelectJokerClear()
             if(attack || block) icon.EnsureIcons(template);
             icon.SetAvailability(attack, block);
         }
+    }
+}
+
+[System.Serializable]
+public class InactivityTimerRule
+{
+    [Tooltip("無操作の制限秒数。0でこのタイマーを無効にします。")]
+    [Min(0f)] public float seconds;
+    [Tooltip("タイマーを表示する位置。未設定なら対象のエリア／パネルを使います。")]
+    public RectTransform anchor;
+    public Vector2 offset = new Vector2(0f, 64f);
+    public InactivityTimerRule(float duration) { seconds = duration; }
+}
+
+// Pure countdown state: only a new decision or actual input resets inactivity.
+public sealed class DecisionCountdown
+{
+    public string Context { get; private set; }
+    public float Remaining { get; private set; }
+    public float Duration { get; private set; }
+    public float DelayRemaining { get; private set; }
+    float displayDelay;
+    bool expired;
+    public void Reset() { Context = null; Remaining = Duration = DelayRemaining = displayDelay = 0f; expired = false; }
+    public bool Advance(string context, float seconds, float delta, bool activity, bool paused, float delay = 0f)
+    {
+        if (string.IsNullOrEmpty(context) || seconds <= 0f) { Reset(); return false; }
+        delay = System.Math.Max(0f, delay);
+        if (Context != context || Duration != seconds || displayDelay != delay)
+        {
+            Context = context; Duration = Remaining = seconds; expired = false;
+            displayDelay = DelayRemaining = delay;
+            return false;
+        }
+        if (expired || paused) return false;
+        if (activity) { Remaining = Duration; DelayRemaining = displayDelay; return false; }
+        delta = System.Math.Max(0f, delta);
+        if (DelayRemaining > 0f)
+        {
+            float consumed = System.Math.Min(DelayRemaining, delta);
+            DelayRemaining -= consumed;
+            delta -= consumed;
+        }
+        Remaining = System.Math.Max(0f, Remaining - delta);
+        if (Remaining > 0f) return false;
+        expired = true;
+        return true;
+    }
+}
+
+public partial class TurnManager
+{
+    [Header("Inactivity timers / 0 seconds disables a position")]
+    [SerializeField] bool inactivityTimersEnabled = true;
+    [SerializeField] InactivityTimerRule confirmationTimer = new InactivityTimerRule(15f) { offset = new Vector2(0f, -360f) };
+    [SerializeField] InactivityTimerRule openingTimer = new InactivityTimerRule(30f);
+    [SerializeField] InactivityTimerRule resourceTimer = new InactivityTimerRule(20f);
+    [SerializeField] InactivityTimerRule mainTimer = new InactivityTimerRule(45f);
+    [SerializeField] InactivityTimerRule battleTimer = new InactivityTimerRule(30f);
+    [SerializeField] InactivityTimerRule attackTargetTimer = new InactivityTimerRule(15f);
+    [SerializeField] InactivityTimerRule blockTimer = new InactivityTimerRule(15f);
+    [SerializeField] InactivityTimerRule shieldTimer = new InactivityTimerRule(15f);
+    [SerializeField] InactivityTimerRule effectTimer = new InactivityTimerRule(20f);
+    [SerializeField] InactivityTimerRule discardTimer = new InactivityTimerRule(25f);
+    [Header("Inactivity timer display")]
+    [SerializeField] Vector2 inactivityTimerSize = new Vector2(172f, 44f);
+    [SerializeField, Min(0.5f)] float inactivityTimerScale = 1.7f;
+    [Tooltip("全セクション共通。無操作がこの秒数続くまで何も表示せず、その後にカウントを開始します。")]
+    [SerializeField, Min(0f)] float inactivityTimerDisplayDelay = 5f;
+    [SerializeField] Sprite inactivityTimerPanelSprite;
+    [SerializeField] Color inactivityTimerColor = new Color(0.95f, 0.77f, 0.35f, 1f);
+    [SerializeField] Color inactivityTimerWarningColor = new Color(1f, 0.34f, 0.22f, 1f);
+    readonly DecisionCountdown decisionCountdown = new DecisionCountdown();
+    RectTransform decisionTimerPanel;
+    RectTransform decisionTimerFill;
+    TMPro.TextMeshProUGUI decisionTimerText;
+    Image decisionTimerFillImage;
+    Canvas decisionTimerCanvas;
+    Vector3 previousDecisionPointer;
+    float nextDragRefresh;
+    CardDrag[] decisionDrags = new CardDrag[0];
+
+    enum TimedDecision { Confirmation, Opening, Resource, Main, Battle, Attack, Block, Shield, Destroy, Joker, Discard }
+    struct PendingDecision
+    {
+        public TimedDecision kind;
+        public InactivityTimerRule rule;
+        public Transform anchor;
+        public string key;
+        public string label;
+        public PendingDecision(TimedDecision value, InactivityTimerRule settings, Transform position, string identity, string title)
+        { kind = value; rule = settings; anchor = position; key = identity; label = title; }
+    }
+
+    bool TryGetTimedDecision(out PendingDecision decision)
+    {
+        decision = default;
+        if (IsPlayerDecisionOpen)
+        {
+            decision = new PendingDecision(TimedDecision.Confirmation, confirmationTimer, playerDecisionBody,
+                "confirmation:" + playerDecisionRevision, "CONFIRM / CANCEL");
+            return true;
+        }
+        if (handDealer != null && handDealer.IsHandLimitSelecting)
+        {
+            if (!handDealer.IsHandLimitDecisionReady) return false;
+            decision = new PendingDecision(TimedDecision.Discard, discardTimer,
+                handDealer.HandLimitDrawnCardObject != null ? handDealer.HandLimitDrawnCardObject.transform : handDealer.handArea,
+                "discard:" + (handDealer.HandLimitDrawnCardObject != null ? handDealer.HandLimitDrawnCardObject.GetInstanceID() : 0), "DISCARD");
+            return true;
+        }
+        ReverseChoiceManager reverse = ReverseChoiceManager.I;
+        if (reverse != null && reverse.IsChoosing)
+        {
+            GameObject panel = reverse.IsChoosingOrder ? reverse.orderPanel : reverse.choicePanel;
+            decision = new PendingDecision(TimedDecision.Shield, shieldTimer, panel != null ? panel.transform : playerWallArea,
+                "shield:" + reverse.ChoiceRevision, reverse.IsChoosingOrder ? "SHIELD ORDER" : "SHIELD CHOICE");
+            return true;
+        }
+        if (handDealer != null && handDealer.IsOpeningDecisionReady)
+        {
+            decision = new PendingDecision(TimedDecision.Opening, openingTimer, handDealer.handArea, "opening", "CONFIRM HAND");
+            return true;
+        }
+        if (isSelectingDestroyTarget)
+        {
+            // CPU selections are automatic and must not be timed as player decisions.
+            if (pendingDestroySelfCard == null || playerBattleArea == null ||
+                !pendingDestroySelfCard.transform.IsChildOf(playerBattleArea)) return false;
+            decision = new PendingDecision(TimedDecision.Destroy, effectTimer, enemyBattleArea,
+                "effect:" + pendingDestroySelfCard.GetInstanceID(), "EFFECT TARGET");
+            return true;
+        }
+        if (jokerEffectPanel != null && jokerEffectPanel.activeInHierarchy && pendingJokerEffectCard != null &&
+            playerBattleArea != null && pendingJokerEffectCard.transform.IsChildOf(playerBattleArea))
+        {
+            decision = new PendingDecision(TimedDecision.Joker, effectTimer, jokerEffectPanel.transform,
+                "joker:" + pendingJokerEffectCard.GetInstanceID(), "JOKER CHOICE");
+            return true;
+        }
+        if (waitingBlockSelect && !resolvingEnemyBlock)
+        {
+            decision = new PendingDecision(TimedDecision.Block, blockTimer, playerBattleArea,
+                "block:" + (pendingEnemyAttacker != null ? pendingEnemyAttacker.GetInstanceID() : 0), "BLOCK / PASS");
+            return true;
+        }
+        if (!isPlayerTurnActive || isEndingTurn || isFirstTurnStarting || resolvingEnemyBlock || resolvingPlayerCardAttack ||
+            (handDealer != null && (HandDealer.IsRedrawSelecting || handDealer.IsTurnDrawAnimating ||
+                handDealer.IsWallPlacementRunning || handDealer.IsResolvingWallAttack)) ||
+            (CardEffectManager.I != null && CardEffectManager.I.IsResolvingNine)) return false;
+        // Do not time out in the middle of a committed summon or resource effect.
+        if (resourcePhaseManager != null && resourcePhaseManager.IsResolvingCharge) return false;
+        RefreshDecisionDrags();
+        foreach (CardDrag drag in decisionDrags)
+            if (drag != null && drag.IsDropSnapPlaying) return false;
+        if (selectingTarget)
+        {
+            decision = new PendingDecision(TimedDecision.Attack, attackTargetTimer,
+                enemyWallArea != null ? enemyWallArea : enemyBattleArea,
+                "attack:" + (currentAttacker != null ? currentAttacker.GetInstanceID() : 0) + ":" + pendingWallTargets.Count, "ATTACK TARGET");
+            return true;
+        }
+        if (resourcePhaseManager != null && resourcePhaseManager.IsRunning())
+        {
+            decision = new PendingDecision(TimedDecision.Resource, resourceTimer, resourcePhaseManager.resourceArea,
+                "resource:" + turnCount, "RESOURCE / SKIP");
+            return true;
+        }
+        if (isBattlePhase || isPlayerMainPhase)
+        {
+            decision = new PendingDecision(isBattlePhase ? TimedDecision.Battle : TimedDecision.Main,
+                isBattlePhase ? battleTimer : mainTimer, playerBattleArea,
+                (isBattlePhase ? "battle:" : "main:") + turnCount, isBattlePhase ? "BATTLE / END TURN" : "MAIN / NEXT PHASE");
+            return true;
+        }
+        return false;
+    }
+
+    void RefreshDecisionDrags()
+    {
+        if (Time.unscaledTime < nextDragRefresh) return;
+        nextDragRefresh = Time.unscaledTime + 0.25f;
+        decisionDrags = FindObjectsByType<CardDrag>(FindObjectsSortMode.None);
+    }
+
+    bool HasDecisionInput()
+    {
+#if ENABLE_LEGACY_INPUT_MANAGER
+        Vector3 pointer = Input.mousePosition;
+        bool movingDrag = Input.GetMouseButton(0) && (pointer - previousDecisionPointer).sqrMagnitude > 4f;
+        previousDecisionPointer = pointer;
+        return Input.anyKeyDown || Input.GetMouseButtonUp(0) || movingDrag;
+#elif ENABLE_INPUT_SYSTEM
+        var mouse = UnityEngine.InputSystem.Mouse.current;
+        var keyboard = UnityEngine.InputSystem.Keyboard.current;
+        var touch = UnityEngine.InputSystem.Touchscreen.current;
+        return (mouse != null && (mouse.leftButton.wasPressedThisFrame || mouse.leftButton.wasReleasedThisFrame ||
+            (mouse.leftButton.isPressed && mouse.delta.ReadValue().sqrMagnitude > 4f))) ||
+            (keyboard != null && keyboard.anyKey.wasPressedThisFrame) ||
+            (touch != null && (touch.primaryTouch.press.wasPressedThisFrame || touch.primaryTouch.press.wasReleasedThisFrame ||
+                (touch.primaryTouch.press.isPressed && touch.primaryTouch.delta.ReadValue().sqrMagnitude > 4f)));
+#else
+        return false;
+#endif
+    }
+
+    void TickDecisionTimer()
+    {
+        if (!inactivityTimersEnabled || IsBattleEnded || Time.timeScale <= 0f)
+        {
+            if (decisionTimerPanel != null) decisionTimerPanel.gameObject.SetActive(false);
+            if (!inactivityTimersEnabled || IsBattleEnded) decisionCountdown.Reset();
+            return;
+        }
+        bool input = HasDecisionInput();
+        if (!TryGetTimedDecision(out PendingDecision decision))
+        {
+            // A committed animation pauses the timer, but the action that started it
+            // still counts as activity when the same phase resumes.
+            if (input && decisionCountdown.Context != null)
+                decisionCountdown.Advance(decisionCountdown.Context, decisionCountdown.Duration, 0f, true, false, inactivityTimerDisplayDelay);
+            if (decisionTimerPanel != null) decisionTimerPanel.gameObject.SetActive(false);
+            return;
+        }
+        if (decision.rule == null || decision.rule.seconds <= 0f)
+        {
+            decisionCountdown.Reset();
+            if (decisionTimerPanel != null) decisionTimerPanel.gameObject.SetActive(false);
+            return;
+        }
+        bool timeout = decisionCountdown.Advance(decision.key, decision.rule.seconds, Time.unscaledDeltaTime, input, false, inactivityTimerDisplayDelay);
+        if (decisionCountdown.DelayRemaining > 0f)
+        {
+            if (decisionTimerPanel != null) decisionTimerPanel.gameObject.SetActive(false);
+        }
+        else ShowDecisionTimer(decision);
+        if (!timeout) return;
+        if (decisionTimerPanel != null) decisionTimerPanel.gameObject.SetActive(false);
+        // Return held cards before the next phase locks the hand.
+        decisionDrags = FindObjectsByType<CardDrag>(FindObjectsSortMode.None);
+        foreach (CardDrag drag in decisionDrags)
+            if (drag != null && drag.IsDragging) drag.OnEndDrag(null);
+        Debug.Log("Inactivity timeout: " + decision.label);
+        RunAutomaticDecision(() => ResolveDecisionTimeout(decision.kind));
+        decisionCountdown.Reset();
+    }
+
+    void ResolveDecisionTimeout(TimedDecision kind)
+    {
+        if (IsBattleEnded) return;
+        switch (kind)
+        {
+            case TimedDecision.Confirmation: RejectPlayerDecision(); break;
+            case TimedDecision.Opening: handDealer.ConfirmHand(); break;
+            case TimedDecision.Resource: resourcePhaseManager.CompleteResourcePhase(); break;
+            case TimedDecision.Main: StartPlayerBattlePhase(); break;
+            case TimedDecision.Block: OnNoBlockButtonClicked(); break;
+            case TimedDecision.Shield:
+                if (ReverseChoiceManager.I != null) ReverseChoiceManager.I.ResolveInactivity();
+                break;
+            case TimedDecision.Discard: handDealer.ResolveHandLimitInactivity(); break;
+            case TimedDecision.Destroy:
+                CardController source = pendingDestroySelfCard;
+                pendingDestroySelfCard = null;
+                isSelectingDestroyTarget = false;
+                if (aceSelectionEffect != null) Destroy(aceSelectionEffect.gameObject);
+                if (source != null) SendCardToOwnGraveyard(source);
+                break;
+            case TimedDecision.Joker:
+                jokerEffectPanel.SetActive(false);
+                CardController joker = pendingJokerEffectCard;
+                pendingJokerEffectCard = null;
+                if (joker != null) SendCardToOwnGraveyard(joker);
+                break;
+            case TimedDecision.Attack:
+                CancelTimedAttackSelection();
+                break;
+            case TimedDecision.Battle:
+                CancelTimedAttackSelection();
+                RunAutomaticDecision(EndPlayerTurn);
+                break;
+        }
+    }
+
+    void CancelTimedAttackSelection()
+    {
+        selectingTarget = false;
+        pendingWallTargets.Clear();
+        wallBreakCount = 0;
+        maxWallBreakCount = 1;
+        currentAttacker = null;
+        SetEnemyWallClickable(false);
+        HideAttackArrow();
+        // Only cancel this target choice; the battle phase gets its own timer.
+        if (isBattlePhase) ShowAttackableCards();
+    }
+
+    void EnsureDecisionTimerUi()
+    {
+        if (decisionTimerPanel != null) return;
+        Canvas source = handDealer != null && handDealer.handArea != null
+            ? handDealer.handArea.GetComponentInParent<Canvas>() : GetComponentInParent<Canvas>();
+        if (source == null) source = FindFirstObjectByType<Canvas>();
+        if (source == null) return;
+        source = source.rootCanvas;
+        GameObject panel = new GameObject("Decision Timer", typeof(RectTransform), typeof(Canvas), typeof(Image), typeof(Outline));
+        panel.layer = source.gameObject.layer;
+        decisionTimerPanel = panel.GetComponent<RectTransform>();
+        decisionTimerPanel.SetParent(source.transform, false);
+        decisionTimerPanel.anchorMin = decisionTimerPanel.anchorMax = new Vector2(0.5f, 0.5f);
+        decisionTimerCanvas = panel.GetComponent<Canvas>();
+        decisionTimerCanvas.overrideSorting = true;
+        decisionTimerCanvas.sortingLayerID = source.sortingLayerID;
+        decisionTimerCanvas.sortingOrder = source.sortingOrder + 150;
+        Image background = panel.GetComponent<Image>();
+        background.color = new Color(0.12f, 0.09f, 0.06f, 0.94f);
+        background.raycastTarget = false;
+        Image existingPanel = resultPanel != null ? resultPanel.GetComponent<Image>() : null;
+        background.sprite = inactivityTimerPanelSprite != null ? inactivityTimerPanelSprite
+            : existingPanel != null ? existingPanel.sprite : null;
+        background.type = Image.Type.Sliced;
+        Outline outline = panel.GetComponent<Outline>();
+        outline.effectColor = new Color(0.82f, 0.64f, 0.3f, 0.9f);
+        outline.effectDistance = new Vector2(1f, -1f);
+        GameObject label = new GameObject("Time Remaining", typeof(RectTransform), typeof(TMPro.TextMeshProUGUI));
+        label.layer = panel.layer;
+        label.transform.SetParent(panel.transform, false);
+        decisionTimerText = label.GetComponent<TMPro.TextMeshProUGUI>();
+        TMPro.TMP_Text template = source.GetComponentInChildren<TMPro.TMP_Text>(true);
+        if (template != null && template != decisionTimerText && template.font != null) decisionTimerText.font = template.font;
+        decisionTimerText.fontSize = 13f;
+        decisionTimerText.enableAutoSizing = true;
+        decisionTimerText.fontSizeMin = 9f;
+        decisionTimerText.fontSizeMax = 13f;
+        decisionTimerText.alignment = TMPro.TextAlignmentOptions.Center;
+        decisionTimerText.raycastTarget = false;
+        RectTransform textRect = label.GetComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero; textRect.anchorMax = Vector2.one;
+        textRect.offsetMin = new Vector2(6f, 8f); textRect.offsetMax = new Vector2(-6f, -2f);
+        GameObject track = new GameObject("Time Track", typeof(RectTransform), typeof(Image));
+        track.layer = panel.layer;
+        track.transform.SetParent(panel.transform, false);
+        Image trackImage = track.GetComponent<Image>();
+        trackImage.color = new Color(1f, 1f, 1f, 0.15f); trackImage.raycastTarget = false;
+        RectTransform trackRect = track.GetComponent<RectTransform>();
+        trackRect.anchorMin = new Vector2(0f, 0f); trackRect.anchorMax = new Vector2(1f, 0f);
+        trackRect.pivot = new Vector2(0.5f, 0f);
+        trackRect.offsetMin = new Vector2(7f, 5f); trackRect.offsetMax = new Vector2(-7f, 8f);
+        GameObject fill = new GameObject("Time Fill", typeof(RectTransform), typeof(Image));
+        fill.layer = panel.layer;
+        fill.transform.SetParent(track.transform, false);
+        decisionTimerFill = fill.GetComponent<RectTransform>();
+        decisionTimerFill.anchorMin = Vector2.zero; decisionTimerFill.anchorMax = Vector2.one;
+        decisionTimerFill.offsetMin = decisionTimerFill.offsetMax = Vector2.zero;
+        decisionTimerFillImage = fill.GetComponent<Image>(); decisionTimerFillImage.raycastTarget = false;
+    }
+
+    void ShowDecisionTimer(PendingDecision decision)
+    {
+        EnsureDecisionTimerUi();
+        if (decisionTimerPanel == null) return;
+        decisionTimerPanel.gameObject.SetActive(true);
+        float displayScale = Mathf.Max(0.5f, inactivityTimerScale);
+        decisionTimerPanel.sizeDelta = new Vector2(Mathf.Max(100f, inactivityTimerSize.x), Mathf.Max(30f, inactivityTimerSize.y)) * displayScale;
+        decisionTimerText.fontSizeMin = 9f * displayScale;
+        decisionTimerText.fontSizeMax = 13f * displayScale;
+        decisionTimerPanel.SetAsLastSibling();
+        Transform anchor = decision.rule.anchor != null ? decision.rule.anchor : decision.anchor;
+        RectTransform parent = decisionTimerPanel.parent as RectTransform;
+        RectTransform anchorRect = anchor as RectTransform;
+        Vector3 point = anchorRect != null ? anchorRect.TransformPoint(anchorRect.rect.center)
+            : anchor != null ? anchor.position : parent.TransformPoint(parent.rect.center);
+        Vector3 local = parent.InverseTransformPoint(point);
+        local += (Vector3)decision.rule.offset;
+        float halfWidth = decisionTimerPanel.sizeDelta.x * 0.5f;
+        float halfHeight = decisionTimerPanel.sizeDelta.y * 0.5f;
+        local.x = Mathf.Clamp(local.x, parent.rect.xMin + halfWidth + 6f, parent.rect.xMax - halfWidth - 6f);
+        local.y = Mathf.Clamp(local.y, parent.rect.yMin + halfHeight + 6f, parent.rect.yMax - halfHeight - 6f);
+        local.z = 0f;
+        decisionTimerPanel.localPosition = local;
+        Color color = decisionCountdown.Remaining <= 5f ? inactivityTimerWarningColor : inactivityTimerColor;
+        decisionTimerText.color = color;
+        decisionTimerText.text = decision.label + "  " + Mathf.CeilToInt(decisionCountdown.Remaining) + "s";
+        decisionTimerFill.anchorMax = new Vector2(Mathf.Clamp01(decisionCountdown.Remaining / Mathf.Max(0.01f, decisionCountdown.Duration)), 1f);
+        decisionTimerFillImage.color = color;
+    }
+}
+
+public partial class TurnManager
+{
+    bool resultPlayerDefeated;
+    [Header("Result choice panel size")]
+    [SerializeField, Min(0.5f)] float resultChoiceScale = 2f;
+    bool resultChoiceVisible;
+    bool resultSceneReloadRequested;
+    Font resultChoiceFont;
+    bool ownsResultChoiceFont;
+
+    GameObject FindResultObject(string objectName)
+    {
+        foreach (RectTransform rect in FindObjectsByType<RectTransform>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            if (rect.gameObject.scene == gameObject.scene && rect.gameObject.name == objectName) return rect.gameObject;
+        return null;
+    }
+
+    void PrepareResultChoicePanel()
+    {
+        Canvas source = handDealer != null && handDealer.handArea != null
+            ? handDealer.handArea.GetComponentInParent<Canvas>() : GetComponentInParent<Canvas>();
+        if (source == null) source = FindFirstObjectByType<Canvas>();
+        if (source == null) { Debug.LogError("Result panel needs a Canvas"); return; }
+        source = source.rootCanvas;
+        if (resultPanel == null) resultPanel = FindResultObject("ResultPanel");
+        if (retryButton == null) retryButton = FindResultObject("RetryButton");
+        if (exitButton == null) exitButton = FindResultObject("ExitButton");
+        if (resultPanel == null) resultPanel = new GameObject("ResultPanel", typeof(RectTransform));
+        resultPanel.SetActive(false);
+        resultPanel.layer = source.gameObject.layer;
+        RectTransform overlay = resultPanel.GetComponent<RectTransform>();
+        overlay.SetParent(source.transform, false);
+        overlay.anchorMin = Vector2.zero; overlay.anchorMax = Vector2.one;
+        overlay.offsetMin = overlay.offsetMax = Vector2.zero;
+        overlay.localScale = Vector3.one;
+        Canvas canvas = resultPanel.GetComponent<Canvas>();
+        if (canvas == null) canvas = resultPanel.AddComponent<Canvas>();
+        canvas.overrideSorting = true;
+        canvas.sortingLayerID = source.sortingLayerID;
+        canvas.sortingOrder = source.sortingOrder + 300;
+        if (resultPanel.GetComponent<GraphicRaycaster>() == null) resultPanel.AddComponent<GraphicRaycaster>();
+        Image shade = resultPanel.GetComponent<Image>();
+        if (shade == null) shade = resultPanel.AddComponent<Image>();
+        shade.sprite = null;
+        shade.color = new Color(0f, 0f, 0f, 0.58f);
+        shade.raycastTarget = true;
+        CanvasGroup group = resultPanel.GetComponent<CanvasGroup>();
+        if (group == null) group = resultPanel.AddComponent<CanvasGroup>();
+        group.alpha = 1f; group.interactable = group.blocksRaycasts = true; group.ignoreParentGroups = true;
+
+        if (resultChoiceFont == null)
+        {
+        resultChoiceFont = Font.CreateDynamicFontFromOSFont(new[] { "Yu Gothic", "Meiryo", "Noto Sans CJK JP", "Arial" }, 28);
+        ownsResultChoiceFont = resultChoiceFont != null;
+        if (resultChoiceFont == null) resultChoiceFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        }
+        GameObject body = new GameObject("Result Choices", typeof(RectTransform), typeof(Image), typeof(Outline));
+        body.layer = resultPanel.layer;
+        body.transform.SetParent(overlay, false);
+        RectTransform bodyRect = body.GetComponent<RectTransform>();
+        bodyRect.anchorMin = bodyRect.anchorMax = new Vector2(0.5f, 0.5f);
+        bodyRect.sizeDelta = new Vector2(330f, 280f);
+        bodyRect.localScale = Vector3.one * Mathf.Max(0.5f, resultChoiceScale);
+        body.GetComponent<Image>().color = new Color(0.16f, 0.12f, 0.08f, 0.98f);
+        Outline border = body.GetComponent<Outline>();
+        border.effectColor = new Color(0.86f, 0.69f, 0.36f, 1f);
+        border.effectDistance = new Vector2(2f, -2f);
+        CreateResultLabel(bodyRect, "Outcome", resultPlayerDefeated ? "敗北" : "勝利", new Vector2(0f, 98f), new Vector2(300f, 46f), 32,
+            new Color(1f, 0.85f, 0.52f, 1f));
+        CreateResultLabel(bodyRect, "Prompt", "もう一度対戦しますか？", new Vector2(0f, 53f), new Vector2(300f, 34f), 20, Color.white);
+        retryButton = ConfigureResultButton(retryButton, bodyRect, "RetryButton", "再戦", new Vector2(0f, -8f), RetryMatchFromBeginning);
+        exitButton = ConfigureResultButton(exitButton, bodyRect, "ExitButton", "タイトルに戻る", new Vector2(0f, -79f), ReturnToTitle);
+    }
+
+    Text CreateResultLabel(Transform parent, string name, string text, Vector2 position, Vector2 size, int fontSize, Color color)
+    {
+        GameObject label = new GameObject(name, typeof(RectTransform), typeof(Text));
+        label.layer = parent.gameObject.layer;
+        label.transform.SetParent(parent, false);
+        RectTransform rect = label.GetComponent<RectTransform>();
+        rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = position; rect.sizeDelta = size;
+        Text value = label.GetComponent<Text>();
+        value.font = resultChoiceFont; value.text = text; value.fontSize = fontSize;
+        value.alignment = TextAnchor.MiddleCenter; value.color = color;
+        value.raycastTarget = false;
+        return value;
+    }
+
+    GameObject ConfigureResultButton(GameObject existing, RectTransform parent, string objectName, string caption,
+        Vector2 position, UnityEngine.Events.UnityAction action)
+    {
+        // Result buttons have their own geometry; old sprites and controls can
+        // compress the frame or bring overlapping labels into the modal.
+        if (existing != null) existing.SetActive(false);
+        GameObject buttonObject = new GameObject(objectName, typeof(RectTransform));
+        buttonObject.layer = parent.gameObject.layer;
+        RectTransform rect = buttonObject.GetComponent<RectTransform>();
+        rect.SetParent(parent, false);
+        rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = position; rect.sizeDelta = new Vector2(278f, 62f); rect.localScale = Vector3.one;
+        rect.localRotation = Quaternion.identity;
+        Image image = buttonObject.GetComponent<Image>();
+        if (image == null) image = buttonObject.AddComponent<Image>();
+        image.sprite = null;
+        image.type = Image.Type.Simple;
+        image.preserveAspect = false;
+        image.color = new Color(1f, 0.92f, 0.73f, 1f); image.raycastTarget = true;
+        Outline border = buttonObject.AddComponent<Outline>();
+        border.effectColor = new Color(0.86f, 0.65f, 0.27f, 1f);
+        border.effectDistance = new Vector2(1f, -1f);
+        Button button = buttonObject.GetComponent<Button>();
+        if (button == null) button = buttonObject.AddComponent<Button>();
+        button.targetGraphic = image; button.interactable = true;
+        button.onClick = new Button.ButtonClickedEvent();
+        button.onClick.AddListener(action);
+        CanvasGroup group = buttonObject.GetComponent<CanvasGroup>();
+        if (group != null) { group.alpha = 1f; group.interactable = group.blocksRaycasts = true; }
+        Text label = CreateResultLabel(rect, "Choice Label", caption, Vector2.zero, new Vector2(254f, 54f), 26,
+            new Color(0.18f, 0.12f, 0.06f, 1f));
+        label.resizeTextForBestFit = true;
+        label.resizeTextMinSize = 18;
+        label.resizeTextMaxSize = 26;
+        buttonObject.SetActive(true);
+        return buttonObject;
+    }
+
+    public void RetryMatchFromBeginning() { ReloadAfterResult(true); }
+    public void ReturnToTitle() { ReloadAfterResult(false); }
+
+    void ReloadAfterResult(bool rematch)
+    {
+        if (!IsBattleEnded || !resultChoiceVisible || resultSceneReloadRequested) return;
+        resultSceneReloadRequested = true;
+        if (retryButton != null) retryButton.GetComponent<Button>().interactable = false;
+        if (exitButton != null) exitButton.GetComponent<Button>().interactable = false;
+        GameFlowManager flow = FindFirstObjectByType<GameFlowManager>();
+        TitleManager.SetResultDestination(rematch, flow != null ? flow.selectedDifficulty : GameFlowManager.Difficulty.Normal);
+        // Retire frozen animations; do not resume the old match during scene teardown.
+        foreach (Tween tween in frozenTweens)
+            if (tween != null && tween.IsActive()) tween.Kill(false);
+        frozenTweens.Clear(); frozenAnimators.Clear(); frozenParticles.Clear();
+        battleFrozen = false;
+        Time.timeScale = 1f;
+        HandDealer.IsRedrawSelecting = false;
+        UnityEngine.SceneManagement.SceneManager.LoadScene(gameObject.scene.path);
+    }
+}
+
+public partial class TurnManager
+{
+    int CompareBattleCards(CardController attacker, CardController defender)
+    {
+        if (attacker == null || defender == null || attacker.data == null || defender.data == null) return -1;
+        attacker.data.SetPowerFromName(); defender.data.SetPowerFromName();
+        if (HasSpecialWin(attacker, defender)) return 1;
+        if (HasSpecialWin(defender, attacker)) return -1;
+        int attack = attacker.data.power;
+        int defense = defender.data.power;
+        if (GameSettings.IsAdvancedRule)
+        {
+            attack += GetSuitBattleBonus(attacker.data.suit, defender.data.suit);
+            defense += GetSuitBattleBonus(defender.data.suit, attacker.data.suit);
+        }
+        return attack.CompareTo(defense);
+    }
+
+    CardController GetEnemyRestedAttackTarget(CardController attacker)
+    {
+        // Keep an available direct finishing attack; otherwise consider a rested unit.
+        if (playerBattleArea == null || GetAlivePlayerWallCount() == 0) return null;
+        CardController best = null;
+        int bestValue = int.MinValue;
+        foreach (CardController candidate in TCardAIUnityBridge.GetCards(playerBattleArea))
+        {
+            if (candidate == null || candidate.data == null || !candidate.isTapped ||
+                !candidate.gameObject.activeInHierarchy || CompareBattleCards(attacker, candidate) <= 0) continue;
+            int value = candidate.data.power + (IsMonarchCard(candidate.data) ? 20 : 0);
+            if (value > bestValue) { bestValue = value; best = candidate; }
+        }
+        return best;
+    }
+
+    IEnumerator EnemyAttackRestedCardRoutine(CardController attacker, CardController target)
+    {
+        if (attacker == null || target == null) yield break;
+        pendingEnemyAttacker = attacker;
+        pendingEnemyRestedTarget = target;
+        pendingEnemyTargetWall = null;
+        enemyAttackBlocked = false;
+        attacker.Tap();
+        if (attackArrowManager != null)
+            attackArrowManager.ShowEnemyArrow(attacker.GetComponent<RectTransform>(), target.GetComponent<RectTransform>());
+        yield return new WaitForSeconds(0.6f);
+        if (HasUntappedPlayerBlocker())
+        {
+            waitingBlockSelect = true;
+            ShowBlockableCards();
+            ShowNoBlockButton(attacker.GetComponent<RectTransform>());
+            while (waitingBlockSelect || resolvingEnemyBlock) yield return null;
+        }
+        HideNoBlockButton();
+        HideAllCardIcons();
+        HideAttackArrow();
+        if (!enemyAttackBlocked && !IsBattleEnded && attacker != null && target != null &&
+            attacker.transform.IsChildOf(enemyBattleArea) && target.transform.IsChildOf(playerBattleArea))
+        {
+            yield return PlayBlockerSlash(target.gameObject);
+            if (attacker != null && target != null) ResolveCardBattle(attacker, target);
+        }
+        pendingEnemyAttacker = null;
+        pendingEnemyRestedTarget = null;
+        pendingEnemyTargetWall = null;
+        waitingBlockSelect = false;
+        enemyAttackBlocked = false;
+        yield return new WaitForSeconds(0.4f);
+    }
+}
+
+public partial class TurnManager
+{
+    [Header("Player decision panel")]
+    [SerializeField, Min(0.5f)] float playerDecisionPanelScale = 2f;
+    RectTransform playerDecisionOverlay;
+    RectTransform playerDecisionBody;
+    RectTransform playerDecisionBoard;
+    Text playerDecisionMessage;
+    System.Action pendingPlayerDecision;
+    System.Action pendingPlayerCancellation;
+    string pendingPlayerDecisionKey;
+    string approvedPlayerDecisionKey;
+    int automaticDecisionDepth;
+    int playerDecisionRevision;
+    public bool IsPlayerDecisionOpen => pendingPlayerDecision != null;
+
+    // Returns true when the caller must defer. Only the exact approved action may pass.
+    public bool RequestPlayerDecision(string key, string message, System.Action accept, System.Action cancel = null)
+    {
+        if (IsBattleEnded) return true;
+        if (automaticDecisionDepth > 0 || approvedPlayerDecisionKey == key) return false;
+        if (IsPlayerDecisionOpen) return true;
+        EnsurePlayerDecisionUi();
+        if (playerDecisionOverlay == null) return true;
+        pendingPlayerDecisionKey = key;
+        pendingPlayerDecision = accept;
+        pendingPlayerCancellation = cancel;
+        playerDecisionRevision++;
+        playerDecisionMessage.text = message;
+        playerDecisionOverlay.gameObject.SetActive(true);
+        PositionPlayerDecisionPanel();
+        decisionCountdown.Reset();
+        return true;
+    }
+
+    public void RunAutomaticDecision(System.Action action)
+    {
+        automaticDecisionDepth++;
+        try { action?.Invoke(); }
+        finally { automaticDecisionDepth--; }
+    }
+
+    void AcceptPlayerDecision()
+    {
+        if (!IsPlayerDecisionOpen || IsBattleEnded) return;
+        System.Action action = pendingPlayerDecision;
+        string key = pendingPlayerDecisionKey;
+        DismissPlayerDecision();
+        string previous = approvedPlayerDecisionKey;
+        approvedPlayerDecisionKey = key;
+        try { action?.Invoke(); }
+        finally { approvedPlayerDecisionKey = previous; }
+    }
+
+    void RejectPlayerDecision()
+    {
+        if (!IsPlayerDecisionOpen) return;
+        System.Action cancel = pendingPlayerCancellation;
+        DismissPlayerDecision();
+        cancel?.Invoke();
+    }
+
+    void DismissPlayerDecision()
+    {
+        pendingPlayerDecision = pendingPlayerCancellation = null;
+        pendingPlayerDecisionKey = null;
+        if (playerDecisionOverlay != null) playerDecisionOverlay.gameObject.SetActive(false);
+        decisionCountdown.Reset();
+    }
+
+    void EnsurePlayerDecisionUi()
+    {
+        if (playerDecisionOverlay != null) return;
+        Canvas source = handDealer != null && handDealer.handArea != null
+            ? handDealer.handArea.GetComponentInParent<Canvas>() : GetComponentInParent<Canvas>();
+        if (source == null) source = FindFirstObjectByType<Canvas>();
+        if (source == null) { Debug.LogError("Player decisions need a Canvas"); return; }
+        source = source.rootCanvas;
+        if (resultChoiceFont == null)
+        {
+            resultChoiceFont = Font.CreateDynamicFontFromOSFont(new[] { "Yu Gothic", "Meiryo", "Noto Sans CJK JP", "Arial" }, 28);
+            ownsResultChoiceFont = resultChoiceFont != null;
+            if (resultChoiceFont == null) resultChoiceFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        }
+        TitleManager titleManager = FindFirstObjectByType<TitleManager>();
+        playerDecisionBoard = titleManager != null && titleManager.gameScreen != null
+            ? titleManager.gameScreen.transform as RectTransform : null;
+        GameObject overlay = new GameObject("Player Decision Panel", typeof(RectTransform), typeof(Canvas), typeof(GraphicRaycaster), typeof(Image), typeof(CanvasGroup));
+        overlay.layer = source.gameObject.layer;
+        playerDecisionOverlay = overlay.GetComponent<RectTransform>();
+        playerDecisionOverlay.SetParent(source.transform, false);
+        playerDecisionOverlay.anchorMin = Vector2.zero; playerDecisionOverlay.anchorMax = Vector2.one;
+        playerDecisionOverlay.offsetMin = playerDecisionOverlay.offsetMax = Vector2.zero;
+        Canvas canvas = overlay.GetComponent<Canvas>();
+        canvas.overrideSorting = true; canvas.sortingLayerID = source.sortingLayerID;
+        canvas.sortingOrder = source.sortingOrder + 220;
+        Image shade = overlay.GetComponent<Image>();
+        shade.color = new Color(0f, 0f, 0f, 0.4f); shade.raycastTarget = true;
+        CanvasGroup group = overlay.GetComponent<CanvasGroup>();
+        group.ignoreParentGroups = true; group.interactable = group.blocksRaycasts = true;
+        GameObject body = new GameObject("Decision Content", typeof(RectTransform), typeof(Image), typeof(Outline));
+        body.layer = overlay.layer; body.transform.SetParent(overlay.transform, false);
+        playerDecisionBody = body.GetComponent<RectTransform>();
+        playerDecisionBody.anchorMin = playerDecisionBody.anchorMax = new Vector2(0.5f, 0.5f);
+        playerDecisionBody.sizeDelta = new Vector2(330f, 320f);
+        body.GetComponent<Image>().color = new Color(0.16f, 0.12f, 0.08f, 0.98f);
+        Outline border = body.GetComponent<Outline>();
+        border.effectColor = new Color(0.86f, 0.69f, 0.36f, 1f); border.effectDistance = new Vector2(2f, -2f);
+        CreateResultLabel(body.transform, "Decision Title", "行動の確認", new Vector2(0f, 125f), new Vector2(300f, 44f), 28,
+            new Color(1f, 0.85f, 0.52f, 1f));
+        playerDecisionMessage = CreateResultLabel(body.transform, "Decision Message", "", new Vector2(0f, 55f), new Vector2(298f, 96f), 22, Color.white);
+        playerDecisionMessage.resizeTextForBestFit = true;
+        playerDecisionMessage.resizeTextMinSize = 17; playerDecisionMessage.resizeTextMaxSize = 22;
+        ConfigureResultButton(null, playerDecisionBody, "Confirm Action", "はい", new Vector2(0f, -28f), AcceptPlayerDecision);
+        ConfigureResultButton(null, playerDecisionBody, "Cancel Action", "いいえ", new Vector2(0f, -103f), RejectPlayerDecision);
+        overlay.SetActive(false);
+    }
+
+    void PositionPlayerDecisionPanel()
+    {
+        if (playerDecisionBody == null || !IsPlayerDecisionOpen) return;
+        playerDecisionBody.localScale = Vector3.one * Mathf.Max(0.5f, playerDecisionPanelScale);
+        // Use the game board's center, independent of the chosen card or pointer.
+        RectTransform board = playerDecisionBoard;
+        if (board != null) playerDecisionBody.position = board.TransformPoint(board.rect.center);
+        else playerDecisionBody.anchoredPosition = Vector2.zero;
+        playerDecisionOverlay.SetAsLastSibling();
     }
 }

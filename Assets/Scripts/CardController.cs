@@ -11,6 +11,11 @@ public class CardController : MonoBehaviour
     public Image artworkImage;
 
     public RectTransform tapVisual;
+    [Header("Rest lowlight")]
+    [SerializeField, Range(0f, 1f)] float restDarkness = 0.45f;
+    [SerializeField, HideInInspector] Image restArtwork;
+    [SerializeField, HideInInspector] Color artworkColorBeforeRest = Color.white;
+    [SerializeField, HideInInspector] bool artworkIsDimmed;
     public TextMeshProUGUI costText;
     public TextMeshProUGUI attackText;
     public TextMeshProUGUI hpText;
@@ -33,6 +38,7 @@ public class CardController : MonoBehaviour
 
     void Awake()
     {
+        RemoveLegacyRestOverlay();
         // CardGlowを自動取得
         if(cardGlow == null)
             cardGlow = GetComponentInChildren<CardGlow>(true);
@@ -209,39 +215,41 @@ public class CardController : MonoBehaviour
     // Tap Visual
     // ========================================
 
- /*  void UpdateTapVisual()
-    {
-        RectTransform rect =
-            GetComponent<RectTransform>();
-
-        if(rect == null)
-            return;
-
-
-        if(isTapped)
-        {
-            rect.localRotation =
-                Quaternion.Euler(0f, 0f, -90f);
-        }
-        else
-        {
-            rect.localRotation =
-                Quaternion.identity;
-        }
-    }*/
-
     void UpdateTapVisual()
     {
         RectTransform target = tapVisual != null
-            ? tapVisual
-            : GetComponent<RectTransform>();
+            ? tapVisual : GetComponent<RectTransform>();
+        if (target != null) target.localRotation = Quaternion.identity;
+        RemoveLegacyRestOverlay();
+        // Tint the sprite itself so its alpha, rounded edges and position stay exact.
+        if (artworkIsDimmed && (restArtwork != artworkImage || !isTapped))
+        {
+            if (restArtwork != null) restArtwork.color = artworkColorBeforeRest;
+            artworkIsDimmed = false;
+        }
+        if (isTapped && artworkImage != null)
+        {
+            if (!artworkIsDimmed)
+            {
+                restArtwork = artworkImage;
+                artworkColorBeforeRest = artworkImage.color;
+                artworkIsDimmed = true;
+            }
+            float brightness = 1f - Mathf.Clamp01(restDarkness);
+            Color original = artworkColorBeforeRest;
+            artworkImage.color = new Color(original.r * brightness, original.g * brightness,
+                original.b * brightness, original.a);
+        }
+    }
 
-        if (target == null)
-            return;
-
-        target.localRotation = isTapped
-            ? Quaternion.Euler(0f, 0f, -90f)
-            : Quaternion.identity;
+    void RemoveLegacyRestOverlay()
+    {
+        foreach (Image image in GetComponentsInChildren<Image>(true))
+        {
+            if (image.gameObject.name != "RestLowlight") continue;
+            image.gameObject.SetActive(false);
+            Destroy(image.gameObject);
+        }
     }
     // ========================================
     // Summon Sickness

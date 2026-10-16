@@ -60,9 +60,23 @@ public class TitleManager : MonoBehaviour
     bool isTransitioning = false;
 
     public static bool isAdvancedRule = false;
+    static bool rematchRequested;
+    static GameFlowManager.Difficulty rematchDifficulty;
+    static bool rematchAdvancedRule;
+    static bool rematchTitleRule;
+
+    public static void SetResultDestination(bool rematch, GameFlowManager.Difficulty difficulty)
+    {
+        rematchRequested = rematch;
+        rematchDifficulty = difficulty;
+        rematchAdvancedRule = GameSettings.IsAdvancedRule;
+        rematchTitleRule = isAdvancedRule;
+    }
 
     void Start()
     {
+        Time.timeScale = 1f;
+        HandDealer.IsRedrawSelecting = false;
         if(titleScreen != null)
             titleScreen.SetActive(true);
 
@@ -101,6 +115,30 @@ public class TitleManager : MonoBehaviour
             difficultyBackgroundImage.sprite =
                 normalDifficultyImage;
         }
+        if (rematchRequested)
+        {
+            rematchRequested = false;
+            StartCoroutine(StartRematchFromBeginning());
+        }
+    }
+
+    IEnumerator StartRematchFromBeginning()
+    {
+        // Let all new-scene Start methods finish before enabling the match root.
+        yield return null;
+        GameSettings.IsAdvancedRule = rematchAdvancedRule;
+        isAdvancedRule = rematchTitleRule;
+        foreach (GameFlowManager flow in FindObjectsByType<GameFlowManager>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            if (flow.gameObject.scene == gameObject.scene) flow.selectedDifficulty = rematchDifficulty;
+        if (bgmSource != null) bgmSource.Stop();
+        if (difficultyBGM != null) difficultyBGM.Stop();
+        if (titleScreen != null) titleScreen.SetActive(false);
+        if (difficultyScreen != null) difficultyScreen.SetActive(false);
+        if (loadingScreen != null) loadingScreen.SetActive(false);
+        if (gameScreen != null) gameScreen.SetActive(true);
+        if (playerResourceUI != null) playerResourceUI.SetActive(true);
+        if (isAdvancedRule) ChangeToSecretBgm();
+        isTransitioning = false;
     }
 
     public void StartGame()

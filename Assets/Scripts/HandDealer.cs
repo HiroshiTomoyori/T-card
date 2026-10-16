@@ -28,6 +28,16 @@ public class HandDealer : MonoBehaviour
 
     [Header("Card Size")]
     public Vector2 handCardSize = new Vector2(75, 112);
+    [Header("Turn draw reveal")]
+    public Vector2 turnDrawRevealSize = new Vector2(100f, 150f);
+    public Vector2 turnDrawRevealOffset = Vector2.zero;
+    [Min(0.01f)] public float turnDrawTravelTime = 0.24f;
+    [Min(0.01f)] public float turnDrawFlipTime = 0.22f;
+    [Tooltip("フリップ完了後、表面を表示してから手札へ移動するまでの秒数。0で待ち時間なし。")]
+    [Min(0f)] public float turnDrawRevealHoldTime = 0.5f;
+    [Min(0.01f)] public float turnDrawHandTime = 0.2f;
+    public bool IsTurnDrawAnimating { get; private set; }
+    bool revealHandLimitDraw;
     [HideInInspector] public Vector2 wallCardSize = new Vector2(70, 105);
 
     [Header("Prefab")]
@@ -158,6 +168,19 @@ public class HandDealer : MonoBehaviour
     bool canRedraw = false;
     bool hasRedrawn = false;
     public bool IsHandLimitSelecting { get; private set; } = false;
+    public bool IsHandLimitDecisionReady { get; private set; }
+    public bool IsOpeningDecisionReady => IsRedrawSelecting && !IsHandLimitSelecting &&
+        confirmButton != null && confirmButton.activeInHierarchy &&
+        (confirmButton.GetComponent<Button>() == null || confirmButton.GetComponent<Button>().interactable) &&
+        !IsWallPlacementRunning;
+
+    public void ResolveHandLimitInactivity()
+    {
+        if (!IsHandLimitSelecting || !IsHandLimitDecisionReady) return;
+        if (SelectedHandLimitDiscardCard == null)
+            SelectedHandLimitDiscardCard = HandLimitDrawnCardObject;
+        ConfirmHandLimitDiscard();
+    }
     public CardData HandLimitDrawnCardData { get; private set; }
     public GameObject HandLimitDrawnCardObject { get; private set; }
     public GameObject SelectedHandLimitDiscardCard { get; private set; }
@@ -693,6 +716,7 @@ IEnumerator AnimateCardToHand(RectTransform cardRect)
         WallAreaLayout layout = GetWallLayout(wallArea);
         if (layout == null || cardPrefab == null || cardBackSprite == null) return;
         layout.ClearWalls();
+        layout.BeginOpeningPlacement();
         for (int i = 0; i < wallCount && layout.HasSpace; i++)
         {
             CardData data = DrawRandomCardData();
@@ -700,6 +724,7 @@ IEnumerator AnimateCardToHand(RectTransform cardRect)
             if (CreateWallCard(data, false, false)) playerWallAliveCount++;
             else currentDeck.Add(data);
         }
+        layout.EndOpeningPlacement();
     }
 
     void CreateEnemyWallCards()
@@ -709,6 +734,7 @@ IEnumerator AnimateCardToHand(RectTransform cardRect)
         WallAreaLayout layout = GetWallLayout(enemyWallArea);
         if (layout == null || cardPrefab == null || cardBackSprite == null) return;
         layout.ClearWalls();
+        layout.BeginOpeningPlacement();
         for (int i = 0; i < enemyWallCount && layout.HasSpace; i++)
         {
             CardData data = DrawEnemyRandomCardData();
@@ -716,6 +742,7 @@ IEnumerator AnimateCardToHand(RectTransform cardRect)
             if (CreateWallCard(data, true, false)) enemyWallAliveCount++;
             else enemyDeck.Add(data);
         }
+        layout.EndOpeningPlacement();
     }
 
     bool CreateWallCard(CardData data, bool enemy, bool fromKing)
@@ -941,6 +968,9 @@ if (redrawButton != null)
         if(hasRedrawn)
             return;
 
+        if (turnManager != null && turnManager.RequestPlayerDecision("redraw-hand",
+            "初期手札を引き直します。\nよろしいですか？", RedrawHand)) return;
+
         IsRedrawSelecting = true;
         hasRedrawn = true;
         canRedraw = false;
@@ -1145,6 +1175,8 @@ if (redrawButton != null)
             return;
         }
 
+        if (turnManager != null && turnManager.RequestPlayerDecision("confirm-hand",
+            "この手札でゲームを開始します。\nよろしいですか？", ConfirmHand)) return;
         CompleteOpeningSelection();
     }
 
@@ -1189,6 +1221,128 @@ if (redrawButton != null)
         }
     }
 
+    public IEnumerator DrawTurnStartCard()
+    {
+        if (IsTurnDrawAnimating || currentDeck == null || currentDeck.Count == 0 || handArea == null)
+            yield break;
+        if (handArea.childCount >= maxHandSize)
+        {
+            revealHandLimitDraw = true;
+            BeginHandLimitSelection();
+            yield return new WaitUntil(() => !IsHandLimitSelecting);
+            yield break;
+        }
+        CardData data = DrawRandomCardData();
+        if (data == null) yield break;
+        if (cardPrefab == null) { currentDeck.Add(data); yield break; }
+        IsTurnDrawAnimating = true;
+        GameObject preview = null;
+        CanvasGroup handVisibility = null;
+        float savedAlpha = 1f;
+        try
+        {
+            preview = Instantiate(cardPrefab, handArea.parent != null ? handArea.parent : transform);
+            DisableWallInput(preview);
+            yield return AnimateTurnDrawReveal(preview, data);
+
+            GameObject handCard = CreateHandCard(data);
+            handVisibility = handCard.GetComponent<CanvasGroup>();
+            if (handVisibility == null) handVisibility = handCard.AddComponent<CanvasGroup>();
+            savedAlpha = handVisibility.alpha;
+            handVisibility.alpha = 0f;
+            SortPlayerHand();
+            // Calculate the real hand destination while the temporary card stays visible.
+            yield return null;
+            RectTransform rect = preview.GetComponent<RectTransform>();
+            CardController controller = handCard.GetComponent<CardController>();
+            RectTransform destination = controller != null && controller.artworkImage != null
+                ? controller.artworkImage.rectTransform : handCard.GetComponent<RectTransform>();
+            if (rect != null && destination != null)
+            {
+                Vector3 start = rect.position;
+                Vector3 startScale = rect.localScale;
+                float elapsed = 0f;
+                float duration = Mathf.Max(0.01f, turnDrawHandTime);
+                while (elapsed < duration && destination != null)
+                {
+                    elapsed += Time.deltaTime;
+                    float t = Mathf.Clamp01(elapsed / duration);
+                    float eased = 1f - Mathf.Pow(1f - t, 3f);
+                    rect.position = Vector3.Lerp(start, destination.TransformPoint(destination.rect.center), eased);
+                    rect.rotation = Quaternion.Slerp(Quaternion.identity, destination.rotation, eased);
+                    float width = destination.rect.width * destination.lossyScale.x;
+                    float height = destination.rect.height * destination.lossyScale.y;
+                    Vector3 sizeScale = new Vector3(width / Mathf.Max(1f, rect.rect.width * rect.parent.lossyScale.x),
+                        height / Mathf.Max(1f, rect.rect.height * rect.parent.lossyScale.y), 1f);
+                    rect.localScale = Vector3.Lerp(startScale, sizeScale, eased);
+                    yield return null;
+                }
+            }
+            LayoutElement layout = handCard.GetComponent<LayoutElement>();
+            if (layout != null) layout.ignoreLayout = false;
+            SortPlayerHand();
+        }
+        finally
+        {
+            if (handVisibility != null) handVisibility.alpha = savedAlpha;
+            if (preview != null) Destroy(preview);
+            IsTurnDrawAnimating = false;
+        }
+    }
+
+    IEnumerator AnimateTurnDrawReveal(GameObject preview, CardData data)
+    {
+        SetupCardSize(preview, turnDrawRevealSize);
+        CardController controller = preview.GetComponent<CardController>();
+        if (controller != null)
+        {
+            controller.SetData(data);
+            controller.enabled = false;
+        }
+        RectTransform rect = preview.GetComponent<RectTransform>();
+        if (rect == null) yield break;
+        Image artwork = controller != null ? controller.artworkImage : null;
+        if (artwork != null) artwork.sprite = cardBackSprite;
+        rect.localScale = Vector3.one;
+        rect.localRotation = Quaternion.identity;
+        preview.transform.SetAsLastSibling();
+        Vector3 start = deckPosition != null ? deckPosition.TransformPoint(deckPosition.rect.center) : rect.position;
+        RectTransform wallRect = wallArea as RectTransform;
+        Vector3 center = wallRect != null ? wallRect.TransformPoint(wallRect.rect.center)
+            : wallArea != null ? wallArea.position : handArea.position;
+        Vector3 end = center + rect.parent.TransformVector(turnDrawRevealOffset);
+        rect.position = start;
+        float elapsed = 0f;
+        float duration = Mathf.Max(0.01f, turnDrawTravelTime);
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            rect.position = Vector3.Lerp(start, end, 1f - Mathf.Pow(1f - t, 3f));
+            yield return null;
+        }
+        rect.position = end;
+        elapsed = 0f;
+        duration = Mathf.Max(0.01f, turnDrawFlipTime);
+        bool revealed = false;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            if (!revealed && t >= 0.5f)
+            {
+                if (artwork != null) artwork.sprite = data.artwork;
+                revealed = true;
+            }
+            rect.localScale = new Vector3(Mathf.Abs(Mathf.Cos(t * Mathf.PI)), 1f, 1f);
+            yield return null;
+        }
+        if (artwork != null) artwork.sprite = data.artwork;
+        rect.localScale = Vector3.one;
+        float holdTime = Mathf.Max(0f, turnDrawRevealHoldTime);
+        if (holdTime > 0f) yield return new WaitForSeconds(holdTime);
+    }
+
     public void DrawOneCard()
     {
         if (currentDeck == null || currentDeck.Count <= 0)
@@ -1230,6 +1384,7 @@ if (redrawButton != null)
             return;
 
         IsHandLimitSelecting = true;
+        IsHandLimitDecisionReady = false;
         SelectedHandLimitDiscardCard = null;
 
         SetOpeningLock(true);
@@ -1318,6 +1473,7 @@ if (redrawButton != null)
 
         if (HandLimitDrawnCardData == null)
         {
+            revealHandLimitDraw = false;
             Debug.LogWarning("11枚目として表示するカードを引けませんでした");
             yield break;
         }
@@ -1346,6 +1502,15 @@ if (redrawButton != null)
             card.enabled = false;
         }
 
+        bool revealedAtWall = revealHandLimitDraw;
+        revealHandLimitDraw = false;
+        if (revealedAtWall)
+        {
+            DisableWallInput(HandLimitDrawnCardObject);
+            yield return AnimateTurnDrawReveal(HandLimitDrawnCardObject, HandLimitDrawnCardData);
+            SetupCardSize(HandLimitDrawnCardObject, handLimitDrawnCardSize);
+        }
+
         ConfigureHandLimitDiscardSelection(HandLimitDrawnCardObject);
 
         RectTransform cardRect =
@@ -1359,7 +1524,11 @@ if (redrawButton != null)
         Vector2 startPosition = handLimitDrawnCardPosition;
         RectTransform parentRect = drawnCardParent as RectTransform;
 
-        if (deckPosition != null && parentRect != null)
+        if (revealedAtWall)
+        {
+            startPosition = cardRect.anchoredPosition;
+        }
+        else if (deckPosition != null && parentRect != null)
         {
             startPosition = WorldToLocalPosition(
                 parentRect,
@@ -1388,6 +1557,7 @@ if (redrawButton != null)
         }
 
         cardRect.anchoredPosition = handLimitDrawnCardPosition;
+        IsHandLimitDecisionReady = true;
 
         Debug.Log(
             "11枚目を表示：" +
@@ -1593,6 +1763,9 @@ if (redrawButton != null)
         if (SelectedHandLimitDiscardCard == null)
             return;
 
+        if (turnManager != null && turnManager.RequestPlayerDecision("discard-hand",
+            "選択したカードを廃棄します。\nよろしいですか？", ConfirmHandLimitDiscard)) return;
+
         bool discardDrawnCard =
             SelectedHandLimitDiscardCard == HandLimitDrawnCardObject;
 
@@ -1631,6 +1804,7 @@ if (redrawButton != null)
 
     void CompleteHandLimitSelection()
     {
+        IsHandLimitDecisionReady = false;
         HideButtons();
         RestoreHandLimitButtonLabels();
 
@@ -2112,7 +2286,7 @@ public void DamageEnemyWall(
             seSource.PlayOneShot(defeatSE);
         }
 
-        yield return new WaitForSeconds(0.3f);
+        yield return new WaitForSecondsRealtime(0.3f);
 
         if(defeatLogo != null)
         {
@@ -2136,14 +2310,14 @@ public void DamageEnemyWall(
             seSource.PlayOneShot(defeatSE);
         }
 
-        yield return new WaitForSeconds(1.2f);
+        yield return new WaitForSecondsRealtime(1.2f);
 
         if(seSource != null && victoryFanfare != null)
         {
             seSource.PlayOneShot(victoryFanfare);
         }
 
-        yield return new WaitForSeconds(0.3f);
+        yield return new WaitForSecondsRealtime(0.3f);
 
         if(victoryLogo != null)
         {
