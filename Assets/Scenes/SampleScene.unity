@@ -11671,9 +11671,9 @@ MonoBehaviour:
   expandMinSpacing: 24
   expandMaxFanAngle: 15
   expandEdgePadding: 120
-  openingMaxWidth: 600
+  openingMaxWidth: 700
   openingMaxSpacing: 80
-  openingLayoutCenter: {x: 0, y: 240}
+  openingLayoutCenter: {x: 0, y: 270}
   doubleClickTime: 0.6
   handDealer: {fileID: 0}
 --- !u!114 &1560023924
