@@ -8685,7 +8685,50 @@ MonoBehaviour:
   jokerEffectPanel: {fileID: 451291014}
   jokerClearButton: {fileID: 914502126}
   jokerExtraTurnButton: {fileID: 274788462}
-  resultWaitTime: 1.5
+  resultWaitTime: 3
+  inactivityTimersEnabled: 1
+  openingTimer:
+    seconds: 30
+    anchor: {fileID: 0}
+    offset: {x: 0, y: 64}
+  resourceTimer:
+    seconds: 20
+    anchor: {fileID: 0}
+    offset: {x: 0, y: 64}
+  mainTimer:
+    seconds: 45
+    anchor: {fileID: 0}
+    offset: {x: 0, y: 64}
+  battleTimer:
+    seconds: 30
+    anchor: {fileID: 0}
+    offset: {x: 0, y: 64}
+  attackTargetTimer:
+    seconds: 15
+    anchor: {fileID: 0}
+    offset: {x: 0, y: 64}
+  blockTimer:
+    seconds: 15
+    anchor: {fileID: 0}
+    offset: {x: 0, y: 64}
+  shieldTimer:
+    seconds: 15
+    anchor: {fileID: 0}
+    offset: {x: 0, y: 64}
+  effectTimer:
+    seconds: 20
+    anchor: {fileID: 0}
+    offset: {x: 0, y: 64}
+  discardTimer:
+    seconds: 25
+    anchor: {fileID: 0}
+    offset: {x: 0, y: 64}
+  inactivityTimerSize: {x: 172, y: 44}
+  inactivityTimerScale: 2
+  inactivityTimerDisplayDelay: 5
+  inactivityTimerPanelSprite: {fileID: 0}
+  inactivityTimerColor: {r: 0.95, g: 0.77, b: 0.35, a: 1}
+  inactivityTimerWarningColor: {r: 1, g: 0.34, b: 0.22, a: 1}
 --- !u!1 &1149260626
 GameObject:
   m_ObjectHideFlags: 0
@@ -8750,6 +8793,10 @@ MonoBehaviour:
   - -10
   - -10
   placementInterval: 0.06
+  openingSpreadDuration: 0.12
+  openingStackOffset: {x: -220, y: 90}
+  openingArcHeight: 0
+  openingStackAngle: -25
   normalPlacement:
     enterFromRight: 0
     duration: 0.25
@@ -10048,6 +10095,10 @@ MonoBehaviour:
   - -10
   - -10
   placementInterval: 0.06
+  openingSpreadDuration: 0.12
+  openingStackOffset: {x: -220, y: 90}
+  openingArcHeight: 0
+  openingStackAngle: -25
   normalPlacement:
     enterFromRight: 0
     duration: 0.25
@@ -11347,6 +11398,12 @@ MonoBehaviour:
   wallCount: 5
   maxKingWallAdditions: 4
   handCardSize: {x: 58, y: 89}
+  turnDrawRevealSize: {x: 100, y: 150}
+  turnDrawRevealOffset: {x: 0, y: 0}
+  turnDrawTravelTime: 0.24
+  turnDrawFlipTime: 0.22
+  turnDrawRevealHoldTime: 0.5
+  turnDrawHandTime: 0.2
   wallCardSize: {x: 58, y: 89}
   cardPrefab: {fileID: 834065891895854406, guid: 3fd5776f6773a3b429041526fc91bfc3, type: 3}
   proHandCardPrefab: {fileID: 632414178086774423, guid: 7d31c3cd09191ae46baa8636807318fa, type: 3}
@@ -11432,9 +11489,9 @@ MonoBehaviour:
   enemyDeckImage: {fileID: 1377010475}
   enemyHandCount: 0
   assistEnemyDraws: 1
-  enemyDrawAssistChance: 1
-  enemyDrawCandidateCount: 64
-  debugForceEnemyQ: 1
+  enemyDrawAssistChance: 0.55
+  enemyDrawCandidateCount: 12
+  debugForceEnemyQ: 0
   turnManager: {fileID: 1118434680}
   targetGlowSprite: {fileID: 8891656711315780718, guid: e975302d61612ac44b483c0f2eef629a, type: 3}
   slashSprite: {fileID: 21300000, guid: 4852a4e32ff3bcf4daf47206bcf1bc0c, type: 3}

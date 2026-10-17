@@ -20,3 +20,10 @@
 
 .DS_Store
 Thumbs.db
+
+# Local Unity build outputs
+*.apk
+*.aab
+*.slnx
+.utmp/
+*_BurstDebugInformation_DoNotShip/

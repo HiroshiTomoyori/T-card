@@ -39,6 +39,7 @@ public class ResourcePhaseManager : MonoBehaviour
 
     bool isRunning = false;
     bool hasCharged = false;
+    public bool IsResolvingCharge => isRunning && hasCharged;
 
     void Start()
     {
@@ -165,6 +166,10 @@ public class ResourcePhaseManager : MonoBehaviour
             Debug.LogError("CardDrag が未設定です");
             return;
         }
+
+        TurnManager decisionManager = FindFirstObjectByType<TurnManager>();
+        if (decisionManager != null && decisionManager.RequestPlayerDecision("resource:" + card.GetInstanceID(),
+            "このカードをリソースに入れます。\nよろしいですか？", () => TryChargeResource(card))) return;
 
         hasCharged = true;
         card.MarkDroppedSuccessfully();

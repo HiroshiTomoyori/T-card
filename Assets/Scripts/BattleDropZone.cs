@@ -61,25 +61,29 @@ public class BattleDropZone :
         if (battleArea == null)
             battleArea = transform;
 
+        CardController selectedBaseCard = IsSpecialSummonK(card) ? FindKSpecialSummonBase(eventData) : null;
+        TryPlayConfirmedCard(cardDrag, selectedBaseCard);
+    }
+
+    void TryPlayConfirmedCard(CardDrag cardDrag, CardController selectedBaseCard)
+    {
+        if (cardDrag == null) return;
+        TurnManager decisionManager = FindFirstObjectByType<TurnManager>();
+        if (decisionManager != null && !decisionManager.CanDragPlayerHand) return;
+        CardController card = cardDrag.GetComponent<CardController>();
+        if (card == null || card.data == null) return;
+        if (decisionManager != null && decisionManager.handDealer != null &&
+            !cardDrag.IsDragging && !card.transform.IsChildOf(decisionManager.handDealer.handArea)) return;
         card.data.SetPowerFromName();
-
         SetCardCost(card);
-
         int summonCost = card.data.cost;
-
-        CardController selectedBaseCard = null;
-
-        // Raising is a summon rule, independent of the optional cost check.
-        if (IsSpecialSummonK(card))
+        if (selectedBaseCard != null)
         {
-            selectedBaseCard = FindKSpecialSummonBase(eventData);
-            if (selectedBaseCard != null)
-            {
-                selectedBaseCard.data.SetPowerFromName();
-                summonCost = Mathf.Max(0, card.data.cost - selectedBaseCard.data.power);
-            }
+            if (selectedBaseCard.data == null || selectedBaseCard.transform.parent != battleArea ||
+                !selectedBaseCard.gameObject.activeInHierarchy) return;
+            selectedBaseCard.data.SetPowerFromName();
+            summonCost = Mathf.Max(0, card.data.cost - selectedBaseCard.data.power);
         }
-
         if(!BattleAreaLayout.IsSpell(card.data) && !BattleAreaLayout.CanAccept(battleArea, selectedBaseCard))
         {
             Debug.Log("バトルエリア上限6枚：手札へ戻します");
@@ -113,6 +117,8 @@ public class BattleDropZone :
                 return;
             }
 
+            if (decisionManager != null && decisionManager.RequestPlayerDecision("summon:" + card.GetInstanceID(),
+                card.data.cardName + "を場に出します。\nよろしいですか？", () => TryPlayConfirmedCard(cardDrag, selectedBaseCard))) return;
             resourceManager.UseResource(
                 summonCost
             );
@@ -138,6 +144,8 @@ public class BattleDropZone :
          * 対象選択完了までは
          * playerBattleAreaの子として維持する。
          */
+        if (!useCostCheck && decisionManager != null && decisionManager.RequestPlayerDecision("summon:" + card.GetInstanceID(),
+            card.data.cardName + "を場に出します。\nよろしいですか？", () => TryPlayConfirmedCard(cardDrag, selectedBaseCard))) return;
         cardDrag.DropToBattleArea(
             battleArea
         );

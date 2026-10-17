@@ -60,9 +60,78 @@ public class TitleManager : MonoBehaviour
     bool isTransitioning = false;
 
     public static bool isAdvancedRule = false;
+    public static bool SkipActionConfirmations { get; private set; }
+    Toggle skipConfirmationsToggle;
+    Font titleOptionsFont;
+
+    void CreateConfirmationOption()
+    {
+        if (titleScreen == null) return;
+        var root = new GameObject("Skip Action Confirmations", typeof(RectTransform), typeof(Image), typeof(Toggle));
+        root.transform.SetParent(titleScreen.transform, false);
+        var rect = root.GetComponent<RectTransform>();
+        // SafeArea is scaled up in this scene; its bottom edge is outside the viewport.
+        // Place beside the visible title controls using their center-based coordinates.
+        rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = new Vector2(0f, -340f);
+        rect.sizeDelta = new Vector2(420f, 64f);
+        root.GetComponent<Image>().color = new Color(0.12f, 0.08f, 0.04f, 0.75f);
+        skipConfirmationsToggle = root.GetComponent<Toggle>();
+
+        var box = new GameObject("Checkbox", typeof(RectTransform), typeof(Image));
+        box.transform.SetParent(root.transform, false);
+        var boxRect = box.GetComponent<RectTransform>();
+        boxRect.anchorMin = boxRect.anchorMax = new Vector2(0f, 0.5f);
+        boxRect.anchoredPosition = new Vector2(34f, 0f);
+        boxRect.sizeDelta = new Vector2(34f, 34f);
+        box.GetComponent<Image>().color = new Color(0.95f, 0.86f, 0.65f);
+        var mark = new GameObject("Checked", typeof(RectTransform), typeof(Image));
+        mark.transform.SetParent(box.transform, false);
+        var markRect = mark.GetComponent<RectTransform>();
+        markRect.anchorMin = Vector2.zero; markRect.anchorMax = Vector2.one;
+        markRect.offsetMin = new Vector2(7f, 7f); markRect.offsetMax = new Vector2(-7f, -7f);
+        mark.GetComponent<Image>().color = new Color(0.3f, 0.18f, 0.05f);
+        skipConfirmationsToggle.targetGraphic = box.GetComponent<Image>();
+        skipConfirmationsToggle.graphic = mark.GetComponent<Image>();
+        skipConfirmationsToggle.isOn = SkipActionConfirmations;
+
+        var label = new GameObject("Label", typeof(RectTransform), typeof(Text));
+        label.transform.SetParent(root.transform, false);
+        var labelRect = label.GetComponent<RectTransform>();
+        labelRect.anchorMin = Vector2.zero; labelRect.anchorMax = Vector2.one;
+        labelRect.offsetMin = new Vector2(65f, 0f); labelRect.offsetMax = new Vector2(-12f, 0f);
+        titleOptionsFont = Font.CreateDynamicFontFromOSFont(new[] { "Yu Gothic", "Meiryo", "Noto Sans CJK JP", "Arial" }, 26);
+        var text = label.GetComponent<Text>();
+        text.font = titleOptionsFont; text.fontSize = 26;
+        text.text = "選択確認を省略";
+        text.color = new Color(0.95f, 0.86f, 0.65f);
+        text.alignment = TextAnchor.MiddleLeft;
+        text.raycastTarget = false;
+    }
+
+    void OnDestroy()
+    {
+        if (titleOptionsFont != null) Destroy(titleOptionsFont);
+    }
+    static bool rematchRequested;
+    static GameFlowManager.Difficulty rematchDifficulty;
+    static bool rematchAdvancedRule;
+    static bool rematchTitleRule;
+
+    public static void SetResultDestination(bool rematch, GameFlowManager.Difficulty difficulty)
+    {
+        rematchRequested = rematch;
+        rematchDifficulty = difficulty;
+        rematchAdvancedRule = GameSettings.IsAdvancedRule;
+        rematchTitleRule = isAdvancedRule;
+    }
 
     void Start()
     {
+        Time.timeScale = 1f;
+        HandDealer.IsRedrawSelecting = false;
+        CreateConfirmationOption();
         if(titleScreen != null)
             titleScreen.SetActive(true);
 
@@ -101,6 +170,30 @@ public class TitleManager : MonoBehaviour
             difficultyBackgroundImage.sprite =
                 normalDifficultyImage;
         }
+        if (rematchRequested)
+        {
+            rematchRequested = false;
+            StartCoroutine(StartRematchFromBeginning());
+        }
+    }
+
+    IEnumerator StartRematchFromBeginning()
+    {
+        // Let all new-scene Start methods finish before enabling the match root.
+        yield return null;
+        GameSettings.IsAdvancedRule = rematchAdvancedRule;
+        isAdvancedRule = rematchTitleRule;
+        foreach (GameFlowManager flow in FindObjectsByType<GameFlowManager>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            if (flow.gameObject.scene == gameObject.scene) flow.selectedDifficulty = rematchDifficulty;
+        if (bgmSource != null) bgmSource.Stop();
+        if (difficultyBGM != null) difficultyBGM.Stop();
+        if (titleScreen != null) titleScreen.SetActive(false);
+        if (difficultyScreen != null) difficultyScreen.SetActive(false);
+        if (loadingScreen != null) loadingScreen.SetActive(false);
+        if (gameScreen != null) gameScreen.SetActive(true);
+        if (playerResourceUI != null) playerResourceUI.SetActive(true);
+        if (isAdvancedRule) ChangeToSecretBgm();
+        isTransitioning = false;
     }
 
     public void StartGame()
@@ -108,6 +201,7 @@ public class TitleManager : MonoBehaviour
         if(isTransitioning)
             return;
 
+        SkipActionConfirmations = skipConfirmationsToggle != null && skipConfirmationsToggle.isOn;
         isTransitioning = true;
 
         StartCoroutine(

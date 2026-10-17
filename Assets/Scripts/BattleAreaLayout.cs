@@ -343,18 +343,7 @@ public class BattleAreaLayout : MonoBehaviour
             Vector3 worldPosition =
                 transform.TransformPoint(localPosition);
 
-            // tapVisualがあるカードはそちらで横向きを表現
-            bool rotateRoot =
-                controller.isTapped &&
-                (
-                    controller.tapVisual == null ||
-                    controller.tapVisual == rect
-                );
-
-            Quaternion localRotation =
-                rotateRoot
-                    ? Quaternion.Euler(0f, 0f, -90f)
-                    : Quaternion.identity;
+            Quaternion localRotation = Quaternion.identity;
 
             Quaternion worldRotation =
                 transform.rotation * localRotation;

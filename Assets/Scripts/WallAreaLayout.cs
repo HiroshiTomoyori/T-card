@@ -18,6 +18,11 @@ public class WallAreaLayout : MonoBehaviour
     [Tooltip("Element 0 = 1 wall, Element 8 = 9 walls. Gap is the space between card edges; negative values overlap.")]
     [SerializeField] float[] gapsByCount = { -10f, -10f, -10f, -10f, -10f, -10f, -10f, -10f, -10f };
     [SerializeField, Min(0f)] float placementInterval = 0.06f;
+    [Header("Opening dealer spread")]
+    [SerializeField, Min(0.05f)] float openingSpreadDuration = 0.12f;
+    [SerializeField] Vector2 openingStackOffset = new Vector2(-220f, 90f);
+    [SerializeField, Min(0f)] float openingArcHeight = 0f;
+    [SerializeField] float openingStackAngle = -25f;
     [Header("CCP placement animations")]
     [SerializeField] WallCardPlaceAnimation normalPlacement = new WallCardPlaceAnimation();
     [SerializeField] WallCardPlaceAnimation kingPlacement = new WallCardPlaceAnimation
@@ -33,7 +38,10 @@ public class WallAreaLayout : MonoBehaviour
     readonly Queue<Placement> pending = new Queue<Placement>();
     Coroutine placementRoutine;
 
-    struct Placement { public CCP.Card card; public int slot; public bool king; }
+    bool collectingOpening;
+    public void BeginOpeningPlacement() { collectingOpening = true; }
+    public void EndOpeningPlacement() { collectingOpening = false; }
+    struct Placement { public CCP.Card card; public int slot; public bool king; public bool opening; }
     public bool IsAnimating => placementRoutine != null;
     public Vector2 CardSize => new Vector2(Mathf.Max(1f, cardSize.x), Mathf.Max(1f, cardSize.y));
     public int Capacity => Mathf.Clamp(slotCount, 1, 9);
@@ -127,7 +135,7 @@ public class WallAreaLayout : MonoBehaviour
         card.transform.localPosition = SlotPosition(index);
         card.transform.localRotation = Quaternion.identity;
         card.transform.localScale = Vector3.zero;
-        pending.Enqueue(new Placement { card = card, slot = index, king = fromKing });
+        pending.Enqueue(new Placement { card = card, slot = index, king = fromKing, opening = collectingOpening });
         if (placementRoutine == null) placementRoutine = StartCoroutine(PlayPlacements());
         return true;
     }
@@ -136,6 +144,13 @@ public class WallAreaLayout : MonoBehaviour
         yield return null; // Assign coroutine handle before completion is possible.
         while (pending.Count > 0)
         {
+            if (pending.Peek().opening)
+            {
+                var batch = new List<Placement>();
+                while (pending.Count > 0 && pending.Peek().opening) batch.Add(pending.Dequeue());
+                yield return PlayOpeningSpread(batch);
+                continue;
+            }
             Placement item = pending.Dequeue();
             if (item.card == null || slots[item.slot] != item.card) continue;
             Vector3 target = transform.TransformPoint(SlotPosition(item.slot));
@@ -160,6 +175,52 @@ public class WallAreaLayout : MonoBehaviour
             }
         }
         placementRoutine = null;
+    }
+    IEnumerator PlayOpeningSpread(List<Placement> batch)
+    {
+        // All cards share one clock and fixed destinations: no per-card pauses or reflow.
+        Vector3 stack = new Vector3(layoutCenter.x + openingStackOffset.x,
+            layoutCenter.y + openingStackOffset.y, 0f);
+        var starts = new Vector3[batch.Count];
+        var targets = new Vector3[batch.Count];
+        for (int i = 0; i < batch.Count; i++)
+        {
+            Placement item = batch[i];
+            starts[i] = stack + new Vector3(i * 2f, i * 0.5f, 0f);
+            targets[i] = SlotPosition(item.slot);
+            if (item.card == null || slots[item.slot] != item.card) continue;
+            item.card.destinationPosition = transform.TransformPoint(targets[i]);
+            item.card.destinationRotation = transform.rotation;
+            item.card.transform.localPosition = starts[i];
+            item.card.transform.localRotation = Quaternion.Euler(0f, 0f, openingStackAngle);
+            item.card.transform.localScale = Vector3.one;
+        }
+        float elapsed = 0f;
+        float duration = Mathf.Max(0.05f, openingSpreadDuration);
+        while (elapsed < duration)
+        {
+            elapsed += CCP.CardControllerSettings.Instance.useUnscaledTime ? Time.unscaledDeltaTime : Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            float progress = 1f - (1f - t) * (1f - t) * (1f - t); // Fast dealer sweep, all five cards together.
+            for (int i = 0; i < batch.Count; i++)
+            {
+                Placement item = batch[i];
+                if (item.card == null || slots[item.slot] != item.card) continue;
+                item.card.transform.localPosition = Vector3.LerpUnclamped(starts[i], targets[i], progress)
+                    + Vector3.up * (Mathf.Sin(t * Mathf.PI) * openingArcHeight);
+                item.card.transform.localRotation = Quaternion.Euler(0f, 0f, openingStackAngle * (1f - progress));
+            }
+            yield return null;
+        }
+        foreach (Placement item in batch)
+        {
+            if (item.card == null || slots[item.slot] != item.card) continue;
+            item.card.transform.localPosition = SlotPosition(item.slot);
+            item.card.transform.localRotation = Quaternion.identity;
+            item.card.isBeingMovedManually = false;
+            item.card.onPlaced?.Invoke();
+        }
+        LayoutWalls();
     }
     void LateUpdate() { LayoutWalls(); }
     public void LayoutWalls()
@@ -226,6 +287,7 @@ public class WallAreaLayout : MonoBehaviour
         StopAllCoroutines();
         placementRoutine = null;
         pending.Clear();
+        collectingOpening = false;
         for (int i = transform.childCount - 1; i >= 0; i--)
         {
             GameObject child = transform.GetChild(i).gameObject;
@@ -244,6 +306,7 @@ public class WallAreaLayout : MonoBehaviour
     }
     void OnDisable()
     {
+        collectingOpening = false;
         StopAllCoroutines();
         placementRoutine = null;
         pending.Clear();
