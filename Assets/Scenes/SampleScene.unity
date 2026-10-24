@@ -7901,6 +7901,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 85717f43aa428de40aa9bc5980c1966b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  settings: {fileID: 11400000, guid: 59b15a2320dc4316b8cc4ca593ccaf18, type: 2}
   coinModel: {fileID: 676032829}
   resultTextObject: {fileID: 1066137999}
   resultText: {fileID: 1066138001}
