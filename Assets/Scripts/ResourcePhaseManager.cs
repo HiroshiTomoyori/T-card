@@ -172,6 +172,7 @@ public class ResourcePhaseManager : MonoBehaviour
             "このカードをリソースに入れます。\nよろしいですか？", () => TryChargeResource(card))) return;
 
         hasCharged = true;
+        if (decisionManager != null) decisionManager.NotifyPlayerActionCommitted();
         card.MarkDroppedSuccessfully();
 
         StartCoroutine(

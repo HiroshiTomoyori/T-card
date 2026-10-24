@@ -173,11 +173,11 @@ public class CardEffectManager :
                     {
                         Debug.Log(
                             "効果発動：" +
-                            "敵手札ランダム墓地"
+                            "相手手札を1枚選んで破棄"
                         );
 
                         handDealer
-                            .DiscardRandomEnemyHand(isEnemy);
+                            .SelectEnemyHandToDiscard(isEnemy);
                     }
                     else
                     {

@@ -146,6 +146,7 @@ public class BattleDropZone :
          */
         if (!useCostCheck && decisionManager != null && decisionManager.RequestPlayerDecision("summon:" + card.GetInstanceID(),
             card.data.cardName + "を場に出します。\nよろしいですか？", () => TryPlayConfirmedCard(cardDrag, selectedBaseCard))) return;
+        if (decisionManager != null) decisionManager.NotifyPlayerActionCommitted();
         cardDrag.DropToBattleArea(
             battleArea
         );
