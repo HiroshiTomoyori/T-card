@@ -5,6 +5,41 @@ using UnityEngine.UI;
 [ExecuteAlways]
 public class ResourceManager : MonoBehaviour
 {
+    [Header("Liquid UI / 水面・数字・チャージ演出")]
+    public LiquidResourceSettings liquidSettings;
+    LiquidResourceView liquidView;
+    public int MaxResource => maxResource;
+
+    public LiquidResourceView EnsureLiquidView()
+    {
+        if(!Application.isPlaying || resourceText == null) return null;
+        if(liquidView != null) return liquidView;
+        if(liquidSettings == null) liquidSettings = Resources.Load<LiquidResourceSettings>("TCardResource/LiquidResourceSettings");
+        if(liquidSettings == null || liquidSettings.liquidShader == null) return null;
+        Transform host = resourceText.transform.parent;
+        if(liquidSettings.behindHand)
+        {
+            foreach(var canvas in host.GetComponentsInChildren<Canvas>(true))canvas.overrideSorting=false;
+            var hostCanvas=host.GetComponent<Canvas>();if(hostCanvas!=null)hostCanvas.overrideSorting=false;
+            var root=host.GetComponentInParent<Canvas>().rootCanvas.transform;
+            Transform hand=null;
+            foreach(var rt in root.GetComponentsInChildren<RectTransform>(true))if(rt.name=="HandArea"){hand=rt;break;}
+            if(hand!=null) LiquidResourceView.PlaceBehindHand(host,hand);
+        }
+
+        var go = new GameObject("Liquid Resource UI", typeof(RectTransform), typeof(LiquidResourceView));
+        go.layer = resourceText.gameObject.layer;
+        go.transform.SetParent(host, false);
+        var rect = (RectTransform)go.transform;
+        rect.anchorMin = rect.anchorMax = new Vector2(.5f,.5f);
+        rect.anchoredPosition = resourceText.rectTransform.anchoredPosition;
+        liquidView = go.GetComponent<LiquidResourceView>();
+        liquidView.Initialize(liquidSettings, resourceText.font);
+        foreach(Graphic graphic in host.GetComponentsInChildren<Graphic>(true))
+            if(!graphic.transform.IsChildOf(go.transform)) graphic.enabled = false;
+        return liquidView;
+    }
+
     public TextMeshProUGUI resourceText;
     public Sprite resourceHeartSprite;
     public Material resourceHeartMaterial;
@@ -28,7 +63,15 @@ public class ResourceManager : MonoBehaviour
 
     void OnEnable() => UpdateHeartIcon();
 
-    void LateUpdate() => UpdateHeartIcon();
+    void LateUpdate()
+    {
+        if(Application.isPlaying)
+        {
+            var view = EnsureLiquidView();
+            if(view != null) { view.SetAmount(currentResource, maxResource); return; }
+        }
+        UpdateHeartIcon();
+    }
 
     public void AddResource()
     {
@@ -38,6 +81,7 @@ public class ResourceManager : MonoBehaviour
         currentResource += 1;
 
         UpdateUI();
+        if(liquidView != null) liquidView.PlayCharge();
     }
 
     void UpdateUI()
@@ -48,7 +92,9 @@ public class ResourceManager : MonoBehaviour
         {
             resourceText.text =
                 currentResource + " / " + maxResource;
-            UpdateHeartIcon();
+            var view = EnsureLiquidView();
+            if(view != null) view.SetAmount(currentResource, maxResource);
+            else UpdateHeartIcon();
         }
         else
         {
@@ -58,6 +104,7 @@ public class ResourceManager : MonoBehaviour
 
     void UpdateHeartIcon()
     {
+        if(Application.isPlaying && EnsureLiquidView() != null) return;
         if(resourceText == null) return;
         // Apply the requested layout even when Unity still has an older scene in memory.
         resourceText.rectTransform.anchoredPosition = new Vector2(147f, -10f);

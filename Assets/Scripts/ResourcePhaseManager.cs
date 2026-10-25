@@ -58,14 +58,20 @@ public class ResourcePhaseManager : MonoBehaviour
         }
         if(resourceGlow == null || dragHighlightRoutine != null) return;
 
-        Canvas parentCanvas = resourceGlow.GetComponentInParent<Canvas>();
-        Canvas glowCanvas = resourceGlow.GetComponent<Canvas>();
-        if(glowCanvas == null) glowCanvas = resourceGlow.AddComponent<Canvas>();
-        if(parentCanvas != null && parentCanvas != glowCanvas)
+        var liquidView=resourceManager!=null?resourceManager.EnsureLiquidView():null;
+        bool behindHand=liquidView!=null && liquidView.Settings.behindHand;
+        if(behindHand)liquidView.PlaceEffectBehindHand(resourceGlow.transform);
+        else
         {
-            glowCanvas.overrideSorting = true;
-            glowCanvas.sortingLayerID = parentCanvas.sortingLayerID;
-            glowCanvas.sortingOrder = parentCanvas.sortingOrder + 10;
+            Canvas parentCanvas = resourceGlow.GetComponentInParent<Canvas>();
+            Canvas glowCanvas = resourceGlow.GetComponent<Canvas>();
+            if(glowCanvas == null) glowCanvas = resourceGlow.AddComponent<Canvas>();
+            if(parentCanvas != null && parentCanvas != glowCanvas)
+            {
+                glowCanvas.overrideSorting = true;
+                glowCanvas.sortingLayerID = parentCanvas.sortingLayerID;
+                glowCanvas.sortingOrder = parentCanvas.sortingOrder + 10;
+            }
         }
 
         dragHighlightGroup = resourceGlow.GetComponent<CanvasGroup>();
@@ -87,7 +93,7 @@ public class ResourcePhaseManager : MonoBehaviour
         }
         dragHighlightGroup.alpha = 1f;
         resourceGlow.SetActive(true);
-        resourceGlow.transform.SetAsLastSibling();
+        if(!behindHand)resourceGlow.transform.SetAsLastSibling();
         dragHighlightRoutine = StartCoroutine(PulseDropHighlight());
     }
 
@@ -183,6 +189,21 @@ public class ResourcePhaseManager : MonoBehaviour
     IEnumerator ChargeRoutine(GameObject cardObj)
     {
         DisableResourceDrop();
+
+        // Show the actual selected card's artwork falling into the water.
+        // Point ownership changes exactly once, on impact, then the light rises.
+        LiquidResourceView liquid = resourceManager != null ? resourceManager.EnsureLiquidView() : null;
+        if(liquid != null)
+        {
+            if(resourceArea != null) cardObj.transform.SetParent(resourceArea, false);
+            yield return liquid.DropCard(cardObj);
+            if(seSource != null && chargeSE != null) seSource.PlayOneShot(chargeSE);
+            resourceManager.AddResource();
+            Destroy(cardObj);
+            yield return new WaitForSecondsRealtime(liquid.Settings.beamDuration);
+            CompleteResourcePhase();
+            yield break;
+        }
 
         if(resourceArea != null)
         {

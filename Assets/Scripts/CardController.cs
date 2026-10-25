@@ -38,6 +38,7 @@ public class CardController : MonoBehaviour
 
     void Awake()
     {
+        if(GetComponent<CardBoundaryShadow>()==null)gameObject.AddComponent<CardBoundaryShadow>();
         RemoveLegacyRestOverlay();
         // CardGlowを自動取得
         if(cardGlow == null)

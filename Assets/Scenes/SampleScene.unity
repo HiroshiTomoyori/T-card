@@ -7905,23 +7905,11 @@ MonoBehaviour:
   coinModel: {fileID: 676032829}
   resultTextObject: {fileID: 1066137999}
   resultText: {fileID: 1066138001}
-  frontLocalEulerAngles: {x: 0, y: 0, z: 0}
-  backLocalEulerAngles: {x: 180, y: 0, z: 0}
   seSource: {fileID: 1632339832}
   gameBgmSource: {fileID: 86075744}
   appearSE: {fileID: 8300000, guid: 6b1ce4bcc854edc4a9333b5aac3201e3, type: 3}
   spinSE: {fileID: 8300000, guid: d323f8b32e4c3e94b91f0da42929cd9b, type: 3}
   stopSE: {fileID: 8300000, guid: dcf095473004cac43aec960717790a0f, type: 3}
-  minSpinTime: 2
-  maxSpinTime: 5
-  flipRotations: 4
-  flipAxis: {x: 1, y: 0, z: 0}
-  spinRotations: 1
-  jumpHeight: 4
-  zoomScale: 1.5
-  slowMotionStrength: 0.2
-  landingBounceHeight: 0.05
-  landingBounceDuration: 0.08
 --- !u!1 &1004047681
 GameObject:
   m_ObjectHideFlags: 0
@@ -8688,6 +8676,10 @@ MonoBehaviour:
   jokerExtraTurnButton: {fileID: 274788462}
   resultWaitTime: 3
   inactivityTimersEnabled: 1
+  confirmationTimer:
+    seconds: 15
+    anchor: {fileID: 0}
+    offset: {x: 0, y: -360}
   openingTimer:
     seconds: 30
     anchor: {fileID: 0}
@@ -8726,10 +8718,11 @@ MonoBehaviour:
     offset: {x: 0, y: 64}
   inactivityTimerSize: {x: 172, y: 44}
   inactivityTimerScale: 2
-  inactivityTimerDisplayDelay: 5
   inactivityTimerPanelSprite: {fileID: 0}
   inactivityTimerColor: {r: 0.95, g: 0.77, b: 0.35, a: 1}
   inactivityTimerWarningColor: {r: 1, g: 0.34, b: 0.22, a: 1}
+  resultChoiceScale: 2
+  playerDecisionPanelScale: 2
 --- !u!1 &1149260626
 GameObject:
   m_ObjectHideFlags: 0
@@ -8862,6 +8855,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 886da5ecea92b8e428b6e088e605b761, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  liquidSettings: {fileID: 0}
   resourceText: {fileID: 1407204560}
   resourceHeartSprite: {fileID: 4606908045521496030, guid: 4e05ac200e674c0489a68aa85701b596, type: 3}
   resourceHeartMaterial: {fileID: 2100000, guid: 8ef3fee7716343a0a640262e2b784c06, type: 2}
@@ -9056,6 +9050,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   showDecisionLog: 1
+  varyCloseDecisions: 1
+  actionVarietyWindow: 350
+  drawVarietyWindow: 450
+  freshVanillaRaisePenalty: 3000
 --- !u!114 &1181382275
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -11714,8 +11712,8 @@ MonoBehaviour:
   proHandGroup: {fileID: 1560023924}
   idlePosition: {x: 0, y: -570, z: 0}
   expandPosition: {x: 0, y: -310, z: 0}
-  idleScale: 1.2
-  expandScale: 1.6
+  idleScale: 1
+  expandScale: 1.3
   idleMaxWidth: 200
   idleMaxSpacing: 20
   idleMinSpacing: 50
