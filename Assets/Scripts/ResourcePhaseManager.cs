@@ -49,6 +49,22 @@ public class ResourcePhaseManager : MonoBehaviour
             resourceGlow.SetActive(false);
     }
 
+    public bool IsInsideResourceTarget(Vector2 position,Camera camera)
+    {
+        var rect=resourceAreaImage!=null?resourceAreaImage.rectTransform:resourceArea as RectTransform;
+        return rect!=null && RectTransformUtility.RectangleContainsScreenPoint(rect,position,camera);
+    }
+    public void UpdateDropHighlight(Vector2 position,Camera camera)
+    {
+        bool inside=isRunning && !hasCharged && isActiveAndEnabled && IsInsideResourceTarget(position,camera);
+        var view=resourceManager!=null?resourceManager.EnsureLiquidView():null;
+        if(view!=null)
+        {
+            if(resourceGlow!=null)resourceGlow.SetActive(false);
+            view.SetTargetActive(inside);
+        }
+        else if(inside)ShowDropHighlight();else HideDropHighlight();
+    }
     public void ShowDropHighlight()
     {
         if(!isRunning || hasCharged || !isActiveAndEnabled)
@@ -115,6 +131,8 @@ public class ResourcePhaseManager : MonoBehaviour
 
     public void HideDropHighlight()
     {
+        var view=resourceManager!=null?resourceManager.EnsureLiquidView():null;
+        if(view!=null)view.SetTargetActive(false);
         if(dragHighlightRoutine != null)
         {
             StopCoroutine(dragHighlightRoutine);
@@ -195,12 +213,12 @@ public class ResourcePhaseManager : MonoBehaviour
         LiquidResourceView liquid = resourceManager != null ? resourceManager.EnsureLiquidView() : null;
         if(liquid != null)
         {
-            if(resourceArea != null) cardObj.transform.SetParent(resourceArea, false);
+            // Keep the released card position until the foreground ghost takes over.
             yield return liquid.DropCard(cardObj);
             if(seSource != null && chargeSE != null) seSource.PlayOneShot(chargeSE);
             resourceManager.AddResource();
             Destroy(cardObj);
-            yield return new WaitForSecondsRealtime(liquid.Settings.beamDuration);
+            yield return new WaitForSecondsRealtime(liquid.Settings.beamDuration+liquid.Settings.rootGlowTail);
             CompleteResourcePhase();
             yield break;
         }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
+using DG.Tweening;
 
 public class HandDealer : MonoBehaviour
 {
@@ -49,6 +50,9 @@ public class HandDealer : MonoBehaviour
 
     [Header("Card Data")]
     public List<CardData> cardList = new List<CardData>();
+
+    [Header("Opening Animation / 初期配布の設定")]
+    public OpeningShuffleSettings openingShuffleSettings;
 
     [Header("Deal Settings")]
     public int dealCount = 5;
@@ -227,54 +231,13 @@ public Transform playerWallArea;
         currentDeck = new List<CardData>(cardList);
         enemyDeck = new List<CardData>(cardList);
         enemyHandCount = 0;
-        openingEnemyDrawsRemaining = 5;
+        enemyHandCards.Clear();
+        openingEnemyDrawsRemaining = dealCount;
 
         if (enemyDeckImage != null)
             enemyDeckImage.gameObject.SetActive(true);
 
         StartCoroutine(DealRoutine(true));
-/*
-        if (enemyHandCountText != null)
-            enemyHandCountText.gameObject.SetActive(true);
-*/
-        if(debugForceEnemyQ)
-{
-    CardData qCard = enemyDeck.Find(
-        card => card != null &&
-        card.cardName.Contains("Q")
-    );
-
-    if(qCard != null)
-    {
-        enemyDeck.Remove(qCard);
-
-        enemyHandCards.Add(qCard);
-        enemyHandCount++;
-
-        RefreshEnemyHandVisual();
-        UpdateEnemyHandCountText();
-
-        Debug.Log(
-            "デバッグ：敵の初期手札にQを追加 → " +
-            qCard.cardName
-        );
-
-        // Q以外の初期手札4枚を通常ドロー
-        EnemyDraw(4);
-    }
-    else
-    {
-        Debug.LogWarning(
-            "デバッグ：敵山札にQが見つかりません"
-        );
-
-        EnemyDraw(5);
-    }
-}
-else
-{
-    EnemyDraw(5);
-}
     }
 
     void Start()
@@ -327,7 +290,7 @@ else
     }
 
 
-    IEnumerator DealRoutine(bool showButtonsAfterDeal)
+    IEnumerator DealRoutine(bool showButtonsAfterDeal, bool includeEnemy=true)
     {
         SetOpeningLock(true);
 
@@ -343,11 +306,17 @@ else
         ClearWall();
         HideButtons();
 
+        if(openingShuffleSettings==null)openingShuffleSettings=Resources.Load<OpeningShuffleSettings>("TCardOpening/OpeningShuffleSettings");
         // Finish placing both sides' walls before dealing the opening hand.
         CreateWallCards();
-        CreateEnemyWallCards();
+        if(includeEnemy)CreateEnemyWallCards();
         yield return new WaitUntil(() => !IsWallPlacementRunning && !IsHandLimitSelecting);
 
+        if(openingShuffleSettings==null)openingShuffleSettings=Resources.Load<OpeningShuffleSettings>("TCardOpening/OpeningShuffleSettings");
+        var opening=openingShuffleSettings;
+        bool enemyFinished=!includeEnemy;
+        if(includeEnemy)StartCoroutine(OpeningEnemyHand(opening,()=>enemyFinished=true));
+        int inFlight=0;
         for (int i = 0; i < dealCount; i++)
         {
             if (currentDeck.Count <= 0)
@@ -383,20 +352,21 @@ else
 
             cardRect.anchoredPosition = startPos;
 
-            yield return AnimateCardToHand(cardRect);
-
-            LayoutElement layout = cardObj.GetComponent<LayoutElement>();
-
-            if (layout != null)
+            if(opening!=null)
             {
-                layout.ignoreLayout = false;
+                inFlight++;
+                StartCoroutine(OpeningDealCard(cardRect,opening,()=>inFlight--));
+                yield return OpeningWait(opening,opening.handDealInterval);
             }
-
-            //ForceHandLayout();
-            SortPlayerHand();
-
-            yield return new WaitForSeconds(dealInterval);
+            else
+            {
+                yield return AnimateCardToHand(cardRect);
+                var layout=cardObj.GetComponent<LayoutElement>();if(layout!=null)layout.ignoreLayout=false;
+                SortPlayerHand();yield return new WaitForSeconds(dealInterval);
+            }
         }
+        yield return new WaitUntil(()=>inFlight<=0 && enemyFinished);
+        if(opening!=null)yield return OpeningWait(opening,opening.afterDealHold);
 
 
         if(showButtonsAfterDeal)
@@ -409,6 +379,44 @@ else
         }
 
         // 初期手札を確定するまで入力ロックを維持する
+    }
+
+    IEnumerator OpeningDealCard(RectTransform card,OpeningShuffleSettings settings,System.Action completed)
+    {
+        bool revealed=!settings.revealDuringDeal;
+        try
+        {
+            if(settings.revealDuringDeal)StartCoroutine(OpeningReveal(card,settings,()=>revealed=true));
+            yield return AnimateCardToHand(card,settings.Seconds(settings.handTravelDuration));
+            yield return new WaitUntil(()=>revealed||card==null);
+            if(card!=null){var layout=card.GetComponent<LayoutElement>();if(layout!=null)layout.ignoreLayout=false;SortPlayerHand();}
+        }
+        finally{completed?.Invoke();}
+    }
+    IEnumerator OpeningReveal(RectTransform card,OpeningShuffleSettings settings,System.Action completed)
+    {
+        var controller=card!=null?card.GetComponent<CardController>():null;
+        var art=controller!=null?controller.artworkImage:null;
+        if(art==null||cardBackSprite==null){completed?.Invoke();yield break;}
+        Sprite front=controller.data!=null && controller.data.artwork!=null?controller.data.artwork:art.sprite;
+        Vector3 original=art.rectTransform.localScale;
+        float elapsed=0,delay=settings.Seconds(settings.handFlipDelay),duration=Mathf.Max(.02f,settings.Seconds(settings.handFlipDuration));
+        try
+        {
+            while(elapsed<delay+duration && card!=null && art!=null)
+            {
+                float p=Mathf.Clamp01((elapsed-delay)/duration),flip=Mathf.Cos(Mathf.PI*Mathf.SmoothStep(0,1,p));
+                art.sprite=flip>=0?cardBackSprite:front;
+                art.rectTransform.localScale=new Vector3(original.x*Mathf.Max(.028f,Mathf.Abs(flip)),original.y,original.z);
+                yield return null;elapsed+=settings.useUnscaledTime?Time.unscaledDeltaTime:Time.deltaTime;
+            }
+        }
+        finally{if(art!=null){art.sprite=front;art.rectTransform.localScale=original;}completed?.Invoke();}
+    }
+    static IEnumerator OpeningWait(OpeningShuffleSettings settings,float seconds)
+    {
+        float remaining=settings.Seconds(seconds);
+        while(remaining>0){yield return null;remaining-=settings.useUnscaledTime?Time.unscaledDeltaTime:Time.deltaTime;}
     }
 
     CardData DrawRandomCardData()
@@ -533,7 +541,7 @@ else
         layout.minWidth = size.x;
         layout.minHeight = size.y;
     }
-/*IEnumerator AnimateCardToHand(RectTransform cardRect)
+/*IEnumerator AnimateCardToHand(RectTransform cardRect,float durationOverride=-1)
 {
     if (cardRect == null)
         yield break;
@@ -577,11 +585,13 @@ else
         cardRect.anchoredPosition = end;
 }*/
 
-IEnumerator AnimateCardToHand(RectTransform cardRect)
+IEnumerator AnimateCardToHand(RectTransform cardRect,float durationOverride=-1)
 {
     if (cardRect == null)
         yield break;
 
+    using(var layer=OpeningDealLayer.Begin(cardRect.gameObject,deckPosition,openingShuffleSettings))
+    {
     CCP.Card proCard = cardRect.GetComponent<CCP.Card>();
 
     if (proCard != null &&
@@ -614,9 +624,7 @@ IEnumerator AnimateCardToHand(RectTransform cardRect)
             Vector2 startCenter =
                 deckPosition.rect.center + dealStartOffset;
 
-            Vector3 deckCenter = deckPosition.TransformPoint(
-                new Vector3(startCenter.x, startCenter.y, 0f)
-            );
+            Vector3 deckCenter = OpeningShuffleView.DealPosition(deckPosition)+deckPosition.TransformVector(dealStartOffset);
 
             RectTransform frontRect = proCard.front != null
                 ? proCard.front.GetComponent<RectTransform>()
@@ -631,7 +639,7 @@ IEnumerator AnimateCardToHand(RectTransform cardRect)
             cardRect.position += deckCenter - cardCenter;
         }
 
-        float duration = Mathf.Max(0.01f, flyTime);
+        float duration = Mathf.Max(0.01f, durationOverride>=0?durationOverride:flyTime);
 
         // CCPで位置・角度・サイズをアニメーション。
         proCard.MoveToPosition(
@@ -651,7 +659,7 @@ IEnumerator AnimateCardToHand(RectTransform cardRect)
     Vector2 end = Vector2.zero;
 
     float elapsed = 0f;
-    float legacyDuration = Mathf.Max(0.01f, flyTime);
+    float legacyDuration = Mathf.Max(0.01f, durationOverride>=0?durationOverride:flyTime);
 
     while (elapsed < legacyDuration)
     {
@@ -671,6 +679,7 @@ IEnumerator AnimateCardToHand(RectTransform cardRect)
 
     if (cardRect != null)
         cardRect.anchoredPosition = end;
+    }
 }
 
     Vector2 WorldToLocalPosition(RectTransform parent, Vector3 worldPosition)
@@ -711,6 +720,7 @@ IEnumerator AnimateCardToHand(RectTransform cardRect)
         WallAreaLayout layout = GetWallLayout(wallArea);
         if (layout == null || cardPrefab == null || cardBackSprite == null) return;
         layout.ClearWalls();
+        layout.ConfigureOpeningDeal(deckPosition,openingShuffleSettings);
         layout.BeginOpeningPlacement();
         for (int i = 0; i < wallCount && layout.HasSpace; i++)
         {
@@ -729,6 +739,7 @@ IEnumerator AnimateCardToHand(RectTransform cardRect)
         WallAreaLayout layout = GetWallLayout(enemyWallArea);
         if (layout == null || cardPrefab == null || cardBackSprite == null) return;
         layout.ClearWalls();
+        layout.ConfigureOpeningDeal(enemyDeckPosition,openingShuffleSettings);
         layout.BeginOpeningPlacement();
         for (int i = 0; i < enemyWallCount && layout.HasSpace; i++)
         {
@@ -832,7 +843,8 @@ IEnumerator AnimateCardToHand(RectTransform cardRect)
         for (int i = handArea.childCount - 1; i >= 0; i--)
         {
             GameObject cardObj = handArea.GetChild(i).gameObject;
-
+            // Removing CCP cards relayouts the remainder; stop those tweens before destruction.
+            foreach(Transform part in cardObj.GetComponentsInChildren<Transform>(true))part.DOKill();
             cardObj.SetActive(false);
             cardObj.transform.SetParent(null, false);
             Destroy(cardObj);
@@ -998,168 +1010,72 @@ if (redrawButton != null)
 
     IEnumerator RedrawRoutine()
     {
-        if(handArea == null)
-        {
-            Debug.LogError(
-                "RedrawRoutine: HandArea が未設定です"
-            );
-            yield break;
-        }
-
-        if(cardPrefab == null)
-        {
-            Debug.LogError(
-                "RedrawRoutine: CardPrefab が未設定です"
-            );
-            yield break;
-        }
-
-        if(currentDeck == null)
-        {
-            currentDeck =
-                new List<CardData>();
-        }
-
-        // 現在の手札を山札へ戻す
-        List<GameObject> oldHandCards =
-            new List<GameObject>();
-
-        for(int i = 0;
-            i < handArea.childCount;
-            i++)
-        {
-            Transform child =
-                handArea.GetChild(i);
-
-            if(child == null)
-                continue;
-
-            CardController controller =
-                child.GetComponent<CardController>();
-
-            if(controller != null &&
-               controller.data != null)
-            {
-                currentDeck.Add(
-                    controller.data
-                );
-            }
-
-            oldHandCards.Add(
-                child.gameObject
-            );
-        }
-
-        // パネルを閉じる
+        if(handArea==null || cardPrefab==null)yield break;
         HideButtons();
-
-        // 古い手札を消す
-        foreach(GameObject oldCard
-            in oldHandCards)
-        {
-            /*if(oldCard != null)
-            {
-                oldCard.SetActive(false);
-                Destroy(oldCard);
-            }*/
-
-            if (oldCard != null)
-            {
-                CCP.Card proCard = oldCard.GetComponent<CCP.Card>();
-
-                if (proCard != null &&
-                    proCard.parentCardGroup != null)
-                {
-                    proCard.parentCardGroup.RemoveCard(proCard);
-                }
-
-                oldCard.SetActive(false);
-                Destroy(oldCard);
-            }
-        }
-
-        // Destroy反映待ち
+        ReturnOpeningCards(handArea,currentDeck);
+        ReturnOpeningCards(wallArea,currentDeck);
+        ClearHand();ClearWall();
         yield return null;
-
-        ApplyOpeningHandLook();
-
-        // 新しい手札を配布アニメーション付きで生成
-        for(int i = 0;
-            i < dealCount;
-            i++)
-        {
-            if(currentDeck.Count <= 0)
-            {
-                Debug.LogWarning(
-                    "RedrawRoutine: 山札が足りません"
-                );
-                break;
-            }
-
-            CardData selectedCard =
-                DrawRandomCardData();
-
-            if(selectedCard == null)
-                continue;
-
-            GameObject cardObj =
-                CreateHandCard(
-                    selectedCard
-                );
-
-            RectTransform cardRect =
-                cardObj.GetComponent
-                <RectTransform>();
-
-            if(cardRect == null)
-            {
-                Debug.LogError(
-                    "RedrawRoutine: " +
-                    "CardPrefab に RectTransform がありません"
-                );
-                yield break;
-            }
-
-            Vector2 startPos =
-                Vector2.zero;
-
-            if(deckPosition != null)
-            {
-                startPos =
-                    WorldToLocalPosition(
-                        handArea as RectTransform,
-                        deckPosition.position
-                    );
-            }
-
-            cardRect.anchoredPosition =
-                startPos;
-
-            yield return
-                AnimateCardToHand(
-                    cardRect
-                );
-
-            LayoutElement layout =
-                cardObj.GetComponent
-                <LayoutElement>();
-
-            if(layout != null)
-            {
-                layout.ignoreLayout =
-                    false;
-            }
-
-            SortPlayerHand();
-
-            yield return
-                new WaitForSeconds(
-                    dealInterval
-                );
-        }
-        // 引き直した手札を1秒見せる
-        yield return new WaitForSeconds(1f);
+        var shuffle=deckPosition!=null?deckPosition.GetComponent<DeckShuffle>():null;
+        if(shuffle==null)shuffle=FindFirstObjectByType<DeckShuffle>();
+        if(shuffle!=null)yield return shuffle.ReplayShuffle(false);
+        yield return DealRoutine(false,false);
         CompleteOpeningSelection();
+    }
+    static void ReturnOpeningCards(Transform area,List<CardData> deck)
+    {
+        if(area==null || deck==null)return;
+        foreach(Transform child in area)
+        {
+            var card=child.GetComponent<CardController>();
+            if(card!=null && card.data!=null && child.gameObject.activeSelf)deck.Add(card.data);
+        }
+    }
+
+    IEnumerator OpeningEnemyHand(OpeningShuffleSettings settings,System.Action completed)
+    {
+        var layouts=enemyHandArea!=null?enemyHandArea.GetComponents<LayoutGroup>():new LayoutGroup[0];
+        var wasEnabled=new bool[layouts.Length];
+        var dealLayers=new List<OpeningDealLayer>();
+        for(int i=0;i<layouts.Length;i++)wasEnabled[i]=layouts[i].enabled;
+        try
+        {
+            for(int i=0;i<dealCount && enemyDeck.Count>0 && enemyHandCards.Count<maxHandSize;i++)
+            {
+                int index=SelectEnemyHandDrawIndex();
+                if(i==0 && debugForceEnemyQ){int q=enemyDeck.FindIndex(c=>c!=null && c.cardName.Contains("Q"));if(q>=0)index=q;}
+                enemyHandCards.Add(enemyDeck[index]);enemyDeck.RemoveAt(index);
+            }
+            enemyHandCount=enemyHandCards.Count;RefreshEnemyHandVisual();UpdateEnemyHandCountText();
+            if(enemyHandArea==null)yield break;
+            Canvas.ForceUpdateCanvases();LayoutRebuilder.ForceRebuildLayoutImmediate(enemyHandArea as RectTransform);
+            var cards=new List<RectTransform>();var targets=new List<Vector3>();
+            foreach(Transform child in enemyHandArea)
+            {
+                if(!child.gameObject.activeSelf || child.GetComponent<CardController>()==null)continue;
+                cards.Add((RectTransform)child);targets.Add(child.position);child.GetComponent<CanvasGroup>().alpha=0;
+                dealLayers.Add(OpeningDealLayer.Begin(child.gameObject,enemyDeckPosition,settings));
+            }
+            for(int i=0;i<layouts.Length;i++){wasEnabled[i]=layouts[i].enabled;layouts[i].enabled=false;}
+            float travel=settings!=null?settings.Seconds(settings.handTravelDuration):flyTime;
+            float interval=settings!=null?settings.Seconds(settings.handDealInterval):dealInterval;
+            Vector3 start=enemyDeckPosition!=null?OpeningShuffleView.DealPosition(enemyDeckPosition):enemyHandArea.position;
+            float elapsed=0,total=Mathf.Max(0,cards.Count-1)*interval+Mathf.Max(.02f,travel);
+            while(elapsed<total)
+            {
+                for(int i=0;i<cards.Count;i++)
+                {
+                    if(cards[i]==null)continue;
+                    float p=Mathf.Clamp01((elapsed-i*interval)/Mathf.Max(.02f,travel));
+                    cards[i].GetComponent<CanvasGroup>().alpha=elapsed>=i*interval?1:0;
+                    cards[i].position=Vector3.Lerp(start,targets[i],Mathf.SmoothStep(0,1,p));
+                    cards[i].localScale=Vector3.one*Mathf.Lerp(.92f,1,p);
+                }
+                yield return null;elapsed+=settings!=null && settings.useUnscaledTime?Time.unscaledDeltaTime:Time.deltaTime;
+            }
+            for(int i=0;i<cards.Count;i++)if(cards[i]!=null){cards[i].position=targets[i];cards[i].localScale=Vector3.one;cards[i].GetComponent<CanvasGroup>().alpha=1;}
+        }
+        finally{foreach(var layer in dealLayers)layer?.Dispose();for(int i=0;i<layouts.Length;i++)if(layouts[i]!=null)layouts[i].enabled=wasEnabled[i];completed?.Invoke();}
     }
 
     public void ConfirmHand()

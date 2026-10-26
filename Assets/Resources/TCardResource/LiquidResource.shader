@@ -3,6 +3,7 @@ Shader "T-card/Liquid Resource"
  Properties
  {
   [PerRendererData] _MainTex("Texture",2D)="white"{}
+  _SuitTex("Suit light atlas",2D)="black"{}
   _StencilComp("Stencil Comparison",Float)=8
   _Stencil("Stencil ID",Float)=0
   _StencilOp("Stencil Operation",Float)=0
@@ -24,6 +25,7 @@ Shader "T-card/Liquid Resource"
    #pragma target 3.0
    #include "UnityCG.cginc"
    float4 _RectSize,_Panel,_Motion,_Waves,_DryColor,_LiquidColor,_DepthColor,_WaveColor,_BeamColor,_Wave2Color,_GlowColor,_Light;
+   sampler2D _SuitTex;float4 _Suits,_SuitLight,_SuitColor;
    struct a2v{float4 vertex:POSITION;float2 uv:TEXCOORD0;float4 color:COLOR;};
    struct v2f{float4 pos:SV_POSITION;float2 uv:TEXCOORD0;float4 color:COLOR;};
    v2f vert(a2v v){v2f o;o.pos=UnityObjectToClipPos(v.vertex);o.uv=v.uv;o.color=v.color;return o;}
@@ -103,6 +105,24 @@ Shader "T-card/Liquid Resource"
     float caustic=pow(saturate(.5+.5*sin(uv.x*10+sin(uv.y*7+phase)+phase*.9)),10);
     caustic*=pow(saturate(.5+.5*sin(uv.y*17+phase*.8)),5)*fill;
     col+=float3(1,1,.96)*caustic*(.2+.55*noise(flickerTime*.72,13))*_Light.x;
+    [unroll]for(int n=0;n<8;n++)
+    {
+        if(n>=_Suits.x)continue;
+        float st=time*_Suits.w,slot=frac(.075+n*.173+st*(.013+fmod(n,3)*.002));
+        float sx=(slot-.5)*size.x+sin(st*.57+n)*size.x*.0114;
+        float phaseSuit=.5+.5*sin(st*.29+n*2.13);
+        float top=(wave-.5)*size.y,depthPixels=max(0,wave*size.y);
+        float sy=top-size.x*.0657-max(size.x*.0228,depthPixels-size.x*.12)*phaseSuit+sin(st*.8+n*.7)*size.x*.0086;
+        float glyphWidth=max(.1,size.x*.32*(.95+fmod(n,3)*.15)*_Suits.y);
+        float2 local=(p-float2(sx,sy))/glyphWidth+.5;
+        local.x-=(3.8*sin((1-local.y)*112*.085+st*1.27+n)+1.5*sin((1-local.y)*112*.14-st*.82+n))*_Suits.z/112;
+        if(any(local<0)||any(local>1))continue;
+        float2 atlasUV=float2((local.x+fmod(n,4))*.25,local.y);
+        float4 glyph=tex2D(_SuitTex,atlasUV);
+        float opacity=(.64+.36*noise(st*.58,n+83))*_SuitLight.x*fill*min(1,depthPixels/max(1,size.x*.126));
+        col=lerp(col,_SuitColor.rgb,glyph.a*opacity);
+        col+=_SuitColor.rgb*glyph.a*opacity*_SuitLight.y*.2;
+    }
     float border=exp(-abs(d+1.4)/1.25)*body;
     col=lerp(col,float3(1,1,.94),border*.6);
     float3 auraColor=lerp(_GlowColor.rgb,float3(1,1,.95),.4+.25*sin(ang+time*.4));

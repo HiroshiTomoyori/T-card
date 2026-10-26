@@ -38,6 +38,9 @@ public class WallAreaLayout : MonoBehaviour
     readonly Queue<Placement> pending = new Queue<Placement>();
     Coroutine placementRoutine;
 
+    RectTransform openingDeck;
+    OpeningShuffleSettings openingSettings;
+    public void ConfigureOpeningDeal(RectTransform deck,OpeningShuffleSettings settings){openingDeck=deck;openingSettings=settings;}
     bool collectingOpening;
     public void BeginOpeningPlacement() { collectingOpening = true; }
     public void EndOpeningPlacement() { collectingOpening = false; }
@@ -178,49 +181,48 @@ public class WallAreaLayout : MonoBehaviour
     }
     IEnumerator PlayOpeningSpread(List<Placement> batch)
     {
-        // All cards share one clock and fixed destinations: no per-card pauses or reflow.
-        Vector3 stack = new Vector3(layoutCenter.x + openingStackOffset.x,
-            layoutCenter.y + openingStackOffset.y, 0f);
-        var starts = new Vector3[batch.Count];
-        var targets = new Vector3[batch.Count];
-        for (int i = 0; i < batch.Count; i++)
+        Vector3 stack=openingDeck!=null?transform.InverseTransformPoint(OpeningShuffleView.DealPosition(openingDeck)):new Vector3(layoutCenter.x+openingStackOffset.x,layoutCenter.y+openingStackOffset.y,0);
+        var layers=new List<OpeningDealLayer>();
+        try
         {
-            Placement item = batch[i];
-            starts[i] = stack + new Vector3(i * 2f, i * 0.5f, 0f);
-            targets[i] = SlotPosition(item.slot);
-            if (item.card == null || slots[item.slot] != item.card) continue;
-            item.card.destinationPosition = transform.TransformPoint(targets[i]);
-            item.card.destinationRotation = transform.rotation;
-            item.card.transform.localPosition = starts[i];
-            item.card.transform.localRotation = Quaternion.Euler(0f, 0f, openingStackAngle);
-            item.card.transform.localScale = Vector3.one;
+        var targets=new Vector3[batch.Count];
+        for(int i=0;i<batch.Count;i++)
+        {
+            var item=batch[i];targets[i]=SlotPosition(item.slot);
+            if(item.card==null || slots[item.slot]!=item.card)continue;
+            layers.Add(OpeningDealLayer.Begin(item.card.gameObject,openingDeck,openingSettings));
+            item.card.destinationPosition=transform.TransformPoint(targets[i]);item.card.destinationRotation=transform.rotation;
+            item.card.transform.localPosition=stack;item.card.transform.localScale=Vector3.zero;
         }
-        float elapsed = 0f;
-        float duration = Mathf.Max(0.05f, openingSpreadDuration);
-        while (elapsed < duration)
+        float duration=openingSettings!=null?openingSettings.Seconds(openingSettings.wallTravelDuration):Mathf.Max(.05f,openingSpreadDuration);
+        float interval=openingSettings!=null?openingSettings.Seconds(openingSettings.wallDealInterval):placementInterval;
+        float arc=openingSettings!=null?openingSettings.wallArcHeight:openingArcHeight;
+        float elapsed=0,total=Mathf.Max(.02f,duration)+Mathf.Max(0,batch.Count-1)*interval;
+        while(elapsed<total)
         {
-            elapsed += CCP.CardControllerSettings.Instance.useUnscaledTime ? Time.unscaledDeltaTime : Time.deltaTime;
-            float t = Mathf.Clamp01(elapsed / duration);
-            float progress = 1f - (1f - t) * (1f - t) * (1f - t); // Fast dealer sweep, all five cards together.
-            for (int i = 0; i < batch.Count; i++)
+            for(int i=0;i<batch.Count;i++)
             {
-                Placement item = batch[i];
-                if (item.card == null || slots[item.slot] != item.card) continue;
-                item.card.transform.localPosition = Vector3.LerpUnclamped(starts[i], targets[i], progress)
-                    + Vector3.up * (Mathf.Sin(t * Mathf.PI) * openingArcHeight);
-                item.card.transform.localRotation = Quaternion.Euler(0f, 0f, openingStackAngle * (1f - progress));
+                var item=batch[i];if(item.card==null || slots[item.slot]!=item.card)continue;
+                float t=Mathf.Clamp01((elapsed-i*interval)/Mathf.Max(.02f,duration)),p=Mathf.SmoothStep(0,1,t);
+                item.card.transform.localPosition=Vector3.Lerp(stack,targets[i],p)+Vector3.up*(Mathf.Sin(t*Mathf.PI)*arc);
+                item.card.transform.localRotation=Quaternion.Euler(0,0,openingStackAngle*(1-p));
+                item.card.transform.localScale=elapsed>=i*interval?Vector3.one*Mathf.Lerp(.92f,1,p):Vector3.zero;
             }
             yield return null;
+            elapsed+=openingSettings!=null && openingSettings.useUnscaledTime?Time.unscaledDeltaTime:Time.deltaTime;
         }
         foreach (Placement item in batch)
         {
             if (item.card == null || slots[item.slot] != item.card) continue;
             item.card.transform.localPosition = SlotPosition(item.slot);
             item.card.transform.localRotation = Quaternion.identity;
+            item.card.transform.localScale=Vector3.one;
             item.card.isBeingMovedManually = false;
             item.card.onPlaced?.Invoke();
         }
         LayoutWalls();
+        }
+        finally{foreach(var layer in layers)layer?.Dispose();}
     }
     void LateUpdate() { LayoutWalls(); }
     public void LayoutWalls()

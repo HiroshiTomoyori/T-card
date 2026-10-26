@@ -18,10 +18,10 @@ MonoBehaviour:
   butterflyUV: {x: 0.016746411, y: 0.025518341, z: 0.96411484, w: 0.95614034}
   moonUV: {x: 0.023125997, y: 0.03030303, z: 0.94896334, w: 0.94896334}
   coinTint: {r: 0.9811321, g: 0.9568634, b: 0.7821289, a: 1}
-  brightness: 1
+  brightness: 1.573
   saturation: 1
   sheen: 0.09
-  backgroundDim: 0.42
+  backgroundDim: 0.059
   overallScale: 0.2
   startDiameter: 180
   endDiameter: 224
@@ -43,7 +43,7 @@ MonoBehaviour:
   rollSwayDegrees: 5
   bounceHeight: 15
   settlingWobbleDegrees: 7
-  thicknessRatio: 0.052
+  thicknessRatio: 0.0807
   edgeDark: {r: 0.39607844, g: 0.27058825, b: 0.10980392, a: 1}
   edgeLight: {r: 0.77254903, g: 0.5607843, b: 0.25490195, a: 1}
   edgeHighlight: {r: 0.9372549, g: 0.76862746, b: 0.43529412, a: 1}

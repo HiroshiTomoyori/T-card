@@ -205,7 +205,7 @@ if (turnManager == null || !turnManager.CanDragPlayerHand)
 // リソースへのドロップ表示はResource中だけ。
 if (rpm != null && rpm.IsRunning())
 {
-    rpm.ShowDropHighlight();
+    rpm.UpdateDropHighlight(eventData.position,eventData.pressEventCamera);
     rpm.SetResourceDropRaycast(true);
 }
 }
@@ -283,7 +283,7 @@ if (rpm != null && rpm.IsRunning())
             rpm.IsRunning()
         )
         {
-            rpm.ShowDropHighlight();
+            rpm.UpdateDropHighlight(eventData.position,eventData.pressEventCamera);
             rpm.SetResourceDropRaycast(true);
         }
     }*/
@@ -334,6 +334,8 @@ public void OnDrag(PointerEventData eventData)
 
     transform.localRotation = Quaternion.identity;
     ApplyDraggingSize();
+    var resourcePhase=FindFirstObjectByType<ResourcePhaseManager>();
+    if(resourcePhase!=null && resourcePhase.IsRunning())resourcePhase.UpdateDropHighlight(eventData.position,eventData.pressEventCamera);
 }
 
 public void OnEndDrag(PointerEventData eventData)

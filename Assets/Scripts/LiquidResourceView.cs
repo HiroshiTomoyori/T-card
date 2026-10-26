@@ -6,7 +6,14 @@ using UnityEngine.UI;
 public sealed class LiquidResourceView : MonoBehaviour
 {
     public LiquidResourceSettings Settings {get;private set;}
-    LiquidResourceGraphic surface,beam;
+    LiquidResourceGraphic surface;
+    ResourceEffectGraphic chargeFx,targetFx;
+    RectTransform foreground;
+    Canvas foregroundCanvas,gameCanvas;
+    float hoverAge;
+    bool targetActive;
+    public bool TargetActive=>targetActive;
+    public Canvas ForegroundCanvas=>foregroundCanvas;
     TextMeshProUGUI digits,oldDigits,maxDigits,oldMaxDigits;
     LiquidResourceSeparator separator;
     TMP_FontAsset runtimeFont;
@@ -27,8 +34,9 @@ public sealed class LiquidResourceView : MonoBehaviour
         initialPosition=panel.anchoredPosition;
         var body=new GameObject("Ever-moving water",typeof(RectTransform),typeof(CanvasRenderer),typeof(LiquidResourceGraphic));
         body.layer=gameObject.layer;body.transform.SetParent(transform,false);surface=body.GetComponent<LiquidResourceGraphic>();
-        var column=new GameObject("Charge light column",typeof(RectTransform),typeof(CanvasRenderer),typeof(LiquidResourceGraphic));
-        column.layer=gameObject.layer;column.transform.SetParent(transform,false);beam=column.GetComponent<LiquidResourceGraphic>();
+        var target=new GameObject("Inside target ripple",typeof(RectTransform),typeof(CanvasRenderer),typeof(ResourceEffectGraphic));
+        target.layer=gameObject.layer;target.transform.SetParent(transform,false);targetFx=target.GetComponent<ResourceEffectGraphic>();
+        CreateForeground();
         oldDigits=MakeDigits("Previous value",fallbackFont,out oldMaterial);
         digits=MakeDigits("Resource value",fallbackFont,out digitMaterial);
         maxDigits=MakeDigits("Capacity",fallbackFont,out _);
@@ -78,12 +86,18 @@ public sealed class LiquidResourceView : MonoBehaviour
         }
         if(charge)PlayCharge();
     }
-    public void PlayCharge(){beamAge=0;rippleAge=0;}
+    public void PlayCharge(){beamAge=0;rippleAge=0;SetTargetActive(false);}
+    public void SetTargetActive(bool active)
+    {
+        if(active!=targetActive)hoverAge=0;
+        targetActive=active;
+        if(targetFx!=null)targetFx.gameObject.SetActive(active);
+    }
 
     void Update(){if(initialized)Advance(Time.unscaledDeltaTime);}
     public void Advance(float dt)
     {
-        dt=Mathf.Max(0,dt);clock+=dt;numberAge+=dt;rippleAge+=dt;beamAge+=dt;
+        dt=Mathf.Max(0,dt);if(targetActive)hoverAge+=dt;clock+=dt;numberAge+=dt;rippleAge+=dt;beamAge+=dt;
         level=Mathf.SmoothDamp(level,targetLevel,ref velocity,Mathf.Max(.05f,Settings.levelResponse),Mathf.Infinity,dt);
         UpdateVisuals(dt);
     }
@@ -93,12 +107,12 @@ public sealed class LiquidResourceView : MonoBehaviour
         panel.sizeDelta=Settings.panelSize;
         panel.anchoredPosition=initialPosition+Settings.offset;
         var sr=surface.rectTransform;sr.sizeDelta=Settings.panelSize+Vector2.one*Settings.auraPadding*2;
-        var br=beam.rectTransform;br.pivot=new Vector2(.5f,0);br.anchoredPosition=new Vector2(0,-Settings.panelSize.y*.15f);
-        br.sizeDelta=new Vector2(Settings.beamWidth,Settings.beamHeight);
         float impulse=Mathf.Exp(-4*rippleAge/Mathf.Max(.1f,Settings.rippleDuration));
         surface.Draw(Settings,clock,level,impulse,beamAge,false);
-        beam.gameObject.SetActive(beamAge<Settings.beamDuration);
-        if(beam.gameObject.activeSelf)beam.Draw(Settings,clock,level,impulse,beamAge,true);
+        targetFx.rectTransform.sizeDelta=Settings.panelSize+Vector2.one*(Settings.targetRippleSpread*2+24);
+        targetFx.gameObject.SetActive(targetActive);
+        if(targetActive)targetFx.Draw(Settings,clock,beamAge,hoverAge,1);
+        UpdateForeground();
         float p=Mathf.Clamp01(numberAge/Mathf.Max(.1f,Settings.numberTransition));
         float newAlpha=Mathf.SmoothStep(0,1,Mathf.InverseLerp(.12f,.85f,p));
         float oldAlpha=1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(0,.6f,p));
@@ -147,7 +161,8 @@ public sealed class LiquidResourceView : MonoBehaviour
         if(sprite==null && card!=null && card.data!=null)sprite=card.data.artwork;
         var cg=source.GetComponent<CanvasGroup>();if(cg==null)cg=source.AddComponent<CanvasGroup>();
         cg.alpha=0;cg.blocksRaycasts=false;cg.interactable=false;
-        var root=panel;
+        UpdateForeground();foreground.gameObject.SetActive(true);
+        var root=foreground;
         var go=new GameObject("Resource card falling",typeof(RectTransform),typeof(CanvasRenderer),typeof(Image),typeof(CanvasGroup));
         go.layer=gameObject.layer;go.transform.SetParent(root,false);
         fallingCard=(RectTransform)go.transform;
@@ -155,6 +170,8 @@ public sealed class LiquidResourceView : MonoBehaviour
         var fade=go.GetComponent<CanvasGroup>();fade.blocksRaycasts=false;
         fallingCard.sizeDelta=new Vector2(Settings.dropCardWidth,Settings.dropCardWidth*1.46f);
         Vector3 end=root.InverseTransformPoint(panel.TransformPoint(new Vector3(0,Settings.panelSize.y*(.06f+.85f*level-.5f),0)));
+        Vector2 start=root.InverseTransformPoint(source.transform.position);
+        if(!Settings.dropFromRelease)start=(Vector2)end+Vector2.up*Settings.dropDistance;
         float elapsed=0;
         try
         {
@@ -162,14 +179,15 @@ public sealed class LiquidResourceView : MonoBehaviour
             {
                 float p=Mathf.Clamp01(elapsed/Mathf.Max(.1f,Settings.dropDuration));
                 Vector4 pose=CardPose(Settings,p);
-                fallingCard.anchoredPosition=(Vector2)end+Vector2.up*pose.x;
+                float ease=.16f*p+.84f*Mathf.Pow(p,2.3f);
+                fallingCard.anchoredPosition=Vector2.Lerp(start,end,ease)+Vector2.up*(Settings.dropArcHeight*4*p*(1-p));
                 fallingCard.localRotation=Quaternion.Euler(0,0,pose.y);
                 fallingCard.localScale=Vector3.one*pose.z;
                 fade.alpha=pose.w;
                 yield return null;elapsed+=Time.unscaledDeltaTime;
             }
         }
-        finally{if(go!=null)Destroy(go);fallingCard=null;}
+        finally{if(go!=null)ReleaseOwned(go);fallingCard=null;}
     }
     public static Vector4 CardPose(LiquidResourceSettings s,float progress)
     {
@@ -195,13 +213,14 @@ public sealed class LiquidResourceView : MonoBehaviour
     Transform layerHand;
     void LateUpdate()
     {
-        if(!initialized || Settings==null || !Settings.behindHand || transform.parent==null)return;
+        if(!initialized || Settings==null || transform.parent==null)return;
         if(layerHand==null)
         {
             var dealer=FindFirstObjectByType<HandDealer>();
             if(dealer!=null)layerHand=dealer.handArea;
         }
-        if(layerHand!=null)PlaceBehindHand(transform.parent,layerHand);
+        if(layerHand!=null && Settings.behindHand)PlaceBehindHand(transform.parent,layerHand);
+        SyncForegroundSorting(layerHand);
     }
     public void PlaceEffectBehindHand(Transform effect)
     {
@@ -215,12 +234,48 @@ public sealed class LiquidResourceView : MonoBehaviour
             if(parentCanvas!=null){c.sortingLayerID=parentCanvas.sortingLayerID;c.sortingOrder=parentCanvas.sortingOrder;}
         }
     }
+    void CreateForeground()
+    {
+        var rootCanvas=GetComponentInParent<Canvas>().rootCanvas;gameCanvas=rootCanvas;
+        var go=new GameObject("Resource Charge Foreground",typeof(RectTransform),typeof(Canvas));go.layer=gameObject.layer;go.transform.SetParent(rootCanvas.transform,false);
+        foreground=(RectTransform)go.transform;foregroundCanvas=go.GetComponent<Canvas>();foregroundCanvas.overrideSorting=true;
+        foregroundCanvas.sortingLayerID=rootCanvas.sortingLayerID;foregroundCanvas.sortingOrder=rootCanvas.sortingOrder+Mathf.Max(1,Settings.chargeSortingOffset);
+        var fx=new GameObject("Column and root glow",typeof(RectTransform),typeof(CanvasRenderer),typeof(ResourceEffectGraphic));fx.layer=gameObject.layer;fx.transform.SetParent(foreground,false);chargeFx=fx.GetComponent<ResourceEffectGraphic>();
+    }
+    public void SyncForegroundSorting(Transform hand)
+    {
+        if(foregroundCanvas==null)return;
+        var root=gameCanvas;int order=root.sortingOrder;int layer=root.sortingLayerID;
+        if(hand!=null)
+        {
+            var parent=hand.GetComponentInParent<Canvas>();if(parent!=null){order=Mathf.Max(order,parent.sortingOrder);layer=parent.sortingLayerID;}
+            foreach(var c in hand.GetComponentsInChildren<Canvas>(true))if(c.overrideSorting)order=Mathf.Max(order,c.sortingOrder);
+        }
+        foregroundCanvas.overrideSorting=true;foregroundCanvas.sortingLayerID=layer;foregroundCanvas.sortingOrder=Mathf.Min(32767,order+Mathf.Max(1,Settings.chargeSortingOffset));
+    }
+    void UpdateForeground()
+    {
+        if(foreground==null)return;
+        foreground.position=panel.position;foreground.rotation=panel.rotation;
+        Vector3 parentScale=foreground.parent.lossyScale,worldScale=panel.lossyScale;
+        foreground.localScale=new Vector3(worldScale.x/Mathf.Max(.0001f,Mathf.Abs(parentScale.x)),worldScale.y/Mathf.Max(.0001f,Mathf.Abs(parentScale.y)),1);
+        foreground.sizeDelta=Settings.panelSize;
+        SyncForegroundSorting(layerHand);
+        bool visible=beamAge<Settings.beamDuration+Settings.rootGlowTail || fallingCard!=null;
+        foreground.gameObject.SetActive(visible && isActiveAndEnabled);
+        var r=chargeFx.rectTransform;r.pivot=new Vector2(.5f,0);
+        r.anchoredPosition=new Vector2(0,Settings.panelSize.y*(.06f+.85f*level-.5f)-Settings.rootGlowHeight);
+        r.sizeDelta=new Vector2(Mathf.Max(Settings.beamWidth*1.4f,Settings.rootGlowWidth*1.4f)+16,Settings.beamHeight+Settings.rootGlowHeight+16);
+        chargeFx.gameObject.SetActive(beamAge<Settings.beamDuration+Settings.rootGlowTail);
+        if(chargeFx.gameObject.activeSelf)chargeFx.Draw(Settings,clock,beamAge,hoverAge,0);
+    }
+    static void ReleaseOwned(UnityEngine.Object item){if(item==null)return;if(Application.isPlaying)Destroy(item);else DestroyImmediate(item);}
     void EnsureFont()
     {
         if(Settings.sourceFont!=null && activeSource!=Settings.sourceFont)
         {
             activeSource=Settings.sourceFont;
-            if(runtimeFont!=null)Destroy(runtimeFont);
+            if(runtimeFont!=null)ReleaseOwned(runtimeFont);
             runtimeFont=TMP_FontAsset.CreateFontAsset(activeSource,90,12,UnityEngine.TextCore.LowLevel.GlyphRenderMode.SDFAA,1024,1024);
             runtimeFont.hideFlags=HideFlags.HideAndDontSave;
         }
@@ -231,13 +286,14 @@ public sealed class LiquidResourceView : MonoBehaviour
             if(text.font==font)continue;
             var previous=text.fontSharedMaterial;
             text.font=font;text.fontSharedMaterial=new Material(font.material){hideFlags=HideFlags.HideAndDontSave};
-            if(previous!=digitMaterial && previous!=oldMaterial && previous!=null && previous.hideFlags==HideFlags.HideAndDontSave)Destroy(previous);
+            if(previous!=digitMaterial && previous!=oldMaterial && previous!=null && previous.hideFlags==HideFlags.HideAndDontSave)ReleaseOwned(previous);
             var m=text.fontSharedMaterial;m.EnableKeyword("UNDERLAY_ON");m.SetFloat("_OutlineWidth",.025f);
         }
     }
-    void OnDisable(){if(fallingCard!=null)Destroy(fallingCard.gameObject);fallingCard=null;}
+    void OnDisable(){SetTargetActive(false);if(fallingCard!=null)ReleaseOwned(fallingCard.gameObject);fallingCard=null;if(foreground!=null)foreground.gameObject.SetActive(false);}
     void OnDestroy()
     {
+        if(foreground!=null){if(Application.isPlaying)Destroy(foreground.gameObject);else DestroyImmediate(foreground.gameObject);}
         foreach(var text in new[]{digits,oldDigits,maxDigits,oldMaxDigits})
             if(text!=null && text.fontSharedMaterial!=null && text.fontSharedMaterial!=digitMaterial && text.fontSharedMaterial!=oldMaterial && text.fontSharedMaterial.hideFlags==HideFlags.HideAndDontSave) {if(Application.isPlaying)Destroy(text.fontSharedMaterial);else DestroyImmediate(text.fontSharedMaterial);}
         if(runtimeFont!=null){if(Application.isPlaying)Destroy(runtimeFont);else DestroyImmediate(runtimeFont);}

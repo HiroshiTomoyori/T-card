@@ -88,7 +88,20 @@ public class Card : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IP
     private RectTransform rectTransform;
     private RectTransform clickTargetRectTransform;
     private CanvasGroup canvasGroup;
-    private Canvas parentCanvas;
+    private Canvas cachedParentCanvas;
+    // Card-local Canvases are temporary sorting layers. Pointer calculations need
+    // the screen Canvas, which outlives a deal and has the correct camera/scale.
+    private Canvas parentCanvas {
+        get {
+            if (cachedParentCanvas == null) {
+                Canvas nearest = GetComponentInParent<Canvas>();
+                cachedParentCanvas = nearest != null ? nearest.rootCanvas : null;
+            }
+            return cachedParentCanvas;
+        }
+        set { cachedParentCanvas = value != null ? value.rootCanvas : null; }
+    }
+    private void OnTransformParentChanged() { cachedParentCanvas = null; }
     private Vector2 clickTargetOriginalOffsetMin;
     private bool clickTargetOriginalOffsetMinCached;
 

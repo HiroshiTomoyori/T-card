@@ -9542,6 +9542,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c075b338e23bdf840aaa99802634272f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  openingSettings: {fileID: 0}
   moveAmount: 20
   speed: 0.04
   shuffleCount: 10
@@ -11462,6 +11463,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: cb4f05511362e724f90fcd23f7c6e284, type: 2}
   - {fileID: 11400000, guid: 375d6e36735167645b82f0bec3b8f659, type: 2}
   - {fileID: 11400000, guid: e36cc1615ef10d24d8fa31889707c563, type: 2}
+  openingShuffleSettings: {fileID: 0}
   dealCount: 5
   maxHandSize: 10
   dealInterval: 0.12
@@ -11470,8 +11472,8 @@ MonoBehaviour:
   confirmButton: {fileID: 2128218466}
   redrawChoicePanel: {fileID: 1666355973}
   handController: {fileID: 1560023923}
-  openingHandScale: 2
-  openingHandYOffset: 300
+  openingHandScale: 1.4
+  openingHandYOffset: 260
   handLimitDisplayPosition: {x: 0, y: 850}
   handLimitCardSize: {x: 105, y: 155}
   handLimitCardOverlap: 60

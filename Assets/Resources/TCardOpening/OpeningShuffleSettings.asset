@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3db501714d3e4347ba464ba30bdfc36c, type: 3}
+  m_Name: OpeningShuffleSettings
+  m_EditorClassIdentifier: 
+  globalSpeed: 1
+  useUnscaledTime: 0
+  visualCardCount: 20
+  startDelay: 0.05
+  cardFallDuration: 0.1
+  cardDropInterval: 0.03
+  fallHeightInCards: 2.2
+  offscreenPadding: 30
+  sourceSpread: 0.28
+  startAngle: 3
+  approachScale: 0.1
+  stackThickness: 0.55
+  sortingOffset: 25
+  dealSortingOffset: 5
+  alignDuration: 0.05
+  beforeDealDelay: 0.08
+  wallTravelDuration: 0.15
+  wallDealInterval: 0.1
+  wallArcHeight: 16
+  handTravelDuration: 0.45
+  handDealInterval: 0.13
+  revealDuringDeal: 1
+  handFlipDelay: 0.09
+  handFlipDuration: 0.22
+  afterDealHold: 0.15
