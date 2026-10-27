@@ -1,0 +1,50 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 58acd36266019754a874d71a985b782e, type: 3}
+  m_Name: CardPlaySettings
+  m_EditorClassIdentifier: 
+  enabledEffect: 1
+  speed: 1
+  rotateZoomDuration: 0.3
+  revealHoldDuration: 0.2
+  fieldTravelDuration: 0.23
+  revealSize: {x: 276, y: 414}
+  centerOffset: {x: 0, y: 0}
+  enemyCenterYOffset: 210
+  initialSizeRatio: 0.58
+  zoomOvershoot: 0.035
+  initialTilt: -18
+  backdropColor: {r: 0.078, g: 0.059, b: 0.047, a: 1}
+  backdropOpacity: 0.43
+  highlightColor: {r: 1, g: 0.97, b: 0.84, a: 1}
+  highlightStrength: 0.85
+  outerGlowStrength: 1.15
+  glowSpread: 30
+  auraColor: {r: 1, g: 0.87, b: 0.59, a: 1}
+  auraStrength: 0.55
+  particleStrength: 0.55
+  particleCount: 30
+  rippleColor: {r: 1, g: 0.96, b: 0.8, a: 1}
+  rippleStrength: 0.4
+  rippleDuration: 0.38
+  rippleExpansion: 47
+  rippleSoftness: 15
+  shadowColor: {r: 0.176, g: 0.114, b: 0.067, a: 1}
+  shadowStrength: 0.24
+  shadowBlur: 22
+  shadowOffset: {x: 18, y: -34}
+  enemyHighlightColor: {r: 1, g: 0.97, b: 0.84, a: 1}
+  enemyAuraColor: {r: 1, g: 0.87, b: 0.59, a: 1}
+  enemyRippleColor: {r: 1, g: 0.96, b: 0.8, a: 1}
+  enemyBackdropColor: {r: 0.078, g: 0.059, b: 0.047, a: 1}
+  enemyShadowColor: {r: 0.176, g: 0.114, b: 0.067, a: 1}
+  sortingOffset: 20

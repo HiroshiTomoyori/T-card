@@ -27,6 +27,10 @@ public sealed class CoinTossGraphic : MaskableGraphic
         ownedMaterial.SetColor("_CoinTint", settings.coinTint);
         ownedMaterial.SetVector("_Appearance", new Vector4(settings.brightness, settings.saturation, settings.sheen, settings.backgroundDim));
         ownedMaterial.SetVector("_Edge", new Vector4(settings.thicknessRatio, settings.reedingSpacing, settings.reedingStrength, settings.shadowOpacity));
+        var shadow=CoinTossMotion.EvaluateShadow(settings,pose);
+        ownedMaterial.SetVector("_ShadowPose",new Vector4(shadow.center.x,shadow.center.y,shadow.radii.x,shadow.radii.y));
+        ownedMaterial.SetVector("_ShadowAppearance",new Vector4(shadow.opacity,Mathf.Max(.2f,settings.shadowSoftness),settings.contactShadowStrength,shadow.elevation));
+        ownedMaterial.SetColor("_ShadowColor",settings.shadowColor);
         ownedMaterial.SetColor("_EdgeDark", settings.edgeDark);
         ownedMaterial.SetColor("_EdgeLight", settings.edgeLight);
         ownedMaterial.SetColor("_EdgeHighlight", settings.edgeHighlight);

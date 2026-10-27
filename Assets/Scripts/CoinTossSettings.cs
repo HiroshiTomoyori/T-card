@@ -50,5 +50,14 @@ public sealed class CoinTossSettings : ScriptableObject
     public Color edgeHighlight = new Color(239f / 255f, 196f / 255f, 111f / 255f);
     [Min(1)] public float reedingSpacing = 5f;
     [Range(0f, 1f)] public float reedingStrength = 0.55f;
+    [Header("Ground Shadow / 動きに追従する影")]
     [Range(0f, 1f)] public float shadowOpacity = 0.45f;
+    public Color shadowColor = new Color(.12f,.085f,.045f,1);
+    [Tooltip("着地位置からの影オフセット。Yは下向き (432×924基準)")]
+    public Vector2 shadowOffset = new Vector2(8,4);
+    [Range(.1f,1.5f)] public float shadowWidthRatio = .7f;
+    [Range(.01f,.3f)] public float shadowHeightRatio = .085f;
+    [Range(.2f,3f)] public float shadowSoftness = 1f;
+    [Range(0,1)] public float airborneShadowFade = .6f;
+    [Range(0,1)] public float contactShadowStrength = .3f;
 }

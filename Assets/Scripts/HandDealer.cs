@@ -37,6 +37,19 @@ public class HandDealer : MonoBehaviour
     [Tooltip("フリップ完了後、表面を表示してから手札へ移動するまでの秒数。0で待ち時間なし。")]
     [Min(0f)] public float turnDrawRevealHoldTime = 0.5f;
     [Min(0.01f)] public float turnDrawHandTime = 0.2f;
+    [Header("Turn draw presentation / 表示位置・拡大・ハイライト")]
+    [Min(.1f)] public float turnDrawRevealScale = 1.3f;
+    public float turnDrawRevealLift = 90f;
+    [Range(0,1)] public float turnDrawHighlightStrength = .5f;
+    [Range(0,1.4f)] public float turnDrawOuterGlowStrength = .8f;
+    [Range(0,60)] public float turnDrawGlowSpread = 32f;
+    public Color turnDrawHighlightColor = new Color(1f,.97f,.84f,1f);
+    [Header("Turn draw field shadow / フィールドに落ちる影")]
+    [Range(0,1),Tooltip("0で影なし。大きいほど濃い影。")]
+    public float turnDrawFieldShadowStrength = .24f;
+    [Min(1)] public float turnDrawFieldShadowBlur = 22f;
+    public Vector2 turnDrawFieldShadowOffset = new Vector2(18f,-34f);
+    public Color turnDrawFieldShadowColor = new Color(.176f,.114f,.067f,1f);
     public bool IsTurnDrawAnimating { get; private set; }
     [HideInInspector] public Vector2 wallCardSize = new Vector2(70, 105);
 
@@ -203,6 +216,16 @@ public class HandDealer : MonoBehaviour
 
 
 public Transform playerWallArea;
+    OpeningDiscardPresentation openingDiscard;
+    void OnEnable()
+    {
+        if(openingShuffleSettings==null)openingShuffleSettings=Resources.Load<OpeningShuffleSettings>("TCardOpening/OpeningShuffleSettings");
+        if(turnManager!=null)
+        {
+            openingDiscard=GetComponent<OpeningDiscardPresentation>();if(openingDiscard==null)openingDiscard=gameObject.AddComponent<OpeningDiscardPresentation>();
+            openingDiscard.Initialize(turnManager.playerGraveyard,turnManager.enemyGraveyard,openingShuffleSettings);
+        }
+    }
     public void DealStart()
     {
         IsRedrawSelecting = true;
@@ -316,54 +339,35 @@ public Transform playerWallArea;
         var opening=openingShuffleSettings;
         bool enemyFinished=!includeEnemy;
         if(includeEnemy)StartCoroutine(OpeningEnemyHand(opening,()=>enemyFinished=true));
-        int inFlight=0;
-        for (int i = 0; i < dealCount; i++)
+        // Draw randomly, then reserve the final sorted layout before any card is shown.
+        var drawn=new List<CardData>();
+        for(int i=0;i<dealCount && currentDeck.Count>0;i++){var data=DrawRandomCardData();if(data!=null)drawn.Add(data);}
+        drawn.Sort((a,b)=>{int rank=GetRankOrder(a.cardName??"").CompareTo(GetRankOrder(b.cardName??""));return rank!=0?rank:a.suit.CompareTo(b.suit);});
+        var cards=new List<RectTransform>();
+        foreach(var data in drawn)
         {
-            if (currentDeck.Count <= 0)
-            {
-                Debug.LogWarning("山札が足りません");
-                break;
-            }
-
-            CardData selectedCard = DrawRandomCardData();
-
-            if (selectedCard == null)
-                continue;
-
-            GameObject cardObj = CreateHandCard(selectedCard);
-
-            RectTransform cardRect = cardObj.GetComponent<RectTransform>();
-
-            if (cardRect == null)
-            {
-                Debug.LogError("CardPrefab に RectTransform がありません");
-                yield break;
-            }
-
-            Vector2 startPos = Vector2.zero;
-
-            if (deckPosition != null)
-            {
-                startPos = WorldToLocalPosition(
-                    handArea as RectTransform,
-                    deckPosition.position
-                );
-            }
-
-            cardRect.anchoredPosition = startPos;
-
-            if(opening!=null)
-            {
-                inFlight++;
-                StartCoroutine(OpeningDealCard(cardRect,opening,()=>inFlight--));
-                yield return OpeningWait(opening,opening.handDealInterval);
-            }
-            else
-            {
-                yield return AnimateCardToHand(cardRect);
-                var layout=cardObj.GetComponent<LayoutElement>();if(layout!=null)layout.ignoreLayout=false;
-                SortPlayerHand();yield return new WaitForSeconds(dealInterval);
-            }
+            var card=CreateHandCard(data);var rect=card.GetComponent<RectTransform>();
+            var group=card.GetComponent<CanvasGroup>();if(group==null)group=card.AddComponent<CanvasGroup>();group.alpha=0;
+            var layout=card.GetComponent<LayoutElement>();if(layout!=null)layout.ignoreLayout=false;
+            cards.Add(rect);
+        }
+        SortPlayerHand();Canvas.ForceUpdateCanvases();ForceHandLayout();
+        var targets=new List<Vector3>();var rotations=new List<Quaternion>();var scales=new List<Vector3>();
+        foreach(var card in cards)
+        {
+            var pro=card.GetComponent<CCP.Card>();
+            bool usePro=pro!=null && pro.parentCardGroup==proHandGroup;
+            targets.Add(usePro?pro.destinationPosition:card.position);rotations.Add(usePro?pro.destinationRotation:card.rotation);
+            scales.Add(usePro?Vector3.one*proHandGroup.GetCardScale():card.localScale);
+            card.DOKill();if(pro!=null)pro.isBeingMovedManually=true;
+            var layout=card.GetComponent<LayoutElement>();if(layout!=null)layout.ignoreLayout=true;
+        }
+        int inFlight=0;
+        for(int i=0;i<cards.Count;i++)
+        {
+            inFlight++;
+            StartCoroutine(OpeningDealCard(cards[i],targets[i],rotations[i],scales[i],opening,()=>inFlight--));
+            if(opening!=null)yield return OpeningWait(opening,opening.handDealInterval);else yield return new WaitForSeconds(dealInterval);
         }
         yield return new WaitUntil(()=>inFlight<=0 && enemyFinished);
         if(opening!=null)yield return OpeningWait(opening,opening.afterDealHold);
@@ -381,17 +385,37 @@ public Transform playerWallArea;
         // 初期手札を確定するまで入力ロックを維持する
     }
 
-    IEnumerator OpeningDealCard(RectTransform card,OpeningShuffleSettings settings,System.Action completed)
+    IEnumerator OpeningDealCard(RectTransform card,Vector3 target,Quaternion rotation,Vector3 scale,OpeningShuffleSettings settings,System.Action completed)
     {
-        bool revealed=!settings.revealDuringDeal;
+        bool revealed=settings==null || !settings.revealDuringDeal;
+        var pro=card!=null?card.GetComponent<CCP.Card>():null;
         try
         {
-            if(settings.revealDuringDeal)StartCoroutine(OpeningReveal(card,settings,()=>revealed=true));
-            yield return AnimateCardToHand(card,settings.Seconds(settings.handTravelDuration));
-            yield return new WaitUntil(()=>revealed||card==null);
-            if(card!=null){var layout=card.GetComponent<LayoutElement>();if(layout!=null)layout.ignoreLayout=false;SortPlayerHand();}
+            if(card==null)yield break;
+            using(var layer=OpeningDealLayer.Begin(card.gameObject,deckPosition,settings))
+            {
+                card.GetComponent<CanvasGroup>().alpha=1;
+                card.rotation=Quaternion.identity;card.localScale=scale*.75f;
+                if(deckPosition!=null)
+                {
+                    var front=pro!=null && pro.front!=null?pro.front.GetComponent<RectTransform>():card;
+                    Vector3 center=front!=null?front.TransformPoint(front.rect.center):card.position;
+                    card.position+=OpeningShuffleView.DealPosition(deckPosition)+deckPosition.TransformVector(dealStartOffset)-center;
+                }
+                var start=card.position;
+                if(!revealed)StartCoroutine(OpeningReveal(card,settings,()=>revealed=true));
+                float elapsed=0,duration=Mathf.Max(.02f,settings!=null?settings.Seconds(settings.handTravelDuration):flyTime);
+                while(elapsed<duration && card!=null)
+                {
+                    float p=Mathf.Clamp01(elapsed/duration),e=1-Mathf.Pow(1-p,3);
+                    card.position=Vector3.Lerp(start,target,e);card.rotation=Quaternion.Slerp(Quaternion.identity,rotation,e);card.localScale=Vector3.Lerp(scale*.75f,scale,e);
+                    yield return null;elapsed+=settings!=null && settings.useUnscaledTime?Time.unscaledDeltaTime:Time.deltaTime;
+                }
+                if(card!=null){card.position=target;card.rotation=rotation;card.localScale=scale;}
+                yield return new WaitUntil(()=>revealed||card==null);
+            }
         }
-        finally{completed?.Invoke();}
+        finally{if(pro!=null)pro.isBeingMovedManually=false;completed?.Invoke();}
     }
     IEnumerator OpeningReveal(RectTransform card,OpeningShuffleSettings settings,System.Action completed)
     {
@@ -1100,6 +1124,7 @@ if (redrawButton != null)
         canRedraw = false;
 
         SetOpeningLock(false);
+        if(openingDiscard!=null)openingDiscard.Reveal();
 
         if(InputLockManager.I != null)
         {
@@ -1143,10 +1168,13 @@ if (redrawButton != null)
         GameObject preview = null;
         CanvasGroup handVisibility = null;
         float savedAlpha = 1f;
+        OpeningDealLayer drawLayer=null;
         try
         {
             preview = Instantiate(cardPrefab, handArea.parent != null ? handArea.parent : transform);
             DisableWallInput(preview);
+            drawLayer=OpeningDealLayer.Begin(preview,deckPosition,openingShuffleSettings);
+            preview.AddComponent<TurnDrawHighlightEffect>().Initialize(this);
             yield return AnimateTurnDrawReveal(preview, data);
 
             GameObject handCard = CreateHandCard(data);
@@ -1179,6 +1207,7 @@ if (redrawButton != null)
                     Vector3 sizeScale = new Vector3(width / Mathf.Max(1f, rect.rect.width * rect.parent.lossyScale.x),
                         height / Mathf.Max(1f, rect.rect.height * rect.parent.lossyScale.y), 1f);
                     rect.localScale = Vector3.Lerp(startScale, sizeScale, eased);
+                    preview.GetComponent<TurnDrawHighlightEffect>().SetTime(turnDrawTravelTime+turnDrawFlipTime+turnDrawRevealHoldTime+elapsed);
                     yield return null;
                 }
             }
@@ -1189,6 +1218,7 @@ if (redrawButton != null)
         finally
         {
             if (handVisibility != null) handVisibility.alpha = savedAlpha;
+            drawLayer?.Dispose();
             if (preview != null) Destroy(preview);
             IsTurnDrawAnimating = false;
         }
@@ -1197,7 +1227,8 @@ if (redrawButton != null)
 
     IEnumerator AnimateTurnDrawReveal(GameObject preview, CardData data)
     {
-        SetupCardSize(preview, turnDrawRevealSize);
+        SetupCardSize(preview, turnDrawRevealSize*Mathf.Max(.1f,turnDrawRevealScale));
+        var highlight=preview.GetComponent<TurnDrawHighlightEffect>();
         CardController controller = preview.GetComponent<CardController>();
         if (controller != null)
         {
@@ -1211,11 +1242,11 @@ if (redrawButton != null)
         rect.localScale = Vector3.one;
         rect.localRotation = Quaternion.identity;
         preview.transform.SetAsLastSibling();
-        Vector3 start = deckPosition != null ? deckPosition.TransformPoint(deckPosition.rect.center) : rect.position;
+        Vector3 start = deckPosition != null ? OpeningShuffleView.DealPosition(deckPosition) : rect.position;
         RectTransform wallRect = wallArea as RectTransform;
         Vector3 center = wallRect != null ? wallRect.TransformPoint(wallRect.rect.center)
             : wallArea != null ? wallArea.position : handArea.position;
-        Vector3 end = center + rect.parent.TransformVector(turnDrawRevealOffset);
+        Vector3 end = center + rect.parent.TransformVector(turnDrawRevealOffset+Vector2.up*turnDrawRevealLift);
         rect.position = start;
         float elapsed = 0f;
         float duration = Mathf.Max(0.01f, turnDrawTravelTime);
@@ -1224,6 +1255,7 @@ if (redrawButton != null)
             elapsed += Time.deltaTime;
             float t = Mathf.Clamp01(elapsed / duration);
             rect.position = Vector3.Lerp(start, end, 1f - Mathf.Pow(1f - t, 3f));
+            if(highlight!=null)highlight.SetTime(elapsed);
             yield return null;
         }
         rect.position = end;
@@ -1239,13 +1271,19 @@ if (redrawButton != null)
                 if (artwork != null) artwork.sprite = data.artwork;
                 revealed = true;
             }
-            rect.localScale = new Vector3(Mathf.Abs(Mathf.Cos(t * Mathf.PI)), 1f, 1f);
+            rect.localScale = new Vector3(Mathf.Max(.018f,Mathf.Abs(Mathf.Cos(t * Mathf.PI))), 1f, 1f);
+            if(highlight!=null)highlight.SetTime(turnDrawTravelTime+elapsed);
             yield return null;
         }
         if (artwork != null) artwork.sprite = data.artwork;
         rect.localScale = Vector3.one;
         float holdTime = Mathf.Max(0f, turnDrawRevealHoldTime);
-        if (holdTime > 0f) yield return new WaitForSeconds(holdTime);
+        elapsed=0;
+        while(elapsed<holdTime)
+        {
+            if(highlight!=null)highlight.SetTime(turnDrawTravelTime+turnDrawFlipTime+elapsed);
+            yield return null;elapsed+=Time.deltaTime;
+        }
     }
 
     public void DrawOneCard()
@@ -2423,6 +2461,9 @@ bool shieldTrigger =
             yield break;
         }
 
+        // Show the accepted reverse before field entry and trigger resolution.
+        yield return CardPlayPresentation.Play(data,turnManager.playerBattleArea);
+
         GameObject triggerCard =
             Instantiate(
                 proHandCardPrefab != null ? proHandCardPrefab : cardPrefab,
@@ -2483,8 +2524,14 @@ bool shieldTrigger =
             if(triggerDrag != null)
             {
                 triggerDrag.enabled = true;
-                triggerDrag.PlaceFromShield(turnManager.playerBattleArea);
+                bool showcase=CardPlaySettings.Load().enabledEffect;
+                triggerDrag.PlaceFromShield(turnManager.playerBattleArea,!showcase);
                 layout.Refresh();
+                if(showcase)
+                {
+                    layout.PlaceImmediately(triggerController);
+                    triggerDrag.EnablePlacedCardInput();
+                }
                 while(triggerDrag != null && triggerDrag.IsDropSnapPlaying)
                     yield return null;
             }

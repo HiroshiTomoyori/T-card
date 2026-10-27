@@ -11404,6 +11404,16 @@ MonoBehaviour:
   turnDrawFlipTime: 0.22
   turnDrawRevealHoldTime: 0.5
   turnDrawHandTime: 0.2
+  turnDrawRevealScale: 1.35
+  turnDrawRevealLift: 140
+  turnDrawHighlightStrength: 0.5
+  turnDrawOuterGlowStrength: 0.8
+  turnDrawGlowSpread: 32
+  turnDrawHighlightColor: {r: 1, g: 0.97, b: 0.84, a: 1}
+  turnDrawFieldShadowStrength: 0.609
+  turnDrawFieldShadowBlur: 22
+  turnDrawFieldShadowOffset: {x: 18, y: -34}
+  turnDrawFieldShadowColor: {r: 0, g: 0, b: 0, a: 1}
   wallCardSize: {x: 58, y: 89}
   cardPrefab: {fileID: 834065891895854406, guid: 3fd5776f6773a3b429041526fc91bfc3, type: 3}
   proHandCardPrefab: {fileID: 632414178086774423, guid: 7d31c3cd09191ae46baa8636807318fa, type: 3}
@@ -14098,6 +14108,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5ee8ca5da312c4348b14033874a2b4d3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  skipTitleScreen: 1
   titleScreen: {fileID: 1004047681}
   gameScreen: {fileID: 888953982}
   difficultyScreen: {fileID: 2094861060}

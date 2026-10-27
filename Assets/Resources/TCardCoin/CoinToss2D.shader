@@ -37,6 +37,7 @@ Shader "T-card/Coin Toss 2D"
             sampler2D _MainTex;
             float4 _FaceRect, _PanelSize, _Pose, _Spin, _Appearance, _Edge;
             float4 _CoinTint, _EdgeDark, _EdgeLight, _EdgeHighlight, _ClipRect;
+            float4 _ShadowPose, _ShadowAppearance, _ShadowColor;
             v2f vert(appdata v)
             {
                 v2f o; o.local=v.vertex; o.vertex=UnityObjectToClipPos(v.vertex); o.color=v.color; o.uv=v.uv; return o;
@@ -59,9 +60,12 @@ Shader "T-card/Coin Toss 2D"
                 float2 panel=(i.uv-0.5)*_PanelSize.xy/fit;
                 panel.y=-panel.y; panel+=float2(216,462);
                 float4 result=float4(0,0,0,saturate(_Appearance.w));
-                float2 sh=(panel-float2(_Pose.x,924*0.745))/float2(60-9*_Spin.z,10+7*_Spin.z);
-                float shadow=exp(-dot(sh,sh)*1.6)*_Edge.w*(1-0.55*_Spin.z);
-                result=over(float4(0,0,0,shadow),result);
+                // The floor projection stays at the landing plane, independently of the airborne coin.
+                float2 sh=(panel-_ShadowPose.xy)/max(_ShadowPose.zw,float2(1,1));
+                float shadow=exp(-dot(sh,sh)*1.6/max(.2,_ShadowAppearance.y))*_ShadowAppearance.x;
+                float2 contact=sh/float2(.8,.55);
+                shadow+=exp(-dot(contact,contact)*2.5)*_ShadowAppearance.x*_ShadowAppearance.z*pow(1-_ShadowAppearance.w,3);
+                result=over(float4(_ShadowColor.rgb,saturate(shadow)*_ShadowColor.a),result);
                 float2 delta=panel-_Pose.xy;
                 float cs=cos(_Spin.y),sn=sin(_Spin.y);
                 // Match the approved raster preview's image rotation convention.

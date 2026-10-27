@@ -19,7 +19,26 @@ public sealed class OpeningShuffleView : MonoBehaviour
     public static Vector3 DealPosition(RectTransform deck){var view=ForDeck(deck);return view!=null && view.settled?view.TopPosition:deck.TransformPoint(deck.rect.center);}
     OpeningShuffleSettings liveSettings;
     bool settled;
-    public void KeepStack(OpeningShuffleSettings settings){liveSettings=settings;settled=true;Sample(settings,settings.ShuffleDuration);}
+    public void KeepStack(OpeningShuffleSettings settings){liveSettings=settings;settled=true;PlaceBehindHands();Sample(settings,settings.ShuffleDuration);}
+    void PlaceBehindHands()
+    {
+        if(root==null || source==null)return;
+        var canvas=source.GetComponentInParent<Canvas>().rootCanvas;
+        var dealer=canvas.GetComponentInChildren<HandDealer>(true);
+        if(dealer==null || dealer.handArea==null)return;
+        Transform common=source.parent;
+        while(common!=null && (!dealer.handArea.IsChildOf(common) || (dealer.enemyHandArea!=null && !dealer.enemyHandArea.IsChildOf(common))))common=common.parent;
+        if(common==null)return;
+        root.SetParent(common,false);root.anchorMin=Vector2.zero;root.anchorMax=Vector2.one;root.offsetMin=root.offsetMax=Vector2.zero;
+        int before=common.childCount-1;
+        foreach(var hand in new[]{dealer.handArea,dealer.enemyHandArea})
+        {
+            if(hand==null)continue;Transform branch=hand;while(branch.parent!=common && branch.parent!=null)branch=branch.parent;
+            before=Mathf.Min(before,branch.GetSiblingIndex());
+        }
+        root.SetSiblingIndex(before);
+        OverlayCanvas.sortingOrder=canvas.sortingOrder;OverlayCanvas.sortingLayerID=canvas.sortingLayerID;OverlayCanvas.overrideSorting=false;
+    }
     void LateUpdate(){if(settled && liveSettings!=null)Sample(liveSettings,liveSettings.ShuffleDuration);}
     public Canvas OverlayCanvas {get;private set;}
     public int VisibleCardCount {get;private set;}

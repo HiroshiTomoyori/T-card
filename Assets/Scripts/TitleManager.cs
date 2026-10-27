@@ -4,6 +4,9 @@ using UnityEngine.UI;
 
 public class TitleManager : MonoBehaviour
 {
+    [Header("Startup / 起動画面")]
+    [Tooltip("現在はタイトルを非表示にして、メインメニューから開始")]
+    public bool skipTitleScreen = true;
     public GameObject titleScreen;
     public GameObject gameScreen;
     public GameObject difficultyScreen;
@@ -68,7 +71,7 @@ public class TitleManager : MonoBehaviour
     {
         if (titleScreen == null) return;
         var root = new GameObject("Skip Action Confirmations", typeof(RectTransform), typeof(Image), typeof(Toggle));
-        root.transform.SetParent(titleScreen.transform, false);
+        root.transform.SetParent(skipTitleScreen&&difficultyScreen!=null?difficultyScreen.transform:titleScreen.transform, false);
         var rect = root.GetComponent<RectTransform>();
         // SafeArea is scaled up in this scene; its bottom edge is outside the viewport.
         // Place beside the visible title controls using their center-based coordinates.
@@ -95,6 +98,7 @@ public class TitleManager : MonoBehaviour
         skipConfirmationsToggle.targetGraphic = box.GetComponent<Image>();
         skipConfirmationsToggle.graphic = mark.GetComponent<Image>();
         skipConfirmationsToggle.isOn = SkipActionConfirmations;
+        skipConfirmationsToggle.onValueChanged.AddListener(value=>SkipActionConfirmations=value);
 
         var label = new GameObject("Label", typeof(RectTransform), typeof(Text));
         label.transform.SetParent(root.transform, false);
@@ -133,10 +137,11 @@ public class TitleManager : MonoBehaviour
         HandDealer.IsRedrawSelecting = false;
         CreateConfirmationOption();
         if(titleScreen != null)
-            titleScreen.SetActive(true);
+            titleScreen.SetActive(!skipTitleScreen);
 
         if(difficultyScreen != null)
-            difficultyScreen.SetActive(false);
+            difficultyScreen.SetActive(skipTitleScreen&&!rematchRequested);
+        if(skipTitleScreen)StartCoroutine(PositionMenuOption());
 
         if(loadingScreen != null)
             loadingScreen.SetActive(false);
@@ -170,11 +175,28 @@ public class TitleManager : MonoBehaviour
             difficultyBackgroundImage.sprite =
                 normalDifficultyImage;
         }
+        if(skipTitleScreen&&!rematchRequested)
+        {
+            if(bgmSource!=null)bgmSource.Stop();
+            if(difficultyBGM!=null&&!difficultyBGM.isPlaying)difficultyBGM.Play();
+        }
         if (rematchRequested)
         {
             rematchRequested = false;
             StartCoroutine(StartRematchFromBeginning());
         }
+    }
+
+    IEnumerator PositionMenuOption()
+    {
+        yield return null;
+        if(skipConfirmationsToggle==null||difficultyScreen==null)yield break;
+        var rect=(RectTransform)skipConfirmationsToggle.transform;var parent=rect.parent as RectTransform;
+        var canvas=parent.GetComponentInParent<Canvas>();var camera=canvas!=null&&canvas.rootCanvas.renderMode!=RenderMode.ScreenSpaceOverlay?canvas.rootCanvas.worldCamera:null;
+        if(RectTransformUtility.ScreenPointToWorldPointInRectangle(parent,new Vector2(Screen.width*.5f,Screen.height*.065f),camera,out Vector3 position))rect.position=position;
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(parent,Vector2.zero,camera,out Vector2 lower);
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(parent,new Vector2(Screen.width,Screen.height),camera,out Vector2 upper);
+        rect.sizeDelta=new Vector2(Mathf.Abs(upper.x-lower.x)*.72f,Mathf.Abs(upper.y-lower.y)*.04f);
     }
 
     IEnumerator StartRematchFromBeginning()

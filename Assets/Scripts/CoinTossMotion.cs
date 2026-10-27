@@ -6,8 +6,27 @@ public struct CoinTossPose
     public float diameter, cosine, sine, rollDegrees, arc, time;
 }
 
+public struct CoinTossShadowPose
+{
+    public Vector2 center,radii;
+    public float opacity,elevation;
+}
+
 public static class CoinTossMotion
 {
+    public static CoinTossShadowPose EvaluateShadow(CoinTossSettings s,CoinTossPose pose)
+    {
+        float size=Mathf.Max(1,s.endDiameter*Mathf.Max(.1f,s.overallScale));
+        float rest=924*s.restingHeightFromTop+s.positionOffset.y;
+        float elevation=Mathf.Clamp01((rest-pose.center.y)/Mathf.Max(1,s.jumpHeight));
+        return new CoinTossShadowPose
+        {
+            center=new Vector2(pose.center.x+s.shadowOffset.x,rest+size*.5f+s.shadowOffset.y),
+            radii=new Vector2(Mathf.Max(1,size*s.shadowWidthRatio*.5f)*Mathf.Lerp(1,1.35f,elevation),Mathf.Max(1,size*s.shadowHeightRatio*.5f)*Mathf.Lerp(1,1.9f,elevation)),
+            opacity=Mathf.Clamp01(s.shadowOpacity)*(1-Mathf.Clamp01(s.airborneShadowFade)*elevation),elevation=elevation
+        };
+    }
+
     public static CoinTossPose Evaluate(CoinTossSettings s, float progress, bool butterfly)
     {
         float t = Mathf.Clamp01(progress);

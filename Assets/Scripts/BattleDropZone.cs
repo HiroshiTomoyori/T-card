@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.EventSystems;
 using System.Collections;
 using DG.Tweening;
@@ -8,6 +8,32 @@ public class BattleDropZone :
     IDropHandler
 {
     public Transform battleArea;
+
+    public FieldDropPresentation FieldPresentation {get;private set;}
+    void Awake()
+    {
+        if(battleArea==null)battleArea=transform;
+        FieldPresentation=GetComponent<FieldDropPresentation>();if(FieldPresentation==null)FieldPresentation=gameObject.AddComponent<FieldDropPresentation>();
+        FieldPresentation.Initialize(this);
+    }
+    public bool CanHighlightCard(CardController card)
+    {
+        if (card == null || card.data == null || battleArea == null || CardPlayPresentation.IsPlaying) return false;
+        var decisionManager = FindFirstObjectByType<TurnManager>();
+        if (decisionManager != null && !decisionManager.CanDragPlayerHand) return false;
+        var cardDrag = card.GetComponent<CardDrag>();
+        if (cardDrag == null || cardDrag.IsDropSnapPlaying) return false;
+
+        // Match the normal drop path, including the best eligible K base and its discount.
+        card.data.SetPowerFromName();
+        SetCardCost(card);
+        var selectedBase = IsSpecialSummonK(card) ? FindKSpecialSummonBase(null) : null;
+        if (!BattleAreaLayout.IsSpell(card.data) && !BattleAreaLayout.CanAccept(battleArea, selectedBase)) return false;
+        int summonCost = selectedBase != null ? Mathf.Max(0, card.data.cost - selectedBase.data.power) : card.data.cost;
+        if (!useCostCheck) return true;
+        var resources = FindFirstObjectByType<ResourceManager>();
+        return resources != null && resources.currentResource >= summonCost;
+    }
 
     [Header("Cost Debug")]
     public bool useCostCheck = true;
@@ -42,6 +68,8 @@ public class BattleDropZone :
 
         if (!cardDrag.IsDragging)
     return;
+        if(FieldPresentation!=null&&!FieldPresentation.Contains(eventData.position))return;
+        FieldDropPresentation.EndDrag();
 
         CardController card =
             eventData.pointerDrag
@@ -67,7 +95,7 @@ public class BattleDropZone :
 
     void TryPlayConfirmedCard(CardDrag cardDrag, CardController selectedBaseCard)
     {
-        if (cardDrag == null) return;
+        if (cardDrag == null || CardPlayPresentation.IsPlaying || cardDrag.IsDropSnapPlaying) return;
         TurnManager decisionManager = FindFirstObjectByType<TurnManager>();
         if (decisionManager != null && !decisionManager.CanDragPlayerHand) return;
         CardController card = cardDrag.GetComponent<CardController>();
@@ -147,9 +175,25 @@ public class BattleDropZone :
         if (!useCostCheck && decisionManager != null && decisionManager.RequestPlayerDecision("summon:" + card.GetInstanceID(),
             card.data.cardName + "を場に出します。\nよろしいですか？", () => TryPlayConfirmedCard(cardDrag, selectedBaseCard))) return;
         if (decisionManager != null) decisionManager.NotifyPlayerActionCommitted();
-        cardDrag.DropToBattleArea(
-            battleArea
-        );
+        if(CardPlaySettings.Load().enabledEffect)
+        {
+            StartCoroutine(PlayCommittedCard(card,cardDrag,selectedBaseCard));
+            return;
+        }
+        FinishPlayingCard(card,cardDrag,selectedBaseCard,true);
+    }
+
+    IEnumerator PlayCommittedCard(CardController card,CardDrag cardDrag,CardController selectedBaseCard)
+    {
+        cardDrag.BeginPlayPresentation();
+        try{yield return CardPlayPresentation.Play(card.data,battleArea,selectedBaseCard);}
+        finally{if(cardDrag!=null)cardDrag.EndPlayPresentation();}
+        if(card!=null&&cardDrag!=null&&battleArea!=null)FinishPlayingCard(card,cardDrag,selectedBaseCard,false);
+    }
+
+    void FinishPlayingCard(CardController card,CardDrag cardDrag,CardController selectedBaseCard,bool playSnap)
+    {
+        cardDrag.DropToBattleArea(battleArea,playSnap);
 
         RectTransform rt =
             card.GetComponent<RectTransform>();
@@ -247,6 +291,11 @@ public class BattleDropZone :
             card.SetAttackable(false);
         }
 
+        if(!playSnap)
+        {
+            var layout=battleArea.GetComponent<BattleAreaLayout>();if(layout!=null)layout.PlaceImmediately(card);
+            cardDrag.EnablePlacedCardInput();
+        }
         ActivateSummonEffect(card);
 
         StartCoroutine(
@@ -586,7 +635,7 @@ IEnumerator CompleteSummonAfterSnap(CardDrag cardDrag)
             return null;
 
         CardController best = null;
-        GameObject hit = eventData.pointerCurrentRaycast.gameObject;
+        GameObject hit = eventData != null ? eventData.pointerCurrentRaycast.gameObject : null;
         CardController pointed = hit != null ? hit.GetComponentInParent<CardController>() : null;
         for (
             int i = 0;

@@ -34,7 +34,7 @@ public bool CanDragPlayerHand
             resourcePhaseManager != null &&
             resourcePhaseManager.IsRunning();
 
-        return !IsChoosingEnemyHand && !IsPlayerDecisionOpen && (CardEffectManager.I == null || !CardEffectManager.I.IsResolvingNine) && (handDealer == null || (!handDealer.IsHandLimitSelecting && !handDealer.IsTurnDrawAnimating && !handDealer.IsWallPlacementRunning && !handDealer.IsResolvingWallAttack)) && isPlayerTurnActive &&
+        return !CardPlayPresentation.IsPlaying && !IsChoosingEnemyHand && !IsPlayerDecisionOpen && (CardEffectManager.I == null || !CardEffectManager.I.IsResolvingNine) && (handDealer == null || (!handDealer.IsHandLimitSelecting && !handDealer.IsTurnDrawAnimating && !handDealer.IsWallPlacementRunning && !handDealer.IsResolvingWallAttack)) && isPlayerTurnActive &&
                !isEndingTurn &&
                !isBattlePhase &&
                !HandDealer.IsRedrawSelecting &&
@@ -1717,6 +1717,9 @@ IEnumerator EnemyMainPhase()
 
         handDealer.enemyHandCount--;
 
+        // Both players share the approved reveal; effects run after it finishes.
+        yield return CardPlayPresentation.Play(selectedCard,enemyBattleArea,kingBase,isEnemy:true);
+
         // =========================
         // カードを場に召喚
         // =========================
@@ -1801,6 +1804,7 @@ IEnumerator EnemyMainPhase()
         if(enemyBattleLayout != null)
         {
             enemyBattleLayout.Refresh();
+            if(controller!=null&&CardPlaySettings.Load().enabledEffect)enemyBattleLayout.PlaceImmediately(controller);
         }
 
         while(IsSelectingDestroyTarget() || (CardEffectManager.I != null && CardEffectManager.I.IsResolvingNine)) yield return null;
@@ -4490,6 +4494,7 @@ public partial class TurnManager
                 handDealer.IsHandLimitSelecting || handDealer.IsWallPlacementRunning || handDealer.IsResolvingWallAttack)) ||
             (CardEffectManager.I != null && CardEffectManager.I.IsResolvingNine)) return false;
         // Do not time out in the middle of a committed summon or resource effect.
+        if (CardPlayPresentation.IsPlaying) return false;
         if (resourcePhaseManager != null && resourcePhaseManager.IsResolvingCharge) return false;
         RefreshDecisionDrags();
         foreach (CardDrag drag in decisionDrags)

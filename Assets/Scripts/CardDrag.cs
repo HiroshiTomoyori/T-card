@@ -53,6 +53,7 @@ public class CardDrag :
     RectTransform rectTransform;
 
     Coroutine dropSnapCoroutine;
+    bool playPresentationRunning;
     bool battlePlacementStarted;
     bool battlePlacementFinished;
 CCP.Card proCard;
@@ -103,7 +104,7 @@ void ReleaseProHand()
     {
         get
         {
-            return dropSnapCoroutine != null;
+            return dropSnapCoroutine != null || playPresentationRunning;
         }
     }
 
@@ -201,6 +202,7 @@ if (turnManager == null || !turnManager.CanDragPlayerHand)
     ApplyDraggingSize();
 
     canvasGroup.blocksRaycasts = false;
+    FieldDropPresentation.UpdateDrag(this,eventData.position,eventData.pressEventCamera);
 
 // リソースへのドロップ表示はResource中だけ。
 if (rpm != null && rpm.IsRunning())
@@ -334,12 +336,14 @@ public void OnDrag(PointerEventData eventData)
 
     transform.localRotation = Quaternion.identity;
     ApplyDraggingSize();
+    FieldDropPresentation.UpdateDrag(this,eventData.position,eventData.pressEventCamera);
     var resourcePhase=FindFirstObjectByType<ResourcePhaseManager>();
     if(resourcePhase!=null && resourcePhase.IsRunning())resourcePhase.UpdateDropHighlight(eventData.position,eventData.pressEventCamera);
 }
 
 public void OnEndDrag(PointerEventData eventData)
 {
+    FieldDropPresentation.EndDrag();
     if (!canDrag)
         return;
 
@@ -463,12 +467,31 @@ public void MarkDroppedSuccessfully()
      * 呼び出し側の指定に関係なく
      * スナップ演出とSEを無効化する。
      */
-    public void PlaceFromShield(Transform battleArea)
+    public void BeginPlayPresentation()
+    {
+        FieldDropPresentation.EndDrag();
+        droppedSuccessfully=true;canDrag=false;playPresentationRunning=true;
+        if(sourceHand==null)sourceHand=GetComponentInParent<HandController>();
+        if(proCard==null)SuspendProCard();
+        ReleaseProHand();transform.DOKill();
+        var root=GetComponentInParent<Canvas>();if(root!=null)transform.SetParent(root.rootCanvas.transform,true);
+        if(sourceHand!=null)sourceHand.RefreshProLayout();
+        canvasGroup.alpha=0;canvasGroup.blocksRaycasts=false;canvasGroup.interactable=false;
+        var rpm=FindFirstObjectByType<ResourcePhaseManager>();if(rpm!=null){rpm.HideDropHighlight();rpm.SetResourceDropRaycast(false);}
+    }
+    public void EndPlayPresentation(){playPresentationRunning=false;}
+    public void EnablePlacedCardInput()
+    {
+        var controller=GetComponent<CardController>();canvasGroup.alpha=controller!=null&&controller.hasSummonSickness?.6f:1f;
+        canvasGroup.blocksRaycasts=true;canvasGroup.interactable=true;
+    }
+
+    public void PlaceFromShield(Transform battleArea,bool playSnap=true)
     {
         // A shield summon has no OnBeginDrag to capture its starting geometry.
         if(rectTransform == null) rectTransform = GetComponent<RectTransform>();
         if(rectTransform != null) originalSizeDelta = rectTransform.sizeDelta;
-        DropToBattleArea(battleArea);
+        DropToBattleArea(battleArea,playSnap);
     }
 
     public void DropToBattleArea(

@@ -34,6 +34,8 @@ public sealed class OpeningShuffleSettings : ScriptableObject
     [Min(0)] public float handFlipDelay=.09f;
     [Min(.02f)] public float handFlipDuration=.22f;
     [Min(0)] public float afterDealHold=.15f;
+    [Header("Discard / 初期手札確定後の表示")]
+    [Min(0)] public float discardFadeDuration=.35f;
     public float Seconds(float value)=>Mathf.Max(0,value)/Mathf.Max(.05f,globalSpeed);
     public float DropEnd=>Mathf.Max(0,startDelay)+(Mathf.Clamp(visualCardCount,1,60)-1)*Mathf.Max(0,cardDropInterval)+Mathf.Max(.02f,cardFallDuration);
     public float ShuffleDuration=>DropEnd+Mathf.Max(0,alignDuration)+Mathf.Max(0,beforeDealDelay);

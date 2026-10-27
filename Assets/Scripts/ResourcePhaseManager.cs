@@ -192,8 +192,6 @@ public class ResourcePhaseManager : MonoBehaviour
         }
 
         TurnManager decisionManager = FindFirstObjectByType<TurnManager>();
-        if (decisionManager != null && decisionManager.RequestPlayerDecision("resource:" + card.GetInstanceID(),
-            "このカードをリソースに入れます。\nよろしいですか？", () => TryChargeResource(card))) return;
 
         hasCharged = true;
         if (decisionManager != null) decisionManager.NotifyPlayerActionCommitted();

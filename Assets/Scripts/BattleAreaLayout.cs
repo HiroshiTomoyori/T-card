@@ -90,6 +90,7 @@ public class BattleAreaLayout : MonoBehaviour
         new List<bool>();
 
     private bool dirty = true;
+    private bool lastFourCardBaseline;
 
     public int CardCount
     {
@@ -130,6 +131,8 @@ public class BattleAreaLayout : MonoBehaviour
 
     private void LateUpdate()
     {
+        bool baseline=FieldHighlightSettings.Load().useFourCardSizeFromStart;
+        if(baseline!=lastFourCardBaseline){lastFourCardBaseline=baseline;dirty=true;}
         CollectCards();
 
         if (dirty || HasChanged())
@@ -367,6 +370,29 @@ public class BattleAreaLayout : MonoBehaviour
         RememberState();
     }
 
+    // Predict the final slot while the committed card is still outside the field.
+    public void GetIncomingPlacement(CardController replaced,out Vector3 position,out Vector2 visualSize)
+    {
+        CollectCards();int count=fieldCards.Count+1;
+        if(replaced!=null&&fieldCards.Contains(replaced))count--;
+        Slot(count,count-1,out Vector3 local,out float width);
+        position=transform.TransformPoint(local);visualSize=new Vector2(width,width*1.5f)*Mathf.Max(.01f,cardSize);
+    }
+    void Slot(int count,int index,out Vector3 position,out float width)
+    {
+        var setting=GetSetting(count);width=Mathf.Max(1,setting.cardWidth);float gap=Mathf.Max(-width+1,setting.gap);
+        float fit=Mathf.Min(1,fieldWidth/Mathf.Max(1,width*count+gap*(count-1)));width*=fit;gap*=fit;
+        position=new Vector3(layoutCenter.x+(index-(count-1)*.5f)*(width+gap),layoutCenter.y,0);
+    }
+    public void PlaceImmediately(CardController controller)
+    {
+        CollectCards();int index=fieldCards.IndexOf(controller);if(index<0)return;
+        Slot(fieldCards.Count,index,out Vector3 position,out float width);
+        var rt=controller.GetComponent<RectTransform>();if(rt==null)return;
+        var card=controller.GetComponent<CCP.Card>();rt.DOKill();rt.localPosition=position;rt.localRotation=Quaternion.identity;
+        rt.localScale=Vector3.one*(width/Mathf.Max(1,GetVisualWidth(card,rt))*Mathf.Max(.01f,cardSize));
+    }
+
     private LayoutSetting GetSetting(int count)
     {
         if (layouts == null || layouts.Length == 0)
@@ -380,8 +406,13 @@ public class BattleAreaLayout : MonoBehaviour
             layouts.Length - 1
         );
 
-        return layouts[index] ??
-            new LayoutSetting(190f, 20f);
+        var setting=layouts[index] ?? new LayoutSetting(190f,20f);
+        if(count<4&&FieldHighlightSettings.Load().useFourCardSizeFromStart)
+        {
+            var four=layouts[Mathf.Min(3,layouts.Length-1)];
+            if(four!=null)return new LayoutSetting(four.cardWidth,setting.gap);
+        }
+        return setting;
     }
 
     private float GetVisualWidth(
