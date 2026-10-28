@@ -2928,6 +2928,8 @@ void ResolveCardBattle(CardController attacker, CardController defender)
 
     attacker.data.SetPowerFromName();
     defender.data.SetPowerFromName();
+    // Blocking rests the defender even when it survives combat.
+    defender.Tap();
 
     int attackerPower = attacker.data.power;
     int defenderPower = defender.data.power;

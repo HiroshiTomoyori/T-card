@@ -355,7 +355,7 @@ public class TCardEnemyAIBrain : MonoBehaviour
         return best;
     }
 
-    // Search visible board only. Surviving blockers can block again in this game.
+    // Search visible board only. Each blocker can block once before it untaps.
     sealed class AttackPlan
     {
         public readonly List<CardController> attackers = new List<CardController>();
@@ -452,8 +452,8 @@ public class TCardEnemyAIBrain : MonoBehaviour
         for(int i = 0; i < plan.blockData.Count; i++)
         {
             if((blockers & (1 << i)) == 0) continue;
-            int result = plan.outcomes[index, i];
-            int nextBlockers = result >= 0 ? blockers & ~(1 << i) : blockers;
+            // Blocking consumes this guard even if it survives.
+            int nextBlockers = blockers & ~(1 << i);
             float value = plan.trades[index, i] + SearchAttacks(plan, next, nextBlockers, walls);
             worst = Mathf.Min(worst, value);
         }
@@ -599,10 +599,10 @@ public CardController SelectBestBlocker(
                 enemyWallCount
             );
 
-        // Keep a surviving, reusable blocker instead of spending it on a mutual trade.
+        // Prefer preserving a blocker for future turns over a mutual trade.
         int outcome = BattleOutcome(attacker.data, blocker.data);
         if(outcome < 0) score += 3000f - GetCardValue(blocker.data) * 0.25f;
-        if(playerField != null && outcome >= 0)
+        if(playerField != null)
         {
             var counter = BuildAttackPlan(playerField, blockers);
             int guard = counter.blockers.IndexOf(blocker);
@@ -1359,7 +1359,7 @@ bool CanSpecialBreak(
             {
                 if(guard.tapped || !HasEffect(guard.data, EffectType.BlockOnly)) continue;
                 int result = BattleOutcome(threat.data, guard.data);
-                // A reusable counter matters much more than a one-use losing guard.
+                // A winning guard preserves material for future turns.
                 if(result < 0) best = Mathf.Max(best, Mathf.Min(GetCardValue(threat.data) * 0.3f, 350f + Mathf.Min(800f, GetCardValue(threat.data) * 0.35f)));
                 else if(result == 0) best = Mathf.Max(best, Mathf.Min(100f, GetCardValue(threat.data) * 0.12f));
             }
@@ -1675,6 +1675,7 @@ bool CanSpecialBreak(
             next.ownWalls = Mathf.Max(0, next.ownWalls - (HasEffect(data, EffectType.DoubleWallBreak) ? 2 : 1));
         else
         {
+            next.own[guard].tapped = true;
             int outcome = BattleOutcome(data, next.own[guard].data);
             if(outcome >= 0) next.own.RemoveAt(guard);
             if(outcome <= 0) next.foe.RemoveAt(attack);
@@ -1741,7 +1742,7 @@ bool CanSpecialBreak(
     float QuickAfterBattleScore(StrategicState state)
     {
         int attackers = 0, breaks = 0;
-        bool reusableGuard = false;
+
         foreach(var enemy in state.foe)
             if(CanAttack(enemy.data))
             { attackers++; breaks += HasEffect(enemy.data, EffectType.DoubleWallBreak) ? 2 : 1; }
@@ -1750,10 +1751,7 @@ bool CanSpecialBreak(
         {
             if(guard.tapped || !HasEffect(guard.data, EffectType.BlockOnly)) continue;
             guards++;
-            bool winsAll = true;
-            foreach(var enemy in state.foe)
-                if(CanAttack(enemy.data) && BattleOutcome(enemy.data, guard.data) >= 0) winsAll = false;
-            if(winsAll) reusableGuard = true;
+
         }
         float score = (9 - state.foeWalls) * 1600f + state.ownWalls * 900f;
         foreach(var unit in state.own)
@@ -1762,7 +1760,7 @@ bool CanSpecialBreak(
         if(!state.extraTurn && attackers > 0 && state.ownWalls == 0) score -= 2000000f;
         else if(!state.extraTurn && guards == 0 && attackers > 1 && breaks - 1 >= state.ownWalls)
             score -= 2000000f;
-        else if(!reusableGuard) score -= Mathf.Max(0, breaks - guards) * 700f;
+        else score -= Mathf.Max(0, breaks - guards) * 700f;
         if(state.extraTurn) score += 2500f;
         return score;
     }
@@ -1853,10 +1851,11 @@ bool CanSpecialBreak(
             if(blocker.tapped || !HasEffect(blocker.data, EffectType.BlockOnly)) continue;
             var blocked = state.Copy();
             blocked.own[index].tapped = true;
+            blocked.foe[i].tapped = true;
             int result = BattleOutcome(attack, blocker.data);
             if(result >= 0) blocked.foe.RemoveAt(i);
             if(result <= 0) blocked.own.RemoveAt(index);
-            // A surviving blocker remains untapped and may block the next attack.
+            // A surviving blocker stays rested until its next untap.
             worst = Mathf.Min(worst, ForecastAttacks(blocked, forecast, depth - 1));
         }
         return worst;
