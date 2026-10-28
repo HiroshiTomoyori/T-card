@@ -21,7 +21,7 @@ MonoBehaviour:
   sizeAdjustment: {x: 0, y: 0}
   highlightColor: {r: 0.1254902, g: 0.8392157, b: 0.76862746, a: 1}
   brightness: 0.6
-  lineWidth: 3.5
+  lineWidth: 2.8
   blur: 30
   cornerRadius: 20
   interiorGlow: 2
