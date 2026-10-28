@@ -750,6 +750,7 @@ public void HideAttackArrow()
 
     public void EndPlayerTurn()
     {    
+        if (automaticDecisionDepth > 0 && turnCount <= 5 && !ShouldAutoEndEarlyTurn()) return;
         if (resolvingPlayerCardAttack || IsChoosingEnemyHand) return;
         // マッチ開始前・敵ターン中・二重クリックからの呼び出しを拒否する。
         if(!isPlayerTurnActive || isEndingTurn || (CardEffectManager.I != null && CardEffectManager.I.IsResolvingNine) || (handDealer != null && (handDealer.IsHandLimitSelecting || handDealer.IsWallPlacementRunning || handDealer.IsResolvingWallAttack)))
@@ -3823,90 +3824,64 @@ void OnSelectJokerClear()
 
     bool ShouldAutoEndEarlyTurn()
     {
-        // 最初の5ターンだけ
-        if (turnCount > 5)
+        if (turnCount > 5 || !isPlayerTurnActive || isEndingTurn || IsBattleEnded)
             return false;
 
-        // 召喚できるカードがあるなら終了しない
-        if (CanPlayerSummonAnything())
+        // An unresolved choice or animation is not proof that the player has no actions.
+        if (CardPlayPresentation.IsPlaying || IsPlayerDecisionOpen || IsChoosingEnemyHand ||
+            IsSelectingTarget() || IsSelectingDestroyTarget() || HasPendingAttackConfirmation ||
+            waitingBlockSelect || resolvingEnemyBlock || resolvingPlayerCardAttack ||
+            pendingJokerEffectCard != null ||
+            (ReverseChoiceManager.I != null && ReverseChoiceManager.I.IsChoosing) ||
+            (CardEffectManager.I != null && CardEffectManager.I.IsResolvingNine) ||
+            (resourcePhaseManager != null && resourcePhaseManager.IsRunning()))
+            return false;
+        if (handDealer == null || handDealer.handArea == null || playerBattleArea == null ||
+            HandDealer.IsRedrawSelecting || handDealer.IsHandLimitSelecting ||
+            handDealer.IsTurnDrawAnimating || handDealer.IsWallPlacementRunning ||
+            handDealer.IsResolvingWallAttack || handDealer.IsResolvingEnemyWallAttack)
             return false;
 
-        // 攻撃できるカードがあるなら終了しない
-        if (CanPlayerAttackAnything())
-            return false;
-
-        return true;
+        return !CanPlayerSummonAnything() && !CanPlayerAttackAnything();
     }
 
     bool CanPlayerSummonAnything()
     {
-        ResourceManager rm =
-            FindFirstObjectByType<ResourceManager>();
-
-        if(rm == null)
-            return false;
-
-        if(handDealer == null)
-            return false;
-
-        if(handDealer.handArea == null)
-            return false;
-
-        for(int i = 0; i < handDealer.handArea.childCount; i++)
+        if (isBattlePhase) return false; // Playing from hand ends when attacks begin.
+        // Missing rule/input references must never silently skip the player's turn.
+        if (handDealer == null || handDealer.handArea == null || playerBattleArea == null)
+            return true;
+        BattleDropZone zone = playerBattleArea.GetComponent<BattleDropZone>();
+        if (zone == null)
         {
-            CardController card =
-                handDealer.handArea
-                .GetChild(i)
-                .GetComponent<CardController>();
-
-            if(card == null || card.data == null)
-                continue;
-
-            card.data.SetCostFromName();
-
-            if(card.data.cost <= rm.currentResource)
-                return true;
+            foreach (var candidate in FindObjectsByType<BattleDropZone>(FindObjectsSortMode.None))
+                if (candidate.battleArea == playerBattleArea) { zone = candidate; break; }
         }
+        if (zone == null || zone.battleArea != playerBattleArea)
+            return true;
+        if (zone.useCostCheck && FindFirstObjectByType<ResourceManager>() == null)
+            return true;
 
+        foreach (Transform child in handDealer.handArea)
+        {
+            if (!child.gameObject.activeInHierarchy) continue;
+            CardController card = child.GetComponent<CardController>();
+            if (card == null || card.data == null) continue;
+            // Do not use CanHighlightCard: phase transitions temporarily disable dragging.
+            // Covers spells, field capacity, free-play mode and discounted K summons.
+            if (zone.CanPlayCardByRules(card)) return true;
+        }
         return false;
     }
 
     bool CanPlayerAttackAnything()
     {
-        if(playerBattleArea == null)
-            return false;
-
-        for(int i = 0; i < playerBattleArea.childCount; i++)
-        {
-            CardController card =
-                playerBattleArea
-                .GetChild(i)
-                .GetComponent<CardController>();
-
-            if(card == null)
-                continue;
-
-            if(card.isTapped)
-                continue;
-
-            if(card.hasSummonSickness)
-                continue;
-
-            if(card.data != null &&
-            card.data.effectTypes != null &&
-            System.Array.Exists(
-                card.data.effectTypes,
-                x => x == EffectType.CannotAttack))
-            {
-                continue;
-            }
-
-            return true;
-        }
-
+        if (playerBattleArea == null) return true;
+        foreach (Transform child in playerBattleArea)
+            if (child.gameObject.activeInHierarchy &&
+                CardActionIcon.CanAttack(child.GetComponent<CardController>())) return true;
         return false;
     }
-
     void ClearAttackableCards()
     {
         if(playerBattleArea == null)
@@ -4317,6 +4292,12 @@ public partial class TurnManager
             mainTurnCountdown.Context == null ? 20f : mainTurnCountdown.Duration,
             Time.unscaledDeltaTime, false, false))
         {
+            // Early-turn auto advance may never interrupt an available action or choice.
+            if (turnCount <= 5 && !ShouldAutoEndEarlyTurn())
+            {
+                mainTurnCountdown.Reset();
+                return;
+            }
             ReturnTimedDrags();
             if (IsPlayerDecisionOpen) RejectPlayerDecision();
             CancelTimedAttackSelection();
@@ -4379,6 +4360,7 @@ public partial class TurnManager
                 CancelTimedAttackSelection();
                 break;
             case TimedDecision.Battle:
+                if (turnCount <= 5 && !ShouldAutoEndEarlyTurn()) break;
                 CancelTimedAttackSelection();
                 RunAutomaticDecision(EndPlayerTurn);
                 break;

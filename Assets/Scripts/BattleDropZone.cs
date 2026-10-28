@@ -24,6 +24,13 @@ public class BattleDropZone :
         var cardDrag = card.GetComponent<CardDrag>();
         if (cardDrag == null || cardDrag.IsDropSnapPlaying) return false;
 
+        return CanPlayCardByRules(card);
+    }
+
+    // Rule availability must also work between Resource and Main, when input is locked.
+    public bool CanPlayCardByRules(CardController card)
+    {
+        if (card == null || card.data == null || battleArea == null) return false;
         // Match the normal drop path, including the best eligible K base and its discount.
         card.data.SetPowerFromName();
         SetCardCost(card);
