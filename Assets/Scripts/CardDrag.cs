@@ -482,7 +482,7 @@ public void MarkDroppedSuccessfully()
     public void EndPlayPresentation(){playPresentationRunning=false;}
     public void EnablePlacedCardInput()
     {
-        var controller=GetComponent<CardController>();canvasGroup.alpha=controller!=null&&controller.hasSummonSickness?.6f:1f;
+        canvasGroup.alpha=1f;
         canvasGroup.blocksRaycasts=true;canvasGroup.interactable=true;
     }
 
@@ -647,7 +647,7 @@ public void MarkDroppedSuccessfully()
         }
         if (proCard != null) proCard.isBeingMovedManually = false;
         CardController card = GetComponent<CardController>();
-        canvasGroup.alpha = card != null && card.hasSummonSickness ? 0.6f : 1f;
+        canvasGroup.alpha = 1f;
         canvasGroup.blocksRaycasts = true;
         canvasGroup.interactable = true;
         dropSnapCoroutine = null;

@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.EventSystems;
 using System.Collections;
 using DG.Tweening;
@@ -253,6 +253,7 @@ public class BattleDropZone :
             "カードをバトルエリアに出した"
         );
 
+        card.BeginNormalPlay();
         bool noSummonSickness =
             HasCardEffect(
                 card,

@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 [CreateAssetMenu(menuName="T-card/Field Highlight Settings")]
 public sealed class FieldHighlightSettings : ScriptableObject
 {
@@ -27,6 +27,10 @@ public sealed class FieldHighlightSettings : ScriptableObject
     [Range(0,2)] public float outerGlow = 1;
     [Min(.2f)] public float driftPeriod = 3.6f;
     [Min(0)] public float outwardSpread = 34;
+    [Header("呼吸する明暗 / ドロップ判定内")]
+    [Min(.2f)] public float pulsePeriod = 2.8f;
+    [Range(0,2)] public float minimumPulseBrightness = .3f;
+    [Range(0,3)] public float maximumPulseBrightness = 1.4f;
     [Header("フェード / 秒")]
     [Min(0)] public float fadeIn = .14f;
     [Min(0)] public float fadeOut = .18f;

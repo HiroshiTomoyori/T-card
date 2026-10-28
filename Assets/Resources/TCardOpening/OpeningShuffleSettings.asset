@@ -31,9 +31,10 @@ MonoBehaviour:
   wallTravelDuration: 0.15
   wallDealInterval: 0.1
   wallArcHeight: 16
-  handTravelDuration: 0.45
+  handTravelDuration: 0.2
   handDealInterval: 0.13
   revealDuringDeal: 1
-  handFlipDelay: 0.09
-  handFlipDuration: 0.22
+  handFlipDelay: 0.08
+  handFlipDuration: 0.15
   afterDealHold: 0.15
+  discardFadeDuration: 0.35

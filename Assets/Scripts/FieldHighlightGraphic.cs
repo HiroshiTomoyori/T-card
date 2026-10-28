@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 [RequireComponent(typeof(CanvasRenderer))]
 public sealed class FieldHighlightGraphic : MaskableGraphic
@@ -15,6 +15,7 @@ public sealed class FieldHighlightGraphic : MaskableGraphic
         owned.SetVector("_Shape",new Vector4(size.x,size.y,settings.cornerRadius*scale,Mathf.Max(1,settings.blur*scale)));
         owned.SetVector("_Appearance",new Vector4(opacity,settings.brightness,settings.interiorGlow,time));
         owned.SetVector("_Motion",new Vector4(Mathf.Max(.2f,settings.driftPeriod),settings.outwardSpread*scale,Mathf.Max(.1f,settings.lineWidth*scale),settings.outerGlow));
+        owned.SetVector("_Breath",new Vector4(Mathf.Max(.2f,settings.pulsePeriod),settings.minimumPulseBrightness,settings.maximumPulseBrightness,0));
         owned.SetColor("_FieldColor",settings.highlightColor);raycastTarget=false;maskable=false;
     }
     protected override void OnPopulateMesh(VertexHelper vh)

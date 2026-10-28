@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -53,74 +53,8 @@ public class AttackArrowManager : MonoBehaviour
         Color color
     )
     {
-        if (from == null || to == null)
-            return;
-
-        if (arrowRoot == null ||
-            arrowBody == null ||
-            arrowHead == null)
-        {
-            Debug.LogWarning("AttackArrowManager: 矢印パーツ未設定");
-            return;
-        }
-
-        gameObject.SetActive(true);
-        transform.SetAsLastSibling();
-
-        arrowRoot.gameObject.SetActive(true);
-        arrowBody.gameObject.SetActive(true);
-        arrowHead.gameObject.SetActive(true);
-
-        RectTransform baseRect =
-            transform as RectTransform;
-
-        Vector2 start =
-            baseRect.InverseTransformPoint(
-                from.position
-            );
-
-        Vector2 end =
-            baseRect.InverseTransformPoint(
-                to.position
-            );
-
-        start +=
-            new Vector2(
-                startXOffset,
-                startYOffset
-            );
-
-        end +=
-            new Vector2(
-                endXOffset,
-                endYOffset
-            );
-
-        Vector2 dir = end - start;
-
-        float distance = dir.magnitude;
-
-        if (distance <= 1f)
-            return;
-
-        float angle =
-            Mathf.Atan2(dir.y, dir.x)
-            * Mathf.Rad2Deg;
-
-        arrowRoot.anchoredPosition = start;
-
-        arrowRoot.localRotation =
-            Quaternion.Euler(0f, 0f, angle);
-
-        SetArrowColor(color);
-
-        if (growRoutine != null)
-            StopCoroutine(growRoutine);
-
-        growRoutine =
-            StartCoroutine(
-                GrowArrow(distance)
-            );
+        // Retain the API for existing combat routines; arrow visuals are retired.
+        Hide();
     }
 
     public void ShowEnemyArrow(

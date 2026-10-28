@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: LiquidResourceSettings
   m_EditorClassIdentifier: 
   panelSize: {x: 160, y: 107.8}
-  offset: {x: -17, y: 20}
-  auraPadding: 65
+  offset: {x: -17, y: 0}
+  auraPadding: 40
   cornerRadius: 17.83
   numberFont: {fileID: 0}
   sourceFont: {fileID: 12800000, guid: 16e23fb9f126400095986f205ffa25cf, type: 3}

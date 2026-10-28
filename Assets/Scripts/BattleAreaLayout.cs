@@ -89,6 +89,17 @@ public class BattleAreaLayout : MonoBehaviour
     private readonly List<bool> previousSnapping =
         new List<bool>();
 
+    private readonly List<bool> previousSickness=new List<bool>();
+    TurnManager turnManager;float lastRearOffset,lastPreparingScale;
+    public void MarkDirty(){dirty=true;}
+    void ApplyReadiness(CardController card,ref Vector3 position,ref float scale)
+    {
+        if(!card.hasSummonSickness)return;
+        if(turnManager==null)turnManager=FindFirstObjectByType<TurnManager>();
+        var settings=CardReadinessSettings.Load();
+        position.y+=(turnManager!=null&&transform==turnManager.enemyBattleArea?1:-1)*settings.rearOffset;
+        scale*=settings.preparingScale;
+    }
     private bool dirty = true;
     private bool lastFourCardBaseline;
 
@@ -131,6 +142,7 @@ public class BattleAreaLayout : MonoBehaviour
 
     private void LateUpdate()
     {
+        var readiness=CardReadinessSettings.Load();if(lastRearOffset!=readiness.rearOffset||lastPreparingScale!=readiness.preparingScale){lastRearOffset=readiness.rearOffset;lastPreparingScale=readiness.preparingScale;dirty=true;}
         bool baseline=FieldHighlightSettings.Load().useFourCardSizeFromStart;
         if(baseline!=lastFourCardBaseline){lastFourCardBaseline=baseline;dirty=true;}
         CollectCards();
@@ -203,6 +215,7 @@ public class BattleAreaLayout : MonoBehaviour
             if (controller != previousCards[i])
                 return true;
 
+            if (controller.hasSummonSickness != previousSickness[i])return true;
             if (controller.isTapped != previousTapped[i])
                 return true;
 
@@ -217,12 +230,14 @@ public class BattleAreaLayout : MonoBehaviour
     {
         previousCards.Clear();
         previousTapped.Clear();
+        previousSickness.Clear();
         previousSnapping.Clear();
 
         foreach (CardController controller in fieldCards)
         {
             previousCards.Add(controller);
             previousTapped.Add(controller.isTapped);
+            previousSickness.Add(controller.hasSummonSickness);
             previousSnapping.Add(IsSnapping(controller));
         }
 
@@ -343,8 +358,8 @@ public class BattleAreaLayout : MonoBehaviour
                 0f
             );
 
-            Vector3 worldPosition =
-                transform.TransformPoint(localPosition);
+            ApplyReadiness(controller,ref localPosition,ref targetScale);
+            Vector3 worldPosition = transform.TransformPoint(localPosition);
 
             Quaternion localRotation = Quaternion.identity;
 
@@ -389,8 +404,8 @@ public class BattleAreaLayout : MonoBehaviour
         CollectCards();int index=fieldCards.IndexOf(controller);if(index<0)return;
         Slot(fieldCards.Count,index,out Vector3 position,out float width);
         var rt=controller.GetComponent<RectTransform>();if(rt==null)return;
-        var card=controller.GetComponent<CCP.Card>();rt.DOKill();rt.localPosition=position;rt.localRotation=Quaternion.identity;
-        rt.localScale=Vector3.one*(width/Mathf.Max(1,GetVisualWidth(card,rt))*Mathf.Max(.01f,cardSize));
+        var card=controller.GetComponent<CCP.Card>();float scale=width/Mathf.Max(1,GetVisualWidth(card,rt))*Mathf.Max(.01f,cardSize);ApplyReadiness(controller,ref position,ref scale);rt.DOKill();rt.localPosition=position;rt.localRotation=Quaternion.identity;
+        rt.localScale=Vector3.one*scale;
     }
 
     private LayoutSetting GetSetting(int count)

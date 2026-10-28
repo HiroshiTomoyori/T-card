@@ -1572,6 +1572,7 @@ if (redrawButton != null)
 
 bool allowEnemyWallDamage = false;
 readonly HashSet<GameObject> resolvingEnemyWalls = new HashSet<GameObject>();
+public bool IsResolvingEnemyWallAttack => resolvingEnemyWalls.Count > 0;
 
 public void DamageEnemyWallFromAttack(
     GameObject targetWall
@@ -2484,7 +2485,7 @@ bool shieldTrigger =
         if(triggerController != null)
         {
             triggerController.SetData(data);
-            triggerController.SetSummonSickness(false);
+            triggerController.MarkPlayedFromReverse();
             triggerController.SetAttackable(false);
         }
 

@@ -21,6 +21,7 @@ public partial class TurnManager : MonoBehaviour
     bool isPlayerFirst = true;
     bool isBattlePhase = false;
     bool enemyBattleIconsActive;
+    int actionGlowTurn; // 0: between turns, 1: player turn, 2: enemy turn
     bool battleIconsEnded;
 
     bool enemyExtraTurnRequested = false;
@@ -201,6 +202,8 @@ public bool CanDragPlayerHand
         // 墓地内のカードへ毎フレーム固定サイズを再適用する。
         SyncGraveyardCardSizes();
         SyncBattleActionIcons();
+        SyncAttackSelectionPresentation();
+        SyncDefenseSelectionPresentation();
     }
 
     public void StartFirstTurn(bool playerFirst)
@@ -322,248 +325,23 @@ IEnumerator FirstTurnRoutine()
 
 public void StartBattleByAttackSelect(GameObject attacker)
 {
-    if (IsBattleEnded || IsChoosingEnemyHand || IsPlayerDecisionOpen || !isPlayerTurnActive || isEndingTurn || resolvingPlayerCardAttack) return;
-    if (handDealer != null && (handDealer.IsHandLimitSelecting || handDealer.IsWallPlacementRunning || handDealer.IsResolvingWallAttack)) return;
-    if(attacker == null)
-        return;
-
-    CardController attackerCard =
-        attacker.GetComponent<CardController>();
-
-    if(attackerCard == null)
-        return;
-
-    if(attackerCard.isTapped)
-    {
-        Debug.Log("タップ済みなので攻撃不可");
-        return;
-    }
-
-    if(attackerCard.hasSummonSickness)
-    {
-        Debug.Log("召喚酔い中なので攻撃不可");
-        return;
-    }
-
-    if(attackerCard.data != null &&
-       attackerCard.data.effectTypes != null &&
-       System.Array.Exists(
-           attackerCard.data.effectTypes,
-           x => x == EffectType.CannotAttack
-       ))
-    {
-        Debug.Log("攻撃不可カード");
-        return;
-    }
-
-    // すでに攻撃対象選択中なら、攻撃カードを切り替える
-    if(selectingTarget)
-    {
-        if(currentAttacker == attacker)
-            return;
-
-        currentAttacker = attacker;
-        wallBreakCount = 0;
-        pendingWallTargets.Clear();
-
-        maxWallBreakCount = 1;
-
-        if(attackerCard.data != null &&
-           attackerCard.data.effectTypes != null &&
-           System.Array.Exists(
-               attackerCard.data.effectTypes,
-               x => x == EffectType.DoubleWallBreak
-           ))
-        {
-            maxWallBreakCount = 2;
-        }
-
-        if(maxWallBreakCount >= 2 &&
-           attackArrowManager != null)
-        {
-            attackArrowManager.SetPlayerArrowColor(
-                new Color(0.8f, 0.2f, 1f)
-            );
-        }
-        else if(attackArrowManager != null)
-        {
-            attackArrowManager.SetPlayerArrowColor(
-                new Color(0.55f, 1f, 0.55f, 1f)
-            );
-        }
-
-        HideAttackArrow();
-
-        Debug.Log("攻撃カード切り替え：" + attacker.name);
-        Debug.Log("攻撃対象を選択してください");
-
-        return;
-    }
-
-    currentAttacker = attacker;
-    wallBreakCount = 0;
-    maxWallBreakCount = 1;
-    pendingWallTargets.Clear();
-
-    if(attackerCard.data != null &&
-       attackerCard.data.effectTypes != null &&
-       System.Array.Exists(
-           attackerCard.data.effectTypes,
-           x => x == EffectType.DoubleWallBreak
-       ))
-    {
-        maxWallBreakCount = 2;
-    }
-
-    selectingTarget = true;
-
-    if(maxWallBreakCount >= 2 &&
-       attackArrowManager != null)
-    {
-        attackArrowManager.SetPlayerArrowColor(
-            new Color(0.8f, 0.2f, 1f)
-        );
-    }
-    else if(attackArrowManager != null)
-    {
-        attackArrowManager.SetPlayerArrowColor(
-            new Color(0.55f, 1f, 0.55f, 1f)
-        );
-    }
-
-    SetEnemyWallClickable(true);
-
-    if(!isBattlePhase)
-    {
-        StartPlayerBattlePhase();
-    }
-
-    Debug.Log("攻撃カード選択：" + attacker.name);
-    Debug.Log("攻撃対象を選択してください");
+    if (!CanChooseAttackCard(attacker)) return;
+    if (selectingTarget && currentAttacker == attacker) { CancelAttackSelection(); return; }
+    ClearPendingAttackConfirmation();currentAttacker=attacker;selectingTarget=true;choosingMonarchWalls=false;
+    pendingWallTargets.Clear();wallBreakCount=0;maxWallBreakCount=IsMonarchAttacker?2:1;
+    SetEnemyWallClickable(true);HideAttackArrow();
 }
-
 public void SelectAttackTarget(GameObject target)
 {
-    if(!selectingTarget)
-        return;
-
-    if(currentAttacker == null)
-        return;
-
-    if(target == null || pendingWallTargets.Contains(target))
-        return;
-
-    CardController attackerCard =
-        currentAttacker.GetComponent<CardController>();
-
-    if(attackerCard == null)
-        return;
-
-    Debug.Log(
-        currentAttacker.name +
-        " が " +
-        target.name +
-        " を攻撃"
-    );
-
-    if (RequestPlayerDecision("attack-wall:" + target.GetInstanceID(),
-        GetCardName(attackerCard.data) + "でウォールを攻撃します。\nよろしいですか？", () => SelectAttackTarget(target))) return;
-
-    CardController blocker =
-        SelectEnemyBlocker(attackerCard);
-
-    if(blocker != null)
+    if(!AttackSelectionActive || !IsLiveAttackWall(target))return;
+    if(IsMonarchAttacker && LiveAttackWalls().Count>1)
     {
-        Debug.Log(
-            "CPUがブロック：" +
-            blocker.data.cardName
-        );
-
-        NotifyPlayerActionCommitted();
-        ResolveCardBattle(
-            attackerCard,
-            blocker
-        );
-
-        attackerCard.Tap();
-        attackerCard.SetAttackable(false);
-
-        CardActionIcon icon =
-            attackerCard.GetComponent<CardActionIcon>();
-
-        if(icon != null)
-            icon.HideAll();
-
-        wallBreakCount = 0;
-        maxWallBreakCount = 1;
-
-        selectingTarget = false;
-        currentAttacker = null;
-
-        SetEnemyWallClickable(false);
-        HideAttackArrow();
-
-        return;
+        if(!choosingMonarchWalls){BeginMonarchWallChoice();return;}
+        if(pendingWallTargets.Contains(target))pendingWallTargets.Remove(target);
+        else if(pendingWallTargets.Count<RequiredAttackWallCount)pendingWallTargets.Add(target);
+        wallBreakCount=pendingWallTargets.Count;return;
     }
-
-    pendingWallTargets.Add(target);
-
-    wallBreakCount++;
-
-    Debug.Log(
-        "Wall選択：" +
-        wallBreakCount +
-        "/" +
-        maxWallBreakCount
-    );
-
-    // まだ2枚目選択が必要
-    if(wallBreakCount < Mathf.Min(maxWallBreakCount, GetAliveEnemyWallCount()))
-    {
-        Debug.Log("2枚目のWallを選択してください");
-
-        return;
-    }
-
-    //=========================
-    // ここで同時破壊
-    //=========================
-
-    NotifyPlayerActionCommitted();
-
-    foreach(GameObject wall in pendingWallTargets)
-    {
-        if(handDealer != null)
-        {
-            handDealer.DamageEnemyWallFromAttack(
-                wall
-            );
-        }
-    }
-
-    pendingWallTargets.Clear();
-
-    attackerCard.Tap();
-    attackerCard.SetAttackable(false);
-
-    CardActionIcon attackerIcon =
-        attackerCard.GetComponent<CardActionIcon>();
-
-    if(attackerIcon != null)
-    {
-        attackerIcon.HideAll();
-    }
-
-    wallBreakCount = 0;
-    maxWallBreakCount = 1;
-
-    selectingTarget = false;
-    currentAttacker = null;
-
-    SetEnemyWallClickable(false);
-
-    HideAttackArrow();
-    pendingWallTargets.Clear();
+    CommitSelectedWallAttack(new System.Collections.Generic.List<GameObject>{target});
 }
 
 CardController SelectEnemyBlocker(
@@ -762,9 +540,9 @@ int GetAliveEnemyWallCount()
             playerBattleArea == null || !attackerCard.transform.IsChildOf(playerBattleArea) || attackerCard.isTapped)
             return;
 
-        if (RequestPlayerDecision("attack-card:" + target.GetInstanceID(),
-            GetCardName(attackerCard.data) + "で" + GetCardName(targetCard.data) + "を攻撃します。\nよろしいですか？",
-            () => SelectEnemyBattleCardTarget(target))) return;
+        if(!AttackSelectionActive || choosingMonarchWalls)return;
+        if(RequestAttackConfirmation("ATTACK  —  CONFIRM",()=>SelectEnemyBattleCardTarget(target),target))return;
+        StartPlayerBattlePhase();
 
         NotifyPlayerActionCommitted();
         selectingTarget = false;
@@ -1078,6 +856,8 @@ void StartPlayerTurn(bool firstTurn = false)
     }
 
     isPlayerTurnActive = true;
+    actionGlowTurn = 1;
+    ClearEnemySummonSickness();
     mainTurnCountdown.Reset();
     mainTurnCountdown.Advance("player-turn", 20f, 0f, false, false);
 
@@ -1153,8 +933,9 @@ void UntapPlayerBattleCards()
             return;
         }
 
-        if (RequestPlayerDecision("direct-attack", "相手に直接攻撃します。\nよろしいですか？",
-            () => SelectDirectAttackTarget(target))) return;
+        if(!AttackSelectionActive || choosingMonarchWalls)return;
+        if(RequestAttackConfirmation("DIRECT ATTACK  —  CONFIRM",()=>SelectDirectAttackTarget(target),target))return;
+        StartPlayerBattlePhase();
 
         Debug.Log(
             currentAttacker.name +
@@ -1313,6 +1094,10 @@ void SetEnemyWallClickable(bool value)
 
         IEnumerator EnemyTurnRoutine()
         {
+            actionGlowTurn = 2;
+            ClearPlayerSummonSickness();
+            try
+            {
             Debug.Log("=== 敵ターン開始 ===");
 
             ClearEnemySummonSickness();
@@ -1362,6 +1147,8 @@ void SetEnemyWallClickable(bool value)
 
                 yield break;
             }
+            }
+            finally { actionGlowTurn = 0; }
         }
 
 CardData SelectEnemyResourceChargeCard()
@@ -2282,10 +2069,11 @@ IEnumerator EnemyBattlePhase()
             pendingEnemyAttacker = attacker;
             pendingEnemyTargetWall = null;
             pendingEnemyRestedTarget = null;
+            pendingEnemyWallTargets.Clear();
             enemyAttackBlocked = false;
             attacker.Tap();
             yield return new WaitForSeconds(0.6f);
-            if (HasUntappedPlayerBlocker())
+            if (!IsBattleEnded&&HasUntappedPlayerBlocker())
             {
                 waitingBlockSelect = true;
                 ShowBlockableCards();
@@ -2329,12 +2117,12 @@ IEnumerator EnemyBattlePhase()
         }
 
         pendingEnemyAttacker = attacker;
-        pendingEnemyTargetWall =
-            targetWall.gameObject;
-
+        pendingEnemyTargetWall = targetWall.gameObject;
+        pendingEnemyRestedTarget = null;
+        PrepareIncomingWallTargets(attacker,pendingEnemyTargetWall,targets);
         enemyAttackBlocked = false;
 
-        if(HasUntappedPlayerBlocker())
+        if(!IsBattleEnded&&HasUntappedPlayerBlocker())
         {
             waitingBlockSelect = true;
 
@@ -2388,11 +2176,7 @@ IEnumerator EnemyBattlePhase()
 
         if (handDealer != null && pendingEnemyTargetWall != null)
         {
-            var wallTargets = new List<GameObject> { pendingEnemyTargetWall };
-            if (IsMonarchCard(attacker.data))
-                foreach (var candidate in targets)
-                    if (candidate != null && candidate.gameObject != pendingEnemyTargetWall)
-                    { wallTargets.Add(candidate.gameObject); break; }
+            var wallTargets = IncomingWallTargets();
             attacker.Tap();
             yield return handDealer.DamagePlayerWallsAndWait(wallTargets);
         }
@@ -2762,8 +2546,8 @@ void ShowEnemyAttackArrow(GameObject attacker, GameObject target)
             return;
         }
 
-        if (RequestPlayerDecision("block:" + blocker.GetInstanceID(),
-            GetCardName(blockerCard.data) + "でブロックします。\nよろしいですか？", () => SelectBlocker(blocker))) return;
+        if(!DefenseSelectionActive)return;
+        if(RequestDefenseConfirmation(blockerCard,()=>SelectBlocker(blocker)))return;
 
         enemyAttackBlocked = true;
         waitingBlockSelect = false;
@@ -2864,62 +2648,17 @@ void ShowEnemyAttackArrow(GameObject attacker, GameObject target)
 
 bool HasUntappedPlayerBlocker()
 {
-    if(playerBattleArea == null)
-        return false;
-
-    for(int i = 0; i < playerBattleArea.childCount; i++)
-    {
-        CardController card =
-            playerBattleArea.GetChild(i)
-            .GetComponent<CardController>();
-
-        if(card == null)
-            continue;
-
-        if(card.isTapped)
-            continue;
-
-        if(card.data == null)
-            continue;
-
-        bool canBlock =
-            card.data.effectTypes != null &&
-            System.Array.Exists(
-                card.data.effectTypes,
-                x => x == EffectType.BlockOnly
-            );
-
-        if(canBlock)
-            return true;
-    }
-
+    if(playerBattleArea==null)return false;
+    foreach(Transform child in playerBattleArea)
+        if(child.gameObject.activeInHierarchy&&CardActionIcon.CanBlock(child.GetComponent<CardController>()))return true;
     return false;
 }
 
     void ShowNoBlockButton(RectTransform attackerRt)
     {
-        if(noBlockButton == null)
-            return;
-
-        if(attackerRt == null)
-            return;
-
-        noBlockButton.SetActive(true);
-
-        RectTransform buttonRt =
-            noBlockButton.GetComponent<RectTransform>();
-
-        if(buttonRt != null)
-        {
-            buttonRt.position =
-                attackerRt.position;
-
-            buttonRt.anchoredPosition +=
-                noBlockButtonOffset;
-        }
-
-        // 最前面へ
-        noBlockButton.transform.SetAsLastSibling();
+        // The new button lives above the hand on the defense presentation canvas.
+        if(noBlockButton!=null)noBlockButton.SetActive(false);
+        SyncDefenseSelectionPresentation();
     }
 
     void HideNoBlockButton()
@@ -2992,7 +2731,8 @@ void ShowBlockableCards()
         if(!waitingBlockSelect)
             return;
 
-        if (RequestPlayerDecision("no-block", "ブロックせずに攻撃を受けます。\nよろしいですか？", OnNoBlockButtonClicked)) return;
+        if(!DefenseSelectionActive)return;
+        if(RequestDefenseConfirmation(null,OnNoBlockButtonClicked))return;
 
         Debug.Log("ブロックしない");
 
@@ -3818,6 +3558,7 @@ public bool IsSelectingDestroyTarget()
         // Cancel the whole turn chain, including the parent enemy-turn coroutine.
         StopAllCoroutines();
         battleIconsEnded = true;
+        actionGlowTurn = 0;
         enemyBattleIconsActive = false;
         HideAllCardIcons();
         //Debug.LogError("★★ StartBattleEndResult 呼ばれた ★★");
@@ -4312,11 +4053,11 @@ void OnSelectJokerClear()
         bool playerAttack = !battleIconsEnded && isBattlePhase && isPlayerTurnActive && !isEndingTurn;
         bool enemyAttack = !battleIconsEnded && enemyBattleIconsActive;
         CardActionIcon template = cardPrefab != null ? cardPrefab.GetComponent<CardActionIcon>() : null;
-        SyncFieldActionIcons(playerBattleArea, playerAttack, enemyAttack, template);
-        SyncFieldActionIcons(enemyBattleArea, enemyAttack, playerAttack, template);
+        SyncFieldActionIcons(playerBattleArea, playerAttack, enemyAttack, template, !IsBattleEnded && actionGlowTurn == 1, !IsBattleEnded && actionGlowTurn == 2);
+        SyncFieldActionIcons(enemyBattleArea, enemyAttack, playerAttack, template, !IsBattleEnded && actionGlowTurn == 2, !IsBattleEnded && actionGlowTurn == 1);
     }
 
-    void SyncFieldActionIcons(Transform area, bool attackMode, bool defenseMode, CardActionIcon template)
+    void SyncFieldActionIcons(Transform area, bool attackMode, bool defenseMode, CardActionIcon template, bool glowAttackMode, bool glowDefenseMode)
     {
         if(area == null) return;
         foreach(Transform child in area)
@@ -4326,6 +4067,12 @@ void OnSelectJokerClear()
             CardActionIcon icon = child.GetComponent<CardActionIcon>();
             bool attack = child.gameObject.activeInHierarchy && attackMode && CardActionIcon.CanAttack(controller);
             bool block = child.gameObject.activeInHierarchy && defenseMode && CardActionIcon.CanBlock(controller);
+            // Aura eligibility spans the complete turn, independently of battle-only action icons.
+            bool glowAttack = child.gameObject.activeInHierarchy && glowAttackMode && CardActionIcon.CanAttack(controller);
+            bool glowBlock = child.gameObject.activeInHierarchy && glowDefenseMode && CardActionIcon.CanBlock(controller);
+            var glow = child.GetComponent<CardActionGlow>();
+            if (glow == null && (glowAttack || glowBlock)) glow = child.gameObject.AddComponent<CardActionGlow>();
+            if (glow != null) glow.SetAvailability(area, glowAttack, glowBlock);
             if(icon == null && (attack || block)) icon = child.gameObject.AddComponent<CardActionIcon>();
             if(icon == null) continue;
             if(attack || block) icon.EnsureIcons(template);
@@ -4638,6 +4385,7 @@ public partial class TurnManager
 
     void CancelTimedAttackSelection()
     {
+        ClearPendingAttackConfirmation();
         selectingTarget = false;
         pendingWallTargets.Clear();
         wallBreakCount = 0;
@@ -4939,12 +4687,13 @@ public partial class TurnManager
         pendingEnemyAttacker = attacker;
         pendingEnemyRestedTarget = target;
         pendingEnemyTargetWall = null;
+        pendingEnemyWallTargets.Clear();
         enemyAttackBlocked = false;
         attacker.Tap();
         if (attackArrowManager != null)
             attackArrowManager.ShowEnemyArrow(attacker.GetComponent<RectTransform>(), target.GetComponent<RectTransform>());
         yield return new WaitForSeconds(0.6f);
-        if (HasUntappedPlayerBlocker())
+        if (!IsBattleEnded&&HasUntappedPlayerBlocker())
         {
             waitingBlockSelect = true;
             ShowBlockableCards();

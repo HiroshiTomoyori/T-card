@@ -12,7 +12,7 @@ public class CardController : MonoBehaviour
 
     public RectTransform tapVisual;
     [Header("Rest lowlight")]
-    [SerializeField, Range(0f, 1f)] float restDarkness = 0.45f;
+    [SerializeField, Range(0f, 1f)] float restDarkness = 0.1f;
     [SerializeField, HideInInspector] Image restArtwork;
     [SerializeField, HideInInspector] Color artworkColorBeforeRest = Color.white;
     [SerializeField, HideInInspector] bool artworkIsDimmed;
@@ -29,6 +29,16 @@ public class CardController : MonoBehaviour
     [Header("State")]
     public bool isTapped = false;
     public bool hasSummonSickness = false;
+    [SerializeField,HideInInspector] bool playedFromReverse;
+    public bool PlayedFromReverse=>playedFromReverse;
+    public static bool CanReceiveSummonSickness(CardData card)
+    {
+        if(card==null)return false;
+        return card.effectTypes==null||!System.Array.Exists(card.effectTypes,e=>e==EffectType.CannotAttack||e==EffectType.NoSummonSickness||e==EffectType.DestroyOneEnemyBattle||e==EffectType.TapAllEnemyBattle||e==EffectType.InstantDestroySelf||e==EffectType.JokerClearBattleArea);
+    }
+    public void BeginNormalPlay(){playedFromReverse=false;}
+    public void MarkPlayedFromReverse(){playedFromReverse=true;SetSummonSickness(false);}
+    public void RefreshStateVisuals(){UpdateTapVisual();}
 
     private float lastClickTime = 0f;
     private const float DOUBLE_CLICK_TIME = 0.3f;
@@ -40,6 +50,7 @@ public class CardController : MonoBehaviour
     {
         if(GetComponent<CardBoundaryShadow>()==null)gameObject.AddComponent<CardBoundaryShadow>();
         RemoveLegacyRestOverlay();
+        if(GetComponent<CardReadinessVisual>()==null)gameObject.AddComponent<CardReadinessVisual>();
         // CardGlowを自動取得
         if(cardGlow == null)
             cardGlow = GetComponentInChildren<CardGlow>(true);
@@ -221,7 +232,6 @@ public class CardController : MonoBehaviour
         RectTransform target = tapVisual != null
             ? tapVisual : GetComponent<RectTransform>();
         if (target != null) target.localRotation = Quaternion.identity;
-        RemoveLegacyRestOverlay();
         // Tint the sprite itself so its alpha, rounded edges and position stay exact.
         if (artworkIsDimmed && (restArtwork != artworkImage || !isTapped))
         {
@@ -236,7 +246,7 @@ public class CardController : MonoBehaviour
                 artworkColorBeforeRest = artworkImage.color;
                 artworkIsDimmed = true;
             }
-            float brightness = 1f - Mathf.Clamp01(restDarkness);
+            float brightness = 1f - Mathf.Clamp01(CardReadinessSettings.Load().restDarkness);
             Color original = artworkColorBeforeRest;
             artworkImage.color = new Color(original.r * brightness, original.g * brightness,
                 original.b * brightness, original.a);
@@ -258,30 +268,9 @@ public class CardController : MonoBehaviour
 
     public void SetSummonSickness(bool value)
     {
-        hasSummonSickness = value;
-
-
-        CanvasGroup canvasGroup =
-            GetComponent<CanvasGroup>();
-
-
-        if(canvasGroup == null)
-        {
-            canvasGroup =
-                gameObject.AddComponent<CanvasGroup>();
-        }
-
-
-        if(hasSummonSickness)
-        {
-            canvasGroup.alpha = 0.6f;
-        }
-        else
-        {
-            canvasGroup.alpha = 1f;
-        }
-
-
+        hasSummonSickness=value&&!playedFromReverse&&CanReceiveSummonSickness(data);
+        var layout=transform.parent!=null?transform.parent.GetComponent<BattleAreaLayout>():null;
+        if(layout!=null)layout.MarkDirty();
         UpdateAttackGlow();
     }
 

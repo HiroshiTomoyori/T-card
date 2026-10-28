@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 62a3c7f53b95a564c8b3aa7e9aeefd73, type: 3}
+  m_Name: CardActionGlowSettings
+  m_EditorClassIdentifier: 
+  enabledEffect: 1
+  attackColor: {r: 0.37254903, g: 0.9254902, b: 0.8666667, a: 1}
+  defenseColor: {r: 0.37254903, g: 0.92549026, b: 0.86666673, a: 1}
+  brightness: 0.5
+  minimumBrightness: 0.389
+  pulsePeriod: 4.4
+  fadeDuration: 0.22
+  blur: 20
+  lineWidth: 2.5
+  cornerRadius: 8
+  edgeOffset: 2
+  positionOffset: {x: 0, y: 0}

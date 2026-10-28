@@ -1,4 +1,4 @@
-Shader "T-card/UI/Field Drop Glow"
+﻿Shader "T-card/UI/Field Drop Glow"
 {
  Properties
  {
@@ -26,14 +26,14 @@ Shader "T-card/UI/Field Drop Glow"
    #include "UnityCG.cginc"
    struct appdata {float4 vertex:POSITION;float4 color:COLOR;float2 uv:TEXCOORD0;};
    struct v2f {float4 vertex:SV_POSITION;float2 localPosition:TEXCOORD0;float4 color:COLOR;};
-   float4 _Shape,_Appearance,_Motion,_FieldColor,_PanelSize;
+   float4 _Shape,_Appearance,_Motion,_FieldColor,_PanelSize,_Breath;
    v2f vert(appdata v){v2f o;o.vertex=UnityObjectToClipPos(v.vertex);o.localPosition=(v.uv-.5)*_PanelSize.xy;o.color=v.color;return o;}
    float4 frag(v2f i):SV_Target
    {
     float2 halfSize=_Shape.xy*.5;float radius=min(_Shape.z,min(halfSize.x,halfSize.y));
     float2 q=abs(i.localPosition)-halfSize+radius;float d=length(max(q,0))+min(max(q.x,q.y),0)-radius;
     float blur=max(1,_Shape.w),strokeWidth=max(.1,_Motion.z),clock=_Appearance.w;
-    float breath=.93+.07*sin(clock*1.5);
+    float breath=lerp(_Breath.y,_Breath.z,(1-cos(clock/max(.2,_Breath.x)*2*UNITY_PI))*.5);
     float rim=exp(-d*d/(strokeWidth*strokeWidth));float soft=exp(-d*d/(blur*blur))* .62;
     float wisps=0;
     for(int n=0;n<4;n++)

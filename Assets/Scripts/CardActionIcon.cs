@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using System;
 
@@ -30,19 +30,8 @@ public class CardActionIcon : MonoBehaviour
 
     public void EnsureIcons(CardActionIcon template)
     {
-        if(template == null || template == this) return;
-        if(attackIcon == null && template.attackIcon != null)
-        {
-            attackIcon = Instantiate(template.attackIcon, transform, false);
-            attackIcon.name = "AttackIcon";
-            attackIcon.SetActive(false);
-        }
-        if(blockIcon == null && template.blockIcon != null)
-        {
-            blockIcon = Instantiate(template.blockIcon, transform, false);
-            blockIcon.name = "BlockIcon";
-            blockIcon.SetActive(false);
-        }
+        // Attack and defense are communicated by glow, not legacy icons.
+        HideAll();
     }
 
     public void SetAvailability(bool attack, bool block)
@@ -93,28 +82,12 @@ public class CardActionIcon : MonoBehaviour
 
     public void ShowAttackIcon()
     {
-        PositionMark(attackIcon);
-        if(attackIcon != null)
-            attackIcon.SetActive(true);
-
-        if(blockIcon != null)
-            blockIcon.SetActive(false);
+        HideAll();
     }
 
     public void ShowBlockIcon()
     {
-        PositionMark(blockIcon);
-
-        if(attackIcon != null)
-            attackIcon.SetActive(false);
-
-        if(blockIcon != null)
-        {
-            blockIcon.SetActive(true);
-
-            // 最前面へ
-            blockIcon.transform.SetAsLastSibling();
-        }
+        HideAll();
     }
 
     public void HideAll()

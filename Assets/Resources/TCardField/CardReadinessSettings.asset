@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 15c1d3b5e233ad64c86a9656f199c70c, type: 3}
+  m_Name: CardReadinessSettings
+  m_EditorClassIdentifier: 
+  restDarkness: 0.1
+  rearOffset: 16
+  preparingScale: 0.97
+  iconSize: 30
+  iconOffset: {x: -4, y: 4}
+  iconColor: {r: 0.91, g: 0.8, b: 0.55, a: 1}
+  iconBackground: {r: 0.2, g: 0.18, b: 0.145, a: 1}
+  pulsePeriod: 3.2
