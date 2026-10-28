@@ -860,7 +860,7 @@ void StartPlayerTurn(bool firstTurn = false)
     actionGlowTurn = 1;
     ClearEnemySummonSickness();
     mainTurnCountdown.Reset();
-    mainTurnCountdown.Advance("player-turn", 20f, 0f, false, false);
+    mainTurnCountdown.Advance("player-turn", 25f, 0f, false, false);
 
     if(!firstTurn)
     {
@@ -4107,7 +4107,7 @@ public sealed class DecisionCountdown
 
 public partial class TurnManager
 {
-    [Header("Timer anchors (main: 20/30 seconds; sub: 10 seconds)")]
+    [Header("Timer anchors (main: 25/30 seconds; sub: 10 seconds)")]
     [SerializeField] bool inactivityTimersEnabled = true;
     [SerializeField] InactivityTimerRule confirmationTimer = new InactivityTimerRule(15f) { offset = new Vector2(0f, -360f) };
     [SerializeField] InactivityTimerRule openingTimer = new InactivityTimerRule(30f);
@@ -4289,7 +4289,7 @@ public partial class TurnManager
         bool mainRunning = isPlayerTurnActive && !isEndingTurn && hasDecision && (!sub || endConfirmation);
         // Main expires first, including when both clocks reach zero in one frame.
         if (mainRunning && mainTurnCountdown.Advance("player-turn",
-            mainTurnCountdown.Context == null ? 20f : mainTurnCountdown.Duration,
+            mainTurnCountdown.Context == null ? 25f : mainTurnCountdown.Duration,
             Time.unscaledDeltaTime, false, false))
         {
             // Early-turn auto advance may never interrupt an available action or choice.
