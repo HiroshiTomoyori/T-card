@@ -17,8 +17,7 @@ public class CardActionIcon : MonoBehaviour
             return false;
         return controller.data.effectTypes == null || !Array.Exists(controller.data.effectTypes,
             effect => effect == EffectType.CannotAttack || effect == EffectType.DestroyOneEnemyBattle ||
-                effect == EffectType.TapAllEnemyBattle || effect == EffectType.InstantDestroySelf ||
-                effect == EffectType.JokerClearBattleArea);
+                effect == EffectType.TapAllEnemyBattle || effect == EffectType.InstantDestroySelf);
     }
 
     public static bool CanBlock(CardController controller)

@@ -2375,7 +2375,7 @@ public IEnumerator DamagePlayerWallsAndWait(IEnumerable<GameObject> requested)
         foreach (var animation in animations) yield return animation;
         foreach (var wall in walls)
         {
-            var cg = wall.GetComponent<CanvasGroup>() ?? wall.AddComponent<CanvasGroup>();
+            var cg = wall.GetComponent<CanvasGroup>(); if (cg == null) cg = wall.AddComponent<CanvasGroup>();
             cg.alpha = 0f;
             cg.blocksRaycasts = false;
             cg.interactable = false;
@@ -2485,6 +2485,11 @@ bool shieldTrigger =
         if(triggerController != null)
         {
             triggerController.SetData(data);
+            if (BattleAreaLayout.IsSpell(data))
+            {
+                var spellGroup = triggerCard.GetComponent<CanvasGroup>(); if (spellGroup == null) spellGroup = triggerCard.AddComponent<CanvasGroup>();
+                spellGroup.alpha = 0f; spellGroup.blocksRaycasts = spellGroup.interactable = false;
+            }
             triggerController.MarkPlayedFromReverse();
             triggerController.SetAttackable(false);
         }
@@ -2543,6 +2548,12 @@ bool shieldTrigger =
                 click.enabled = true;
                 layout.Refresh();
             }
+        }
+
+        if (BattleAreaLayout.IsSpell(data))
+        {
+            var spellGroup = triggerCard.GetComponent<CanvasGroup>(); if (spellGroup == null) spellGroup = triggerCard.AddComponent<CanvasGroup>();
+            spellGroup.alpha = 0f; spellGroup.blocksRaycasts = spellGroup.interactable = false;
         }
 
         if(CardEffectManager.I != null &&
@@ -2621,7 +2632,7 @@ bool shieldTrigger =
                     "対象選択・破壊完了"
                 );
             }
-            else if(isNine || isJoker)
+            else if(isNine)
             {
                 while(isNine && CardEffectManager.I != null && CardEffectManager.I.IsResolvingNine)
                     yield return null;
@@ -2860,37 +2871,44 @@ bool shieldTrigger =
         );
     }
 
+    struct OpeningInputState { public bool raycasts, interactable; }
+    readonly Dictionary<CanvasGroup, OpeningInputState> openingInputStates = new Dictionary<CanvasGroup, OpeningInputState>();
     void SetOpeningLock(bool locked)
     {
-        CanvasGroup[] groups =
-            FindObjectsByType<CanvasGroup>(
-                FindObjectsSortMode.None
-            );
-
-        foreach(CanvasGroup cg in groups)
+        if (!locked)
         {
-            if(cg == null)
-                continue;
-
-            // Redrawボタンだけ除外
-            if(redrawButton != null &&
-            cg.gameObject == redrawButton)
-                continue;
-
-            // 確定ボタンだけ除外
-            if(confirmButton != null &&
-            cg.gameObject == confirmButton)
-                continue;
-
-            cg.blocksRaycasts = !locked;
-            cg.interactable = !locked;
+            foreach (var entry in openingInputStates)
+                if (entry.Key != null)
+                {
+                    entry.Key.blocksRaycasts = entry.Value.raycasts;
+                    entry.Key.interactable = entry.Value.interactable;
+                }
+            openingInputStates.Clear();
+            return;
         }
-
-        Debug.Log(
-            locked ?
-            "初期手札選択ロックON" :
-            "初期手札選択ロック解除"
-        );
+        // Lock gameplay branches only. Global CanvasGroup edits also disabled modal
+        // ancestors, and unlocking them re-enabled deliberately non-interactive effects.
+        var areas = new List<Transform> { handArea, wallArea, enemyWallArea };
+        if (turnManager != null)
+        {
+            areas.Add(turnManager.playerBattleArea); areas.Add(turnManager.enemyBattleArea);
+            if (turnManager.resourcePhaseManager != null) areas.Add(turnManager.resourcePhaseManager.resourceArea);
+        }
+        foreach (var area in areas)
+        {
+            if (area == null) continue;
+            var group = area.GetComponent<CanvasGroup>(); if (group == null) group = area.gameObject.AddComponent<CanvasGroup>();
+            if (!openingInputStates.ContainsKey(group))
+                openingInputStates[group] = new OpeningInputState { raycasts = group.blocksRaycasts, interactable = group.interactable };
+            group.blocksRaycasts = group.interactable = false;
+        }
+        foreach (var button in new[] { redrawButton, confirmButton })
+        {
+            if (button == null) continue;
+            var group = button.GetComponent<CanvasGroup>(); if (group == null) group = button.AddComponent<CanvasGroup>();
+            group.ignoreParentGroups = true;
+            group.blocksRaycasts = group.interactable = true;
+        }
     }
 
     void RefreshEnemyHandVisual()

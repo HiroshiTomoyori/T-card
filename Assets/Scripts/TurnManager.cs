@@ -1524,6 +1524,11 @@ IEnumerator EnemyMainPhase()
         if(controller != null)
         {
             controller.SetData(selectedCard);
+            if (BattleAreaLayout.IsSpell(selectedCard))
+            {
+                var spellGroup = obj.GetComponent<CanvasGroup>(); if (spellGroup == null) spellGroup = obj.AddComponent<CanvasGroup>();
+                spellGroup.alpha = 0f; spellGroup.blocksRaycasts = spellGroup.interactable = false;
+            }
             if(kingBase != null) StackEnemyKingBase(controller, kingBase);
 
             bool noSummonSickness =
@@ -3097,6 +3102,13 @@ public void StartSelectEnemyBattleToDestroy(
         return;
     }
 
+    bool sourceIsEnemy = enemyBattleArea != null && selfCard.transform.IsChildOf(enemyBattleArea);
+    Transform opponents = sourceIsEnemy ? playerBattleArea : enemyBattleArea;
+    if (TCardAIUnityBridge.GetCards(opponents).Count == 0)
+    {
+        SendCardToOwnGraveyard(selfCard);
+        return;
+    }
     pendingDestroySelfCard = selfCard;
     isSelectingDestroyTarget = true;
 
@@ -3312,70 +3324,17 @@ public bool IsSelectingDestroyTarget()
 }
     public void JokerClearBattleArea(CardController summonedJoker)
     {
-        if(summonedJoker == null)
-            return;
-
-        List<GameObject> targets =
-            new List<GameObject>();
-
-        if(playerBattleArea != null)
-        {
-            for(int i = 0; i < playerBattleArea.childCount; i++)
-            {
-                CardController card =
-                    playerBattleArea.GetChild(i)
-                    .GetComponent<CardController>();
-
-                if(card == null)
-                    continue;
-
-                if(card == summonedJoker)
-                    continue;
-
-                targets.Add(card.gameObject);
-            }
-        }
-
-        if(enemyBattleArea != null)
-        {
-            for(int i = 0; i < enemyBattleArea.childCount; i++)
-            {
-                CardController card =
-                    enemyBattleArea.GetChild(i)
-                    .GetComponent<CardController>();
-
-                if(card == null)
-                    continue;
-
-                if(card == summonedJoker)
-                    continue;
-
-                targets.Add(card.gameObject);
-            }
-        }
-
-        foreach(GameObject obj in targets)
-        {
-            if(obj == null)
-                continue;
-
-            if(obj.transform.IsChildOf(playerBattleArea))
-            {
-                SendToGraveyard(obj, playerGraveyard);
-            }
-            else if(obj.transform.IsChildOf(enemyBattleArea))
-            {
-                SendToGraveyard(obj, enemyGraveyard);
-            }
-        }
-
-        Debug.Log(
-            "JOKER効果：バトルエリア全体墓地送り " +
-            targets.Count +
-            "枚"
-        );
+        if (summonedJoker == null) return;
+        bool sourceIsEnemy = enemyBattleArea != null && summonedJoker.transform.IsChildOf(enemyBattleArea);
+        bool sourceIsPlayer = playerBattleArea != null && summonedJoker.transform.IsChildOf(playerBattleArea);
+        if (!sourceIsEnemy && !sourceIsPlayer) return;
+        Transform opposingField = sourceIsEnemy ? playerBattleArea : enemyBattleArea;
+        Transform graveyard = sourceIsEnemy ? playerGraveyard : enemyGraveyard;
+        if (opposingField == null || graveyard == null) return;
+        var targets = TCardAIUnityBridge.GetCards(opposingField);
+        foreach (var target in targets) SendToGraveyard(target.gameObject, graveyard);
+        Debug.Log("JOKER: opposing field cleared (" + targets.Count + ")");
     }
-
     bool HasSpecialWin(
         CardController attacker,
         CardController target
@@ -3392,6 +3351,7 @@ public bool IsSelectingDestroyTarget()
         if(attacker.data.effectTypes == null)
             return false;
 
+        target.data.SetPowerFromName();
         string targetName =
             target.data.name;
 
@@ -3400,7 +3360,7 @@ public bool IsSelectingDestroyTarget()
             // Jokerに勝利
             if(effect == EffectType.BreakableJoker)
             {
-                if(targetName.Contains("JOKER"))
+                if(target.data.suit == Suit.Joker || targetName.IndexOf("Joker", System.StringComparison.OrdinalIgnoreCase) >= 0)
                     return true;
             }
 
@@ -3419,7 +3379,7 @@ public bool IsSelectingDestroyTarget()
             // Jに勝利
             if(effect == EffectType.BreakableJack)
             {   //0529修正
-                if(targetName.Contains("Jack"))
+                if(target.data.suit != Suit.Joker && target.data.power == 11)
                     return true;
             }
         }
@@ -4874,6 +4834,11 @@ public partial class TurnManager
     {
         if (IsBattleEnded || IsChoosingEnemyHand || handDealer == null ||
             handDealer.enemyHandCards == null || handDealer.enemyHandCards.Count == 0) return;
+        if (handDealer.enemyHandCards.Count == 1)
+        {
+            handDealer.DiscardEnemyHandAt(0);
+            return;
+        }
         EnsurePlayerDecisionUi(); // Share the board reference and Japanese font.
         if (playerDecisionOverlay == null) return;
         if (enemyHandChoiceOverlay != null) Destroy(enemyHandChoiceOverlay.gameObject);

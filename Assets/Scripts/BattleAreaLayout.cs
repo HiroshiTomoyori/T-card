@@ -192,6 +192,8 @@ public class BattleAreaLayout : MonoBehaviour
             if (controller == null || controller.data == null)
                 continue;
 
+            if (IsSpell(controller.data)) continue;
+
             fieldCards.Add(controller);
         }
     }

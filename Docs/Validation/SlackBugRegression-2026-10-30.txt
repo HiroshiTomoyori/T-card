@@ -1,0 +1,56 @@
+PASS: 55 Unity runtime regression checks
+PASS: Joker preserves allies and self: enemy=False reverse=False
+PASS: Joker clears opposing field: enemy=False reverse=False
+PASS: Joker can attack: enemy=False reverse=False
+PASS: Joker preserves allies and self: enemy=False reverse=True
+PASS: Joker clears opposing field: enemy=False reverse=True
+PASS: Joker can attack: enemy=False reverse=True
+PASS: Joker preserves allies and self: enemy=True reverse=False
+PASS: Joker clears opposing field: enemy=True reverse=False
+PASS: Joker can attack: enemy=True reverse=False
+PASS: Joker preserves allies and self: enemy=True reverse=True
+PASS: Joker clears opposing field: enemy=True reverse=True
+PASS: Joker can attack: enemy=True reverse=True
+PASS: 10 defeats Jack both directions: False
+PASS: AI agrees that 10 defeats Jack
+PASS: 10 defeats Jack both directions: True
+PASS: AI agrees that 10 defeats Jack
+PASS: Spade 6 has summon sickness
+PASS: Spade 8 can block
+PASS: Spade survivor cannot block twice
+PASS: Heart 6 has summon sickness
+PASS: Heart 8 can block
+PASS: Heart survivor cannot block twice
+PASS: Club 6 has summon sickness
+PASS: Club 8 can block
+PASS: Club survivor cannot block twice
+PASS: Diamond 6 has summon sickness
+PASS: Diamond 8 can block
+PASS: Diamond survivor cannot block twice
+PASS: 6 cannot defeat Joker through ordinary combat
+PASS: 10 as sixth field card discards sole opposing hand card
+PASS: seventh normal summon rejected
+PASS: spell excluded from layout count
+PASS: spell excluded from combat list
+PASS: Ace source hidden before target selection
+PASS: targetless Ace cannot deadlock turn
+PASS: resource 4 plus hand 4 prevents early auto-end
+PASS: no available actions permits early auto-end
+PASS: 2 playable with resource 14 without charging
+PASS: K discount is recognized as available action
+PASS: King playable at exactly 13 without additional charge
+PASS: Joker playable at exactly 13
+PASS: hand limit and discard still count spell cards in hand
+PASS: redraw locks board hand input
+PASS: redraw confirmation buttons retain input
+PASS: redraw restores original hand input state
+PASS: redraw unlock does not turn effects into input blockers
+PASS: early-turn rule stops after fifth turn
+PASS: 7 also defeats attacking Jack through BreakableJack
+PASS: King restores exactly one own wall
+PASS: player King does not restore enemy walls
+PASS: King lifetime recovery cap prevents excess walls
+PASS: enemy King restores exactly one enemy-owned wall
+PASS: wall width and height are independently configurable
+PASS: wall size settings applied to existing card
+PASS: wall size settings applied to existing card

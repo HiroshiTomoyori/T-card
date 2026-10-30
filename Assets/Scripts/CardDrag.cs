@@ -208,7 +208,7 @@ if (turnManager == null || !turnManager.CanDragPlayerHand)
 if (rpm != null && rpm.IsRunning())
 {
     rpm.UpdateDropHighlight(eventData.position,eventData.pressEventCamera);
-    rpm.SetResourceDropRaycast(true);
+    rpm.SetResourceDropRaycast(rpm.IsInsideResourceTarget(eventData.position,eventData.pressEventCamera));
 }
 }
     /*public void OnBeginDrag(
@@ -338,7 +338,11 @@ public void OnDrag(PointerEventData eventData)
     ApplyDraggingSize();
     FieldDropPresentation.UpdateDrag(this,eventData.position,eventData.pressEventCamera);
     var resourcePhase=FindFirstObjectByType<ResourcePhaseManager>();
-    if(resourcePhase!=null && resourcePhase.IsRunning())resourcePhase.UpdateDropHighlight(eventData.position,eventData.pressEventCamera);
+    if(resourcePhase!=null && resourcePhase.IsRunning())
+    {
+        resourcePhase.UpdateDropHighlight(eventData.position,eventData.pressEventCamera);
+        resourcePhase.SetResourceDropRaycast(resourcePhase.IsInsideResourceTarget(eventData.position,eventData.pressEventCamera));
+    }
 }
 
 public void OnEndDrag(PointerEventData eventData)
@@ -526,6 +530,8 @@ public void MarkDroppedSuccessfully()
         if (isAce || isNine)
         {
             playSnap = false;
+            // Keep the effect source for ownership, but never display it as a field card.
+            canvasGroup.alpha = 0f;
 
             Debug.Log(
                 "アクトカードのスナップを強制無効化：" +
@@ -547,7 +553,7 @@ public void MarkDroppedSuccessfully()
 
         BattleCardClick battleClick = GetComponent<BattleCardClick>();
         if (battleClick == null) battleClick = gameObject.AddComponent<BattleCardClick>();
-        battleClick.enabled = true;
+        battleClick.enabled = !isAce && !isNine;
 
         transform.SetParent(battleArea, true);
         if (!playSnap) transform.localPosition = Vector3.zero;
@@ -577,6 +583,7 @@ public void MarkDroppedSuccessfully()
         else
         {
             ApplyBattleAreaSizeWithoutSnap();
+            if (isAce || isNine) canvasGroup.alpha = 0f;
 
             Debug.Log(
                 "スナップなしでカードを配置：" +

@@ -13,13 +13,16 @@ public static class TCardAIUnityBridge
         if(area == null)
             return result;
 
+        bool isBattleField = area.GetComponent<BattleAreaLayout>() != null;
+
         for(int i = 0; i < area.childCount; i++)
         {
             CardController card =
                 area.GetChild(i)
                 .GetComponent<CardController>();
 
-            if(card != null && card.data != null)
+            if(card != null && card.data != null && card.gameObject.activeInHierarchy &&
+               (!isBattleField || !BattleAreaLayout.IsSpell(card.data)))
             {
                 result.Add(card);
             }
@@ -27,6 +30,7 @@ public static class TCardAIUnityBridge
 
         return result;
     }
+
 
     public static int CountAliveWalls(
         Transform wallArea

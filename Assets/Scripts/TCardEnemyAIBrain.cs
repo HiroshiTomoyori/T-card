@@ -117,7 +117,11 @@ public class TCardEnemyAIBrain : MonoBehaviour
         {
             if(!affordable) return score;
             var joker = state.Copy();
-            if(ChooseProjectedJokerClear(state)) { joker.own.Clear(); joker.foe.Clear(); }
+            if(ChooseProjectedJokerClear(state))
+            {
+                joker.foe.Clear();
+                joker.own.Add(new StrategicUnit { data = card, sick = false });
+            }
             else joker.extraTurn = true;
             return score + DrawTacticalGain(joker, state, search, offense, danger);
         }
@@ -842,8 +846,7 @@ bool CanSpecialBreak(
     {
         var state = ReadStrategicState(new List<CardData>(), 0, enemyWallCount,
             playerWallCount, playerField, enemyField);
-        // The just-cast Joker is consumed by both choices, so exclude it from board value.
-        state.own.RemoveAll(unit => HasEffect(unit.data, EffectType.JokerClearBattleArea));
+        // Clear preserves the caster and its allies. The extra-turn branch consumes its source.
         return ChooseProjectedJokerClear(state);
     }
     float EvaluateSummonTempo(CardData card, int enemyWalls, int playerWalls,
@@ -1042,9 +1045,7 @@ bool CanSpecialBreak(
 
         if(HasEffect(card, EffectType.JokerClearBattleArea))
         {
-            float clearValue =
-                SumFieldValue(playerField) -
-                SumFieldValue(enemyField);
+            float clearValue = SumFieldValue(playerField);
 
             score += Mathf.Max(0f, clearValue);
 
@@ -1439,7 +1440,11 @@ bool CanSpecialBreak(
             if(card.cost > state.mana || state.own.Count >= state.slots) yield break;
             bool clear = ChooseProjectedJokerClear(state);
             var next = StartSummon(state, index, card.cost, card);
-            if(clear) { next.own.Clear(); next.foe.Clear(); }
+            if(clear)
+            {
+                next.foe.Clear();
+                next.own.Add(new StrategicUnit { data = card, sick = false });
+            }
             else next.extraTurn = true;
             yield return next;
             yield break;
@@ -1484,7 +1489,7 @@ bool CanSpecialBreak(
         if(!GameSettings.IsAdvancedRule) return true;
         var context = new StrategicSearch();
         var extra = state.Copy(); extra.extraTurn = true;
-        var clear = state.Copy(); clear.own.Clear(); clear.foe.Clear();
+        var clear = state.Copy(); clear.foe.Clear();
         var clearForecast = new BattleForecast();
         var extraForecast = new BattleForecast();
         return ForecastAttacks(clear, clearForecast, 6) > ForecastAttacks(extra, extraForecast, 6);
