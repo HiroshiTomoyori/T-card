@@ -153,12 +153,14 @@ public sealed class LiquidResourceView : MonoBehaviour
         text.UpdateVertexData(TMP_VertexDataUpdateFlags.Vertices);
     }
 
-    public IEnumerator DropCard(GameObject source)
+    public IEnumerator DropCard(GameObject source,bool preserveSourcePose=false,float durationOverride=-1)
     {
         if(source==null)yield break;
         var card=source.GetComponent<CardController>();
         Sprite sprite=card!=null&&card.artworkImage!=null?card.artworkImage.sprite:null;
         if(sprite==null && card!=null && card.data!=null)sprite=card.data.artwork;
+        RectTransform sourceArt=card!=null&&card.artworkImage!=null?card.artworkImage.rectTransform:source.transform as RectTransform;
+        var corners=new Vector3[4];if(sourceArt!=null)sourceArt.GetWorldCorners(corners);
         var cg=source.GetComponent<CanvasGroup>();if(cg==null)cg=source.AddComponent<CanvasGroup>();
         cg.alpha=0;cg.blocksRaycasts=false;cg.interactable=false;
         UpdateForeground();foreground.gameObject.SetActive(true);
@@ -168,20 +170,33 @@ public sealed class LiquidResourceView : MonoBehaviour
         fallingCard=(RectTransform)go.transform;
         var image=go.GetComponent<Image>();image.sprite=sprite;image.preserveAspect=true;image.raycastTarget=false;
         var fade=go.GetComponent<CanvasGroup>();fade.blocksRaycasts=false;
-        fallingCard.sizeDelta=new Vector2(Settings.dropCardWidth,Settings.dropCardWidth*1.46f);
+        Vector2 configuredSize=new Vector2(Settings.dropCardWidth,Settings.dropCardWidth*1.46f);
+        Vector2 initialSize=configuredSize;
+        Quaternion initialRotation=Quaternion.identity;
+        Vector3 sourceCenter=source.transform.position;
+        if(preserveSourcePose&&sourceArt!=null)
+        {
+            Vector3 a=root.InverseTransformPoint(corners[0]),b=root.InverseTransformPoint(corners[1]),c=root.InverseTransformPoint(corners[2]);
+            initialSize=new Vector2(Vector3.Distance(b,c),Vector3.Distance(a,b));
+            sourceCenter=(corners[0]+corners[2])*.5f;
+            initialRotation=Quaternion.Inverse(root.rotation)*sourceArt.rotation;
+        }
+        fallingCard.sizeDelta=initialSize;
         Vector3 end=root.InverseTransformPoint(panel.TransformPoint(new Vector3(0,Settings.panelSize.y*(.06f+.85f*level-.5f),0)));
-        Vector2 start=root.InverseTransformPoint(source.transform.position);
-        if(!Settings.dropFromRelease)start=(Vector2)end+Vector2.up*Settings.dropDistance;
+        Vector2 start=root.InverseTransformPoint(sourceCenter);
+        if(!preserveSourcePose&&!Settings.dropFromRelease)start=(Vector2)end+Vector2.up*Settings.dropDistance;
+        float duration=durationOverride>0?Mathf.Max(.1f,durationOverride):Settings.dropDuration;
         float elapsed=0;
         try
         {
-            while(elapsed<Settings.dropDuration && fallingCard!=null)
+            while(elapsed<duration && fallingCard!=null)
             {
-                float p=Mathf.Clamp01(elapsed/Mathf.Max(.1f,Settings.dropDuration));
+                float p=Mathf.Clamp01(elapsed/Mathf.Max(.1f,duration));
                 Vector4 pose=CardPose(Settings,p);
-                float ease=.16f*p+.84f*Mathf.Pow(p,2.3f);
+                float ease=preserveSourcePose?Mathf.SmoothStep(0,1,p):.16f*p+.84f*Mathf.Pow(p,2.3f);
                 fallingCard.anchoredPosition=Vector2.Lerp(start,end,ease)+Vector2.up*(Settings.dropArcHeight*4*p*(1-p));
-                fallingCard.localRotation=Quaternion.Euler(0,0,pose.y);
+                fallingCard.sizeDelta=Vector2.Lerp(initialSize,configuredSize,Mathf.SmoothStep(0,1,p));
+                fallingCard.localRotation=preserveSourcePose?Quaternion.Slerp(initialRotation,Quaternion.identity,ease):Quaternion.Euler(0,0,pose.y);
                 fallingCard.localScale=Vector3.one*pose.z;
                 fade.alpha=pose.w;
                 yield return null;elapsed+=Time.unscaledDeltaTime;
@@ -211,6 +226,8 @@ public sealed class LiquidResourceView : MonoBehaviour
         if(host.GetSiblingIndex()!=index)host.SetSiblingIndex(index);
     }
     Transform layerHand;
+    bool manageLayerHost=true;
+    public void ConfigureLayerHand(Transform hand,bool manageHost=true){layerHand=hand;manageLayerHost=manageHost;}
     void LateUpdate()
     {
         if(!initialized || Settings==null || transform.parent==null)return;
@@ -219,7 +236,7 @@ public sealed class LiquidResourceView : MonoBehaviour
             var dealer=FindFirstObjectByType<HandDealer>();
             if(dealer!=null)layerHand=dealer.handArea;
         }
-        if(layerHand!=null && Settings.behindHand)PlaceBehindHand(transform.parent,layerHand);
+        if(manageLayerHost && layerHand!=null && Settings.behindHand)PlaceBehindHand(transform.parent,layerHand);
         SyncForegroundSorting(layerHand);
     }
     public void PlaceEffectBehindHand(Transform effect)

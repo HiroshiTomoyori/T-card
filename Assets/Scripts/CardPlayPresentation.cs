@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 public sealed class CardPlayPresentation : MonoBehaviour
@@ -39,6 +39,8 @@ public sealed class CardPlayPresentation : MonoBehaviour
         Camera camera=owner.renderMode==RenderMode.ScreenSpaceOverlay?null:owner.worldCamera;
         RectTransformUtility.ScreenPointToLocalPointInRectangle(root,RectTransformUtility.WorldToScreenPoint(camera,landing),camera,out Vector2 target);
         Vector2 finalSize=new Vector2(root.InverseTransformVector(area.TransformVector(Vector3.right*localSize.x)).magnitude,root.InverseTransformVector(area.TransformVector(Vector3.up*localSize.y)).magnitude);
+        bool isAct=BattleAreaLayout.IsSpell(data);
+        if(isAct){target=center;finalSize=reveal;}
         var shadow=Graphic<TurnDrawFieldShadowGraphic>(root,"Play field shadow");shadow.maskable=false;
         var atmosphere=Graphic<CardPlayAtmosphereGraphic>(root,"Play atmosphere and circular ripple");atmosphere.rectTransform.anchoredPosition=center;atmosphere.maskable=false;fx.Atmosphere=atmosphere;
         var holder=Rect(root,"Play card");var halo=Graphic<TurnDrawHighlightGraphic>(holder,"Play edge glow");halo.surface=false;halo.maskable=false;
@@ -56,6 +58,7 @@ public sealed class CardPlayPresentation : MonoBehaviour
                 float travel=Smooth(arrival,total,elapsed),fade=1-travel;
                 holder.anchoredPosition=Vector2.Lerp(center,target,travel);holder.sizeDelta=Vector2.Lerp(reveal*zoom,finalSize,travel);
                 holder.localScale=new Vector3(elapsed<rotate?Mathf.Max(.018f,Mathf.Abs(Mathf.Cos(yaw))):1,1,1);holder.localRotation=Quaternion.Euler(0,0,elapsed<rotate?s.initialTilt*(1-Ease(u)):0);
+                fx.Artwork.color=new Color(1,1,1,isAct?fade:1);
                 fx.Artwork.sprite=elapsed<rotate&&Mathf.Cos(yaw)<0?back:data.artwork;
                 float light=s.highlightStrength*Smooth(rotate*.08f,rotate*.84f,elapsed)*fade,sweep=Mathf.InverseLerp(rotate*.64f,rotate*1.34f,elapsed);
                 halo.Configure(light*s.outerGlowStrength,s.glowSpread*fit,sweep,s.Highlight(isEnemy));surface.Configure(light,0,sweep,s.Highlight(isEnemy));

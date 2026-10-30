@@ -35,7 +35,7 @@ public partial class TurnManager
     }
     public bool CanChooseAttackCard(GameObject card)
     {
-        return !IsBattleEnded && !IsChoosingEnemyHand && !IsPlayerDecisionOpen && isPlayerTurnActive && !isEndingTurn && !resolvingPlayerCardAttack && !waitingBlockSelect && !CardPlayPresentation.IsPlaying &&
+        return !PresentationSequenceLock.IsLocked && !IsBattleEnded && !IsChoosingEnemyHand && !IsPlayerDecisionOpen && isPlayerTurnActive && !isEndingTurn && !resolvingPlayerCardAttack && !waitingBlockSelect && !CardPlayPresentation.IsPlaying && !AttackMotionPresentation.IsPlaying &&
             (handDealer==null||(!HandDealer.IsRedrawSelecting&&!handDealer.IsHandLimitSelecting&&!handDealer.IsTurnDrawAnimating&&!handDealer.IsWallPlacementRunning&&!handDealer.IsResolvingWallAttack&&!handDealer.IsResolvingEnemyWallAttack)) &&
             (CardEffectManager.I==null||!CardEffectManager.I.IsResolvingNine) && !IsSelectingDestroyTarget() && card!=null && playerBattleArea!=null && card.transform.parent==playerBattleArea && card.activeInHierarchy && CardActionIcon.CanAttack(card.GetComponent<CardController>());
     }
@@ -81,9 +81,7 @@ public partial class TurnManager
         var attacker=currentAttacker.GetComponent<CardController>();var blocker=SelectEnemyBlocker(attacker);
         StartPlayerBattlePhase();NotifyPlayerActionCommitted();CancelAttackSelection();
         attacker.Tap();attacker.SetAttackable(false);
-        if(blocker!=null){ResolveCardBattle(attacker,blocker);return;}
-        // Start both existing wall slash/recovery routines in this frame, after one confirmation.
-        foreach(var wall in walls)handDealer.DamageEnemyWallFromAttack(wall);
+        StartCoroutine(PlayerWallAttackMotion(attacker,walls,blocker));
     }
     void SyncAttackSelectionPresentation()
     {

@@ -36,7 +36,7 @@ public class CardController : MonoBehaviour
         if(card==null)return false;
         return card.effectTypes==null||!System.Array.Exists(card.effectTypes,e=>e==EffectType.CannotAttack||e==EffectType.NoSummonSickness||e==EffectType.DestroyOneEnemyBattle||e==EffectType.TapAllEnemyBattle||e==EffectType.InstantDestroySelf||e==EffectType.JokerClearBattleArea);
     }
-    public void BeginNormalPlay(){playedFromReverse=false;}
+    public void BeginNormalPlay(){playedFromReverse=false;GetComponent<CardReadinessVisual>()?.ResetPreparationTransition();}
     public void MarkPlayedFromReverse(){playedFromReverse=true;SetSummonSickness(false);}
     public void RefreshStateVisuals(){UpdateTapVisual();}
 
@@ -268,7 +268,10 @@ public class CardController : MonoBehaviour
 
     public void SetSummonSickness(bool value)
     {
+        bool wasPreparing=hasSummonSickness;
         hasSummonSickness=value&&!playedFromReverse&&CanReceiveSummonSickness(data);
+        if(hasSummonSickness&&!wasPreparing)GetComponent<CardReadinessVisual>()?.ResetPreparationTransition();
+        if(!hasSummonSickness)GetComponent<CardReadinessVisual>()?.ClearPreparationTransition();
         var layout=transform.parent!=null?transform.parent.GetComponent<BattleAreaLayout>():null;
         if(layout!=null)layout.MarkDirty();
         UpdateAttackGlow();

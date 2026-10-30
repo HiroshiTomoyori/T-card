@@ -4,6 +4,8 @@ public sealed class CardReadinessSettings:ScriptableObject
 {
     [Header("レスト：傾けず軽く暗くする")]
     [Range(0,1)] public float restDarkness=.1f;
+    [Header("出撃準備：着地後の変化")]
+    [Min(0),Tooltip("カードがフィールドに着いてから準備姿勢へ変わる時間（秒）") ] public float preparationTransitionDuration=.5f;
     [Header("出撃準備：後方へ配置 / UI単位")]
     [Min(0)] public float rearOffset=10;
     [Range(.8f,1)] public float preparingScale=.97f;

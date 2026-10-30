@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.EventSystems;
 using System.Collections;
 using DG.Tweening;
@@ -372,14 +372,7 @@ public class BattleDropZone :
          */
         ActivateSummonEffect(card);
 
-        /*
-         * DropToBattleAreaのスナップ演出が
-         * CanvasGroup.alphaを戻す可能性があるため、
-         * 対象選択中は毎フレーム非表示を維持する。
-         */
-        StartCoroutine(
-            HideAceWhileSelecting(card)
-        );
+        ActCardPresentation.HideOnField(card);
 
         RefreshBattleLayout();
 
@@ -393,90 +386,6 @@ public class BattleDropZone :
                 cardDrag
             )
         );
-    }
-
-    IEnumerator HideAceWhileSelecting(
-        CardController aceCard
-    )
-    {
-        if (aceCard == null)
-            yield break;
-
-        TurnManager turnManager =
-            FindFirstObjectByType<TurnManager>();
-
-        if (turnManager == null)
-        {
-            Debug.LogWarning(
-                "A非表示処理：" +
-                "TurnManagerが見つかりません"
-            );
-            yield break;
-        }
-
-        CanvasGroup canvasGroup =
-            aceCard.GetComponent<CanvasGroup>();
-
-        if (canvasGroup == null)
-        {
-            canvasGroup =
-                aceCard.gameObject
-                    .AddComponent<CanvasGroup>();
-        }
-
-        while (
-            aceCard != null &&
-            battleArea != null &&
-            turnManager
-                .IsSelectingDestroyTarget() &&
-            aceCard.transform
-                .IsChildOf(battleArea)
-        )
-        {
-            SetAceHidden(canvasGroup);
-
-            /*
-             * CardDragやAnimatorによる
-             * 表示更新の後に再度非表示にする。
-             */
-            yield return new WaitForEndOfFrame();
-
-            if (
-                aceCard != null &&
-                battleArea != null &&
-                turnManager
-                    .IsSelectingDestroyTarget() &&
-                aceCard.transform
-                    .IsChildOf(battleArea)
-            )
-            {
-                SetAceHidden(canvasGroup);
-            }
-        }
-
-        /*
-         * Aが墓地へ移動した場合、
-         * TurnManager.SendToGraveyard()が
-         * alphaを0.45へ設定する。
-         *
-         * ここではalphaを変更しない。
-         */
-        Debug.Log(
-            "Aの対象選択終了：" +
-            "非表示維持を終了"
-        );
-    }
-
-    void SetAceHidden(
-        CanvasGroup canvasGroup
-    )
-    {
-        if (canvasGroup == null)
-            return;
-
-        canvasGroup.alpha = 0f;
-        canvasGroup.blocksRaycasts = false;
-        canvasGroup.interactable = false;
     }
 
     void ResolveNineAction(
@@ -617,7 +526,7 @@ IEnumerator CompleteSummonAfterSnap(CardDrag cardDrag)
         yield break;
     }
 
-    while(CardEffectManager.I != null && CardEffectManager.I.IsResolvingNine) yield return null;
+    while(PresentationSequenceLock.IsLocked || (CardEffectManager.I != null && (CardEffectManager.I.IsResolvingNine || CardEffectManager.I.IsResolvingSummon))) yield return null;
     rpm.EndResourcePhase();
 
     TurnManager turnManager =

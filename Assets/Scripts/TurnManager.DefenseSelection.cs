@@ -15,7 +15,7 @@ public partial class TurnManager
     public bool HasPendingDefenseConfirmation=>pendingDefenseConfirmation!=null;
     public CardController SelectedDefenseBlocker=>selectedDefenseBlocker;
     public string DefenseConfirmationLabel=>selectedDefenseBlocker!=null?GetCardName(selectedDefenseBlocker.data)+"で防御しますか？":"攻撃を通しますか？";
-    public bool CanChooseDefenseCard(CardController card)=>DefenseSelectionActive&&card!=null&&card.gameObject.activeInHierarchy&&card.transform.parent==playerBattleArea&&CardActionIcon.CanBlock(card);
+    public bool CanChooseDefenseCard(CardController card)=>!PresentationSequenceLock.IsLocked&&DefenseSelectionActive&&card!=null&&card.gameObject.activeInHierarchy&&card.transform.parent==playerBattleArea&&CardActionIcon.CanBlock(card);
     public List<GameObject> IncomingWallTargets()
     {
         var result=new List<GameObject>();

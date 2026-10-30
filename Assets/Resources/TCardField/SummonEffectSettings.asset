@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c1cca1172c00bf54c8b41351cb5fbb33, type: 3}
+  m_Name: SummonEffectSettings
+  m_EditorClassIdentifier: 
+  speed: 1.3
+  landingDelay: 0.5
+  pulseDuration: 0.38
+  pulseColor: {r: 0.12156862, g: 0.9265342, b: 1, a: 1}
+  pulseStrength: 1
+  pulseExpansion: 1.65
+  drawTravel: 0.24
+  drawFlip: 0.22
+  drawHold: 0.18
+  handTravel: 0.2
+  chargeTravel: 0.3
+  chargeHold: 0.1
+  playerRevealSize: {x: 120, y: 184}
+  enemyRevealSize: {x: 110, y: 169}
+  playerRevealOffset: {x: 0, y: 150}
+  enemyRevealOffset: {x: 0, y: -155}
+  chargeRevealAboveDeck: 110

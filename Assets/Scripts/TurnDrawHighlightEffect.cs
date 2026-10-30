@@ -1,9 +1,10 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 [DisallowMultipleComponent]
 public sealed class TurnDrawHighlightEffect : MonoBehaviour
 {
     HandDealer dealer;
+    EnemyPresentationSettings enemy;
     RectTransform artwork;
     float shadowVisibility;
     public TurnDrawFieldShadowGraphic FieldShadow {get;private set;}
@@ -11,9 +12,9 @@ public sealed class TurnDrawHighlightEffect : MonoBehaviour
     public TurnDrawHighlightGraphic Surface {get;private set;}
     public float Elapsed {get;private set;}
     public float Amount {get;private set;}
-    public void Initialize(HandDealer owner)
+    public void Initialize(HandDealer owner,EnemyPresentationSettings enemySettings=null)
     {
-        dealer=owner;var controller=GetComponent<CardController>();
+        dealer=owner;enemy=enemySettings;var controller=GetComponent<CardController>();
         var art=controller!=null?controller.artworkImage:null;
         var anchor=art!=null?art.rectTransform:GetComponent<RectTransform>();
         artwork=anchor;
@@ -28,14 +29,14 @@ public sealed class TurnDrawHighlightEffect : MonoBehaviour
     public void SetTime(float time)
     {
         Elapsed=time;if(dealer==null)return;
-        float total=Mathf.Max(.01f,dealer.turnDrawTravelTime)+Mathf.Max(.01f,dealer.turnDrawFlipTime)+Mathf.Max(0,dealer.turnDrawRevealHoldTime)+Mathf.Max(.01f,dealer.turnDrawHandTime);
-        shadowVisibility=Mathf.SmoothStep(0,1,Mathf.InverseLerp(0,Mathf.Max(.01f,dealer.turnDrawTravelTime),time))*(1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(total-Mathf.Max(.01f,dealer.turnDrawHandTime),total,time)));
-        float travel=Mathf.Max(.01f,dealer.turnDrawTravelTime),flip=Mathf.Max(.01f,dealer.turnDrawFlipTime),hold=Mathf.Max(0,dealer.turnDrawRevealHoldTime),hand=Mathf.Max(.01f,dealer.turnDrawHandTime);
+        float total=Mathf.Max(.01f,(enemy!=null?enemy.drawTravel:dealer.turnDrawTravelTime))+Mathf.Max(.01f,(enemy!=null?enemy.drawSettle:dealer.turnDrawFlipTime))+Mathf.Max(0,(enemy!=null?enemy.drawHold:dealer.turnDrawRevealHoldTime))+Mathf.Max(.01f,(enemy!=null?enemy.drawToHand:dealer.turnDrawHandTime));
+        shadowVisibility=Mathf.SmoothStep(0,1,Mathf.InverseLerp(0,Mathf.Max(.01f,(enemy!=null?enemy.drawTravel:dealer.turnDrawTravelTime)),time))*(1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(total-Mathf.Max(.01f,(enemy!=null?enemy.drawToHand:dealer.turnDrawHandTime)),total,time)));
+        float travel=Mathf.Max(.01f,(enemy!=null?enemy.drawTravel:dealer.turnDrawTravelTime)),flip=Mathf.Max(.01f,(enemy!=null?enemy.drawSettle:dealer.turnDrawFlipTime)),hold=Mathf.Max(0,(enemy!=null?enemy.drawHold:dealer.turnDrawRevealHoldTime)),hand=Mathf.Max(.01f,(enemy!=null?enemy.drawToHand:dealer.turnDrawHandTime));
         float start=travel+flip*.5f,rise=travel+flip*1.05f,fade=travel+flip+hold*.84f,end=travel+flip+hold+hand*.8f;
-        Amount=dealer.turnDrawHighlightStrength*Mathf.SmoothStep(0,1,Mathf.InverseLerp(start,rise,time))*(1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(fade,end,time)));
+        Amount=(enemy!=null?enemy.highlightStrength:dealer.turnDrawHighlightStrength)*Mathf.SmoothStep(0,1,Mathf.InverseLerp(start,rise,time))*(1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(fade,end,time)));
         float sweep=Mathf.InverseLerp(travel+flip*.68f,travel+flip+hold*.82f,time);
-        if(Halo!=null)Halo.Configure(Amount*dealer.turnDrawOuterGlowStrength,dealer.turnDrawGlowSpread,sweep,dealer.turnDrawHighlightColor);
-        if(Surface!=null)Surface.Configure(Amount,0,sweep,dealer.turnDrawHighlightColor);
+        if(Halo!=null)Halo.Configure(Amount*(enemy!=null?enemy.outerGlow:dealer.turnDrawOuterGlowStrength),(enemy!=null?enemy.glowSpread:dealer.turnDrawGlowSpread),sweep,(enemy!=null?enemy.highlightColor:dealer.turnDrawHighlightColor));
+        if(Surface!=null)Surface.Configure(Amount,0,sweep,(enemy!=null?enemy.highlightColor:dealer.turnDrawHighlightColor));
         UpdateFieldShadow();
     }
     void CreateFieldShadow()
@@ -62,9 +63,9 @@ public sealed class TurnDrawHighlightEffect : MonoBehaviour
         Vector3 height=parent.InverseTransformVector(artwork.TransformVector(Vector3.up*artwork.rect.height));
         Vector2 footprint=new Vector2(Mathf.Max(1,width.magnitude*.94f),Mathf.Max(1,height.magnitude*.9f));
         rt.anchorMin=rt.anchorMax=new Vector2(.5f,.5f);rt.pivot=new Vector2(.5f,.5f);rt.localScale=Vector3.one;rt.localRotation=Quaternion.identity;
-        rt.localPosition=parent.InverseTransformPoint(artwork.TransformPoint(artwork.rect.center))+(Vector3)dealer.turnDrawFieldShadowOffset;
-        float blur=Mathf.Max(1,dealer.turnDrawFieldShadowBlur);rt.sizeDelta=footprint+Vector2.one*blur*5;
-        FieldShadow.Configure(footprint,blur,Mathf.Clamp01(dealer.turnDrawFieldShadowStrength)*shadowVisibility,dealer.turnDrawFieldShadowColor);
+        rt.localPosition=parent.InverseTransformPoint(artwork.TransformPoint(artwork.rect.center))+(Vector3)(enemy!=null?enemy.shadowOffset:dealer.turnDrawFieldShadowOffset);
+        float blur=Mathf.Max(1,(enemy!=null?enemy.shadowBlur:dealer.turnDrawFieldShadowBlur));rt.sizeDelta=footprint+Vector2.one*blur*5;
+        FieldShadow.Configure(footprint,blur,Mathf.Clamp01((enemy!=null?enemy.shadowStrength:dealer.turnDrawFieldShadowStrength))*shadowVisibility,(enemy!=null?enemy.shadowColor:dealer.turnDrawFieldShadowColor));
     }
     void LateUpdate(){UpdateFieldShadow();}
     void OnDisable(){if(FieldShadow!=null)FieldShadow.gameObject.SetActive(false);}

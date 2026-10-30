@@ -338,8 +338,24 @@ public class ResourcePhaseManager : MonoBehaviour
             .Initialize(chargeColumnDuration, chargeColumnWidth);
     }
 
+    bool completingAfterPresentation;
+    IEnumerator CompleteAfterPresentation()
+    {
+        while (PresentationSequenceLock.IsLocked) yield return null;
+        completingAfterPresentation = false;
+        CompleteResourcePhase();
+    }
     public void CompleteResourcePhase()
     {
+        if (PresentationSequenceLock.IsLocked)
+        {
+            if (!completingAfterPresentation && isRunning)
+            {
+                completingAfterPresentation = true;
+                StartCoroutine(CompleteAfterPresentation());
+            }
+            return;
+        }
         if(!isRunning)
             return;
 

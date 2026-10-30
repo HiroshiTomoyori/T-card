@@ -1,0 +1,82 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a8f2295da8414c5db19470dc88009461, type: 3}
+  m_Name: EnemyLiquidResourceSettings
+  m_EditorClassIdentifier: 
+  panelSize: {x: 130, y: 77.616005}
+  offset: {x: -75, y: -20}
+  auraPadding: 40
+  cornerRadius: 17.83
+  numberFont: {fileID: 0}
+  sourceFont: {fileID: 12800000, guid: 16e23fb9f126400095986f205ffa25cf, type: 3}
+  numberOffset: {x: 30, y: 10.8}
+  separatorWidth: 3.33
+  numberGlow: 1
+  behindHand: 1
+  fontSize: 48
+  numberColor: {r: 1, g: 1, b: 1, a: 1}
+  liquidShader: {fileID: 4800000, guid: 76608fc07f594eb89a1f874c52ce3149, type: 3}
+  dryColor: {r: 0.17599179, g: 0.13665895, b: 0.3490566, a: 1}
+  liquidColor: {r: 1, g: 0.9451, b: 0.4157, a: 1}
+  depthColor: {r: 0.8, g: 0.71, b: 0.96, a: 1}
+  wave2Color: {r: 1, g: 1, b: 1, a: 1}
+  glowColor: {r: 0.7686, g: 0.6078, b: 1, a: 1}
+  liquidGlow: 1
+  lightFlicker: 1
+  lightFlickerSpeed: 1
+  waveColor: {r: 0.6431, g: 0.4784, b: 1, a: 1}
+  auraStrength: 0.609
+  waveAmplitude: 3
+  waveSpeed: 1.2
+  levelResponse: 0.2
+  impactWaveAmplitude: 13
+  rippleDuration: 1.2
+  numberTransition: 0.46
+  numberRefraction: 4.5
+  dropDuration: 0.37
+  dropDistance: 90
+  dropCardWidth: 90
+  cardStartRoll: -9
+  dropFromRelease: 1
+  dropArcHeight: 0
+  beamColor: {r: 0.78, g: 0.59, b: 1, a: 1}
+  beamDuration: 0.8
+  beamHeight: 240
+  beamWidth: 300
+  chargeEffectsShader: {fileID: 4800000, guid: af20434d73564a9ebc44a6f4f10b840d, type: 3}
+  beamIntensity: 1
+  beamCoreWidth: 10
+  beamSoftness: 0.28
+  beamRiseFraction: 0.3
+  beamFadeStart: 0.34
+  beamFadePower: 1
+  beamCurveAmount: 0.04
+  beamFilamentStrength: 0.08
+  rootGlowColor: {r: 0.7686, g: 0.6078, b: 1, a: 1}
+  rootGlowWidth: 170
+  rootGlowHeight: 60
+  rootGlowStrength: 1
+  rootGlowTail: 0.32
+  chargeSortingOffset: 40
+  targetRipplePeriod: 0.72
+  targetRippleStrength: 1.55
+  targetRippleWidth: 1.5
+  targetRippleSpread: 30
+  targetGlowStrength: 0.35
+  suitAtlas: {fileID: 2800000, guid: f2a0c86601344cd785e2f71e165810d4, type: 3}
+  suitColor: {r: 1, g: 1, b: 1, a: 1}
+  suitCount: 6
+  suitScale: 1
+  suitWarp: 1
+  suitSpeed: 1
+  suitOpacity: 0.58
+  suitGlow: 0.2

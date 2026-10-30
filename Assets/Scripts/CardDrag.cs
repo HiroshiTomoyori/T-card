@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.EventSystems;
 using System.Collections;
 using DG.Tweening;
@@ -42,6 +42,7 @@ public class CardDrag :
     Vector3 originalPosition;
     Quaternion originalRotation;
     Vector3 originalScale;
+    Vector3 fieldHoverScale = Vector3.one, fieldPickupScale = Vector3.one;
     Vector2 originalSizeDelta;
     Vector3 draggingScale;
 
@@ -110,6 +111,12 @@ void ReleaseProHand()
 
     void Awake()
     {
+        var geometry = GetComponent<CCP.Card>();
+        if (geometry != null)
+        {
+            if (geometry.cardHoverer != null) fieldHoverScale = geometry.cardHoverer.transform.localScale;
+            if (geometry.cardPickuper != null) fieldPickupScale = geometry.cardPickuper.transform.localScale;
+        }
         canvas =
             GetComponentInParent<Canvas>();
 
@@ -474,6 +481,8 @@ public void MarkDroppedSuccessfully()
     public void BeginPlayPresentation()
     {
         FieldDropPresentation.EndDrag();
+        // Double-click play has no OnBeginDrag geometry snapshot.
+        if(!canDrag && rectTransform!=null) originalSizeDelta=rectTransform.sizeDelta;
         droppedSuccessfully=true;canDrag=false;playPresentationRunning=true;
         if(sourceHand==null)sourceHand=GetComponentInParent<HandController>();
         if(proCard==null)SuspendProCard();
@@ -507,6 +516,7 @@ public void MarkDroppedSuccessfully()
             return;
 
             ReleaseProHand();
+        ResetFieldVisualScale();
 
         CardController card =
             GetComponent<CardController>();
@@ -583,7 +593,7 @@ public void MarkDroppedSuccessfully()
         else
         {
             ApplyBattleAreaSizeWithoutSnap();
-            if (isAce || isNine) canvasGroup.alpha = 0f;
+            if (isAce || isNine) ActCardPresentation.HideOnField(card);
 
             Debug.Log(
                 "スナップなしでカードを配置：" +
@@ -599,6 +609,23 @@ public void MarkDroppedSuccessfully()
         {
             rpm.HideDropHighlight();
             rpm.SetResourceDropRaycast(false);
+        }
+    }
+
+    // Hand hover/pickup tweens must finish before field width is measured.
+    public void ResetFieldVisualScale()
+    {
+        var geometry = GetComponent<CCP.Card>();
+        if (geometry == null) return;
+        if (geometry.cardHoverer != null)
+        {
+            geometry.cardHoverer.transform.DOKill();
+            geometry.cardHoverer.transform.localScale = fieldHoverScale;
+        }
+        if (geometry.cardPickuper != null)
+        {
+            geometry.cardPickuper.transform.DOKill();
+            geometry.cardPickuper.transform.localScale = fieldPickupScale;
         }
     }
 

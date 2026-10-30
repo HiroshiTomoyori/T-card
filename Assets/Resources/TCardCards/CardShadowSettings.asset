@@ -1,4 +1,4 @@
-%YAML 1.1
+﻿%YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
 --- !u!114 &11400000
 MonoBehaviour:
@@ -15,9 +15,9 @@ MonoBehaviour:
   shadowsEnabled: 1
   shadowShader: {fileID: 4800000, guid: d4762789230643f882305f1895bc2856, type: 3}
   shadowColor: {r: 0.094118, g: 0.062745, b: 0.047059, a: 1}
-  strength: 0.38
-  blur: 10
-  contactStrength: 0.24
+  strength: 0.804
+  blur: 20.1
+  contactStrength: 0.806
   contactBlur: 2.5
   offset: {x: 3, y: -4}
   referenceWidth: 156

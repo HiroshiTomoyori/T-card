@@ -37,7 +37,14 @@ public static class CardReadinessDiagnostics
   yield return null;var layout=t.playerBattleArea.GetComponent<BattleAreaLayout>();var enemyLayout=t.enemyBattleArea.GetComponent<BattleAreaLayout>();layout.Refresh();enemyLayout.Refresh();foreach(var c in new[]{normal,guard,reverse,rest})layout.PlaceImmediately(c);enemyLayout.PlaceImmediately(enemy);enemyLayout.PlaceImmediately(enemyGuard);
   float baseY=normal.transform.localPosition.y,baseScale=normal.transform.localScale.x,enemyY=enemy.transform.localPosition.y;var original=normal.artworkImage.color;var originalRest=rest.artworkImage.color;var cg=normal.GetComponent<CanvasGroup>()??normal.gameObject.AddComponent<CanvasGroup>();cg.alpha=1;
   normal.BeginNormalPlay();normal.SetSummonSickness(true);guard.SetSummonSickness(true);enemyGuard.SetSummonSickness(true);reverse.MarkPlayedFromReverse();reverse.SetSummonSickness(true);rest.Tap();enemy.SetSummonSickness(true);
-  layout.PlaceImmediately(normal);enemyLayout.PlaceImmediately(enemy);yield return new WaitForSeconds(.4f);var settings=CardReadinessSettings.Load();
+  layout.PlaceImmediately(normal);enemyLayout.PlaceImmediately(enemy);var settings=CardReadinessSettings.Load();
+  try{Check(Mathf.Abs(normal.transform.localPosition.y-baseY)<.1f&&Mathf.Abs(normal.transform.localScale.x-baseScale)<.001f,"Readiness jumped before transition");Check(normal.GetComponent<CardReadinessVisual>().PreparationLanded,"Immediate placement did not notify landing");}catch(Exception e){Finish("FAIL: "+e);yield break;}
+  float priorTimeScale=Time.timeScale;Time.timeScale=0;
+  yield return new WaitForSecondsRealtime(settings.preparationTransitionDuration*.4f);
+  string transitionError=null;
+  try{var visual=normal.GetComponent<CardReadinessVisual>();Check(visual.PreparationBlend>0&&visual.PreparationBlend<1,"Preparation icon did not fade gradually");Check(normal.transform.localPosition.y<baseY&&normal.transform.localPosition.y>baseY-settings.rearOffset,"Readiness did not interpolate while scaled time paused");Check(normal.artworkImage.color==original&&Mathf.Approximately(cg.alpha,1),"Transition changed card color/opacity");}catch(Exception e){transitionError=e.ToString();}
+  Time.timeScale=priorTimeScale;if(transitionError!=null){Finish("FAIL: "+transitionError);yield break;}
+  yield return new WaitForSecondsRealtime(settings.preparationTransitionDuration+.15f);
   try{
    Check(normal.hasSummonSickness&&!guard.hasSummonSickness&&!enemyGuard.hasSummonSickness&&!reverse.hasSummonSickness,"Immunity or normal entry incorrect");
    Check(normal.artworkImage.color==original&&Mathf.Approximately(cg.alpha,1),"Readiness changed artwork color/alpha");
@@ -60,6 +67,6 @@ public static class CardReadinessDiagnostics
   enemy.BeginNormalPlay();enemy.SetSummonSickness(true);typeof(TurnManager).GetField("isPlayerTurnActive",Flags).SetValue(t,false);
   try{typeof(TurnManager).GetMethod("StartPlayerTurn",Flags).Invoke(t,new object[]{true});Check(!enemy.hasSummonSickness,"Enemy readiness not cleared at player-turn entry");}
   catch(Exception e){Finish("FAIL: "+e);yield break;}
-  Finish("PASS: All four suits of 4 on both sides cannot attack on summon turn, retain guard, can attack after readiness clears, and retain Reverse exemption. Real card prefabs/layout; rest upright with light tint and preserved alpha; readiness full color/opacity with rearward position, subtle size change and icon. Cannot-attack and reverse cards exempt, normal replay resets exemption; both opponent-turn entry points clear readiness before first yield. Placement restores opaque field card. No scene saved.");
+  Finish("PASS: All four suits of 4 on both sides cannot attack on summon turn, retain guard, can attack after readiness clears, and retain Reverse exemption. Real card prefabs/layout; rest upright with light tint and preserved alpha; readiness transitions smoothly for the configured 0.5 seconds after field landing, including while Time.timeScale=0, retaining full card color/opacity with rearward position, subtle size change and fading icon. Cannot-attack and reverse cards exempt, normal replay resets exemption; both opponent-turn entry points clear readiness before first yield. Placement restores opaque field card. No scene saved.");
  }
 }

@@ -1,4 +1,4 @@
-using DG.Tweening;
+﻿using DG.Tweening;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
@@ -35,7 +35,7 @@ public bool CanDragPlayerHand
             resourcePhaseManager != null &&
             resourcePhaseManager.IsRunning();
 
-        return !CardPlayPresentation.IsPlaying && !IsChoosingEnemyHand && !IsPlayerDecisionOpen && (CardEffectManager.I == null || !CardEffectManager.I.IsResolvingNine) && (handDealer == null || (!handDealer.IsHandLimitSelecting && !handDealer.IsTurnDrawAnimating && !handDealer.IsWallPlacementRunning && !handDealer.IsResolvingWallAttack)) && isPlayerTurnActive &&
+        return !PresentationSequenceLock.IsLocked && !CardPlayPresentation.IsPlaying && !AttackMotionPresentation.IsPlaying && !IsChoosingEnemyHand && !IsPlayerDecisionOpen && (CardEffectManager.I == null || !CardEffectManager.I.IsResolvingNine && !CardEffectManager.I.IsResolvingSummon) && (handDealer == null || (!handDealer.IsHandLimitSelecting && !handDealer.IsTurnDrawAnimating && !handDealer.IsWallPlacementRunning && !handDealer.IsResolvingWallAttack)) && isPlayerTurnActive &&
                !isEndingTurn &&
                !isBattlePhase &&
                !HandDealer.IsRedrawSelecting &&
@@ -313,7 +313,7 @@ IEnumerator FirstTurnRoutine()
 
     void StartPlayerBattlePhase()
     {
-        if (IsBattleEnded || !isPlayerTurnActive || isEndingTurn || isBattlePhase ||
+        if (PresentationSequenceLock.IsLocked || IsBattleEnded || !isPlayerTurnActive || isEndingTurn || isBattlePhase ||
             (handDealer != null && handDealer.IsHandLimitSelecting)) return;
         if (mainPhaseManager != null) mainPhaseManager.EndMainPhase();
         isPlayerMainPhase = false;
@@ -628,7 +628,7 @@ int GetAliveEnemyWallCount()
             CardController defender = blocker != null ? blocker : targetCard;
             if (attackArrowManager != null)
                 attackArrowManager.ShowPlayerArrow(attackerCard.GetComponent<RectTransform>(), defender.GetComponent<RectTransform>());
-            yield return PlayBlockerSlash(defender.gameObject);
+            yield return PlayAttackBattleMotion(attackerCard,defender);
             if (!IsBattleEnded && attackerCard != null && defender != null)
                 ResolveCardBattle(attackerCard, defender);
         }
@@ -685,8 +685,25 @@ if(handDealer != null)
     currentAttacker = null;
 }
 
+    bool resourceCompletionDeferred;
+    IEnumerator CompleteResourceAfterPresentation()
+    {
+        while (PresentationSequenceLock.IsLocked) yield return null;
+        resourceCompletionDeferred = false;
+        if (!IsBattleEnded && isPlayerTurnActive && !isEndingTurn && !isPlayerMainPhase && !isBattlePhase)
+            OnResourcePhaseComplete();
+    }
     public void OnResourcePhaseComplete()
     {
+        if (PresentationSequenceLock.IsLocked)
+        {
+            if (!resourceCompletionDeferred)
+            {
+                resourceCompletionDeferred = true;
+                StartCoroutine(CompleteResourceAfterPresentation());
+            }
+            return;
+        }
         Debug.Log("Resource完了");
 
         if (ShouldAutoEndEarlyTurn())
@@ -749,11 +766,12 @@ public void HideAttackArrow()
 }
 
     public void EndPlayerTurn()
-    {    
+    {
+        if (PresentationSequenceLock.IsLocked) return;
         if (automaticDecisionDepth > 0 && turnCount <= 5 && !ShouldAutoEndEarlyTurn()) return;
         if (resolvingPlayerCardAttack || IsChoosingEnemyHand) return;
         // マッチ開始前・敵ターン中・二重クリックからの呼び出しを拒否する。
-        if(!isPlayerTurnActive || isEndingTurn || (CardEffectManager.I != null && CardEffectManager.I.IsResolvingNine) || (handDealer != null && (handDealer.IsHandLimitSelecting || handDealer.IsWallPlacementRunning || handDealer.IsResolvingWallAttack)))
+        if(!isPlayerTurnActive || isEndingTurn || (CardEffectManager.I != null && (CardEffectManager.I.IsResolvingNine || CardEffectManager.I.IsResolvingSummon)) || (handDealer != null && (handDealer.IsHandLimitSelecting || handDealer.IsWallPlacementRunning || handDealer.IsResolvingWallAttack)))
         {
             Debug.Log("自分のターンではないためターン終了不可");
             return;
@@ -1113,9 +1131,7 @@ void SetEnemyWallClickable(bool value)
 
             if(handDealer != null)
             {
-                handDealer.EnemyDraw(1);
-
-                yield return new WaitForSeconds(0.5f);
+                yield return handDealer.DrawEnemyTurnStartCard();
             }
 
             UntapEnemyBattleCards();
@@ -1325,7 +1341,7 @@ IEnumerator EnemyResourcePhase()
         enemyResourceManager.AddResource();
     }
 
-    yield return new WaitForSeconds(0.5f);
+    yield return new WaitForSeconds(Mathf.Max(0,EnemyPresentationSettings.Load().afterChargeDelay));
 }
 
 IEnumerator EnemyMainPhase()
@@ -1502,8 +1518,9 @@ IEnumerator EnemyMainPhase()
         // =========================
 
         handDealer.enemyHandCards.Remove(selectedCard);
-
-        handDealer.enemyHandCount--;
+        handDealer.enemyHandCount=handDealer.enemyHandCards.Count;
+        handDealer.RefreshEnemyHandVisual();
+        handDealer.UpdateEnemyHandCountText();
 
         // Both players share the approved reveal; effects run after it finishes.
         yield return CardPlayPresentation.Play(selectedCard,enemyBattleArea,kingBase,isEnemy:true);
@@ -1524,11 +1541,7 @@ IEnumerator EnemyMainPhase()
         if(controller != null)
         {
             controller.SetData(selectedCard);
-            if (BattleAreaLayout.IsSpell(selectedCard))
-            {
-                var spellGroup = obj.GetComponent<CanvasGroup>(); if (spellGroup == null) spellGroup = obj.AddComponent<CanvasGroup>();
-                spellGroup.alpha = 0f; spellGroup.blocksRaycasts = spellGroup.interactable = false;
-            }
+            if(BattleAreaLayout.IsSpell(selectedCard)) ActCardPresentation.HideOnField(controller);
             if(kingBase != null) StackEnemyKingBase(controller, kingBase);
 
             bool noSummonSickness =
@@ -1600,7 +1613,7 @@ IEnumerator EnemyMainPhase()
             if(controller!=null&&CardPlaySettings.Load().enabledEffect)enemyBattleLayout.PlaceImmediately(controller);
         }
 
-        while(IsSelectingDestroyTarget() || (CardEffectManager.I != null && CardEffectManager.I.IsResolvingNine)) yield return null;
+        while(PresentationSequenceLock.IsLocked || IsSelectingDestroyTarget() || (CardEffectManager.I != null && (CardEffectManager.I.IsResolvingNine || CardEffectManager.I.IsResolvingSummon))) yield return null;
 
         yield return new WaitUntil(() => handDealer == null || !handDealer.IsWallPlacementRunning);
         if(!BattleAreaLayout.IsSpell(selectedCard)) summonCount++;
@@ -2096,6 +2109,8 @@ IEnumerator EnemyBattlePhase()
             enemyAttackBlocked = false;
             if (!blocked)
             {
+                yield return PlayAttackMotion(attacker,new List<CardController>(),new List<CardController>(),null);
+                if(IsBattleEnded)yield break;
                 StartBattleEndResult(true);
                 yield break;
             }
@@ -2184,7 +2199,7 @@ IEnumerator EnemyBattlePhase()
         {
             var wallTargets = IncomingWallTargets();
             attacker.Tap();
-            yield return handDealer.DamagePlayerWallsAndWait(wallTargets);
+            yield return EnemyWallAttackMotion(attacker,wallTargets);
         }
         // Shield Triggerなどで攻撃カードが
         // 墓地へ送られた可能性を考慮
@@ -2574,7 +2589,7 @@ void ShowEnemyAttackArrow(GameObject attacker, GameObject target)
         if(blocker != null)
         {
             yield return StartCoroutine(
-                PlayBlockerSlash(blocker)
+                PlayAttackBattleMotion(pendingEnemyAttacker,blocker.GetComponent<CardController>())
             );
 
             CardController blockerCard =
@@ -2827,7 +2842,7 @@ void ShowBlockableCards()
         if(cg == null)
             cg = cardObj.AddComponent<CanvasGroup>();
 
-        cg.alpha = 0.45f;
+        cg.alpha = 1f;
         cg.blocksRaycasts = false;
         cg.interactable = false;
 
@@ -2849,18 +2864,19 @@ void ShowBlockableCards()
         if(icon != null)
             icon.HideAll();
 
+        SyncGraveyardCardSizes(graveyard);
     }
 
     void FitGraveyardCard(RectTransform cardRect, Transform graveyard)
     {
         RectTransform background = graveyard.Find("GraveBackground") as RectTransform;
-        Vector2 size = new Vector2(Mathf.Max(1f, graveyardCardSize.x), Mathf.Max(1f, graveyardCardSize.y));
+        Vector2 size = GetDiscardCardSize(graveyard);
         if(background != null)
         {
             background.localRotation = Quaternion.identity;
             background.localScale = Vector3.one;
-            background.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, size.x + 10f);
-            background.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, size.y + 16f);
+            background.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, size.x);
+            background.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, size.y);
         }
         cardRect.anchorMin = cardRect.anchorMax = new Vector2(0.5f, 0.5f);
         cardRect.pivot = new Vector2(0.5f, 0.5f);
@@ -2908,16 +2924,46 @@ void ShowBlockableCards()
     void SyncGraveyardCardSizes(Transform graveyard)
     {
         if(graveyard == null) return;
-        for(int i = 0; i < graveyard.childCount; i++)
+        RectTransform deck=handDealer!=null?(graveyard==enemyGraveyard?handDealer.enemyDeckPosition:handDealer.deckPosition):null;
+        if(deck!=null)
         {
-            Transform child = graveyard.GetChild(i);
-            if(child.GetComponent<CardController>() == null) continue;
-            RectTransform rt = child as RectTransform;
-            if(rt == null) continue;
-            LayoutElement layout = child.GetComponent<LayoutElement>();
-            if(layout != null) layout.ignoreLayout = true;
-            FitGraveyardCard(rt, graveyard);
+            var bg=graveyard.Find("GraveBackground") as RectTransform;
+            var zone=graveyard as RectTransform;
+            Vector3 center=bg!=null?bg.TransformPoint(bg.rect.center):zone!=null?zone.TransformPoint(zone.rect.center):graveyard.position;
+            Vector3 position=graveyard.position;
+            position.y+=OpeningShuffleView.DealPosition(deck).y-center.y;
+            graveyard.position=position;
         }
+        var size=GetDiscardCardSize(graveyard);
+        var background=graveyard.Find("GraveBackground") as RectTransform;
+        if(background!=null){background.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal,size.x);background.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical,size.y);}
+        Transform top=null;
+        foreach(Transform child in graveyard)if(child.GetComponent<CardController>()!=null)top=child;
+        foreach(Transform child in graveyard)
+        {
+            if(child.GetComponent<CardController>()==null)continue;
+            bool visible=child==top;
+            var cg=child.GetComponent<CanvasGroup>();if(cg==null)cg=child.gameObject.AddComponent<CanvasGroup>();
+            cg.alpha=visible?1:0;cg.blocksRaycasts=false;cg.interactable=false;
+            // Keep history/data, but render only the latest discard and its shadow.
+            if(child.gameObject.activeSelf!=visible)child.gameObject.SetActive(visible);
+            if(!visible)continue;
+            var layout=child.GetComponent<LayoutElement>();if(layout!=null)layout.ignoreLayout=true;
+            if(child is RectTransform rt)FitGraveyardCard(rt,graveyard);
+        }
+    }
+    public Vector2 GetDiscardCardSize(Transform graveyard)
+    {
+        RectTransform deck=handDealer!=null?(graveyard==enemyGraveyard?handDealer.enemyDeckPosition:handDealer.deckPosition):null;
+        if(deck==null||graveyard==null)return new Vector2(Mathf.Max(1,graveyardCardSize.x),Mathf.Max(1,graveyardCardSize.y));
+        Vector3 right=deck.TransformVector(Vector3.right*deck.rect.width),up=deck.TransformVector(Vector3.up*deck.rect.height);
+        var stack=OpeningShuffleView.ForDeck(deck);
+        if(stack!=null&&stack.OverlayCanvas!=null&&stack.RenderedCardSize.x>0&&stack.RenderedCardSize.y>0)
+        {
+            right=stack.OverlayCanvas.transform.TransformVector(Vector3.right*stack.RenderedCardSize.x);
+            up=stack.OverlayCanvas.transform.TransformVector(Vector3.up*stack.RenderedCardSize.y);
+        }
+        return new Vector2(Mathf.Max(1,graveyard.InverseTransformVector(right).magnitude),Mathf.Max(1,graveyard.InverseTransformVector(up).magnitude));
     }
 void ResolveCardBattle(CardController attacker, CardController defender)
 {
@@ -3788,12 +3834,12 @@ void OnSelectJokerClear()
             return false;
 
         // An unresolved choice or animation is not proof that the player has no actions.
-        if (CardPlayPresentation.IsPlaying || IsPlayerDecisionOpen || IsChoosingEnemyHand ||
+        if (PresentationSequenceLock.IsLocked || AttackMotionPresentation.IsPlaying || CardPlayPresentation.IsPlaying || IsPlayerDecisionOpen || IsChoosingEnemyHand ||
             IsSelectingTarget() || IsSelectingDestroyTarget() || HasPendingAttackConfirmation ||
             waitingBlockSelect || resolvingEnemyBlock || resolvingPlayerCardAttack ||
             pendingJokerEffectCard != null ||
             (ReverseChoiceManager.I != null && ReverseChoiceManager.I.IsChoosing) ||
-            (CardEffectManager.I != null && CardEffectManager.I.IsResolvingNine) ||
+            (CardEffectManager.I != null && (CardEffectManager.I.IsResolvingNine || CardEffectManager.I.IsResolvingSummon)) ||
             (resourcePhaseManager != null && resourcePhaseManager.IsRunning()))
             return false;
         if (handDealer == null || handDealer.handArea == null || playerBattleArea == null ||
@@ -4176,9 +4222,9 @@ public partial class TurnManager
         if (!isPlayerTurnActive || isEndingTurn || isFirstTurnStarting || resolvingEnemyBlock || resolvingPlayerCardAttack ||
             (handDealer != null && (HandDealer.IsRedrawSelecting || handDealer.IsTurnDrawAnimating ||
                 handDealer.IsHandLimitSelecting || handDealer.IsWallPlacementRunning || handDealer.IsResolvingWallAttack)) ||
-            (CardEffectManager.I != null && CardEffectManager.I.IsResolvingNine)) return false;
+            (CardEffectManager.I != null && (CardEffectManager.I.IsResolvingNine || CardEffectManager.I.IsResolvingSummon))) return false;
         // Do not time out in the middle of a committed summon or resource effect.
-        if (CardPlayPresentation.IsPlaying) return false;
+        if (PresentationSequenceLock.IsLocked || AttackMotionPresentation.IsPlaying || CardPlayPresentation.IsPlaying) return false;
         if (resourcePhaseManager != null && resourcePhaseManager.IsResolvingCharge) return false;
         RefreshDecisionDrags();
         foreach (CardDrag drag in decisionDrags)
@@ -4650,7 +4696,7 @@ public partial class TurnManager
         if (!enemyAttackBlocked && !IsBattleEnded && attacker != null && target != null &&
             attacker.transform.IsChildOf(enemyBattleArea) && target.transform.IsChildOf(playerBattleArea))
         {
-            yield return PlayBlockerSlash(target.gameObject);
+            yield return PlayAttackBattleMotion(attacker,target);
             if (attacker != null && target != null) ResolveCardBattle(attacker, target);
         }
         pendingEnemyAttacker = null;
@@ -4806,10 +4852,10 @@ public partial class TurnManager
             {
                 if (attackArrowManager != null)
                     attackArrowManager.ShowPlayerArrow(attacker.GetComponent<RectTransform>(), blocker.GetComponent<RectTransform>());
-                yield return PlayBlockerSlash(blocker.gameObject);
+                yield return PlayAttackBattleMotion(attacker,blocker);
                 if (!IsBattleEnded && attacker != null && blocker != null) ResolveCardBattle(attacker, blocker);
             }
-            else StartBattleEndResult();
+            else {yield return PlayAttackMotion(attacker,new List<CardController>(),new List<CardController>(),null);if(!IsBattleEnded)StartBattleEndResult();}
         }
         finally
         {

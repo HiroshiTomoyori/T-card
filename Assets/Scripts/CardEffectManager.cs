@@ -2,7 +2,7 @@ using UnityEngine;
 using System.Collections;
 using System.Linq;
 
-public class CardEffectManager :
+public partial class CardEffectManager :
     MonoBehaviour
 {
     public static CardEffectManager I;
@@ -23,6 +23,7 @@ public class CardEffectManager :
         bool isEnemy = false
     )
     {
+        if(QueueDeckSummon(card,isShieldTrigger,isEnemy))return;
         if(card != null && card.data != null && card.data.effectTypes != null &&
            card.data.effectTypes.Contains(EffectType.TapAllEnemyBattle))
         {
@@ -63,7 +64,7 @@ public class CardEffectManager :
         }
     }
 
-    void ResolveOnSummon(CardController card, bool isShieldTrigger, bool isEnemy)
+    void ResolveOnSummon(CardController card, bool isShieldTrigger, bool isEnemy, bool skipDeckEffects=false)
     {
         if (card == null)
         {
@@ -128,6 +129,7 @@ public class CardEffectManager :
                     break;
 
                 case EffectType.ChargeTopDeck:
+                    if(skipDeckEffects)break;
                     if (handDealer != null)
                     {
                         Debug.Log(
@@ -148,6 +150,7 @@ public class CardEffectManager :
                     break;
 
                 case EffectType.Draw1:
+                    if(skipDeckEffects)break;
                     if (handDealer != null)
                     {
                         Debug.Log(
@@ -562,6 +565,6 @@ public class CardEffectManager :
         );
 
         yield return null;
-        while(IsResolvingNine) yield return null;
+        while(IsResolvingNine || IsResolvingSummon || PresentationSequenceLock.IsLocked) yield return null;
     }
 }

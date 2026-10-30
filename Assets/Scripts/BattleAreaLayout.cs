@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 using DG.Tweening;
@@ -92,13 +92,15 @@ public class BattleAreaLayout : MonoBehaviour
     private readonly List<bool> previousSickness=new List<bool>();
     TurnManager turnManager;float lastRearOffset,lastPreparingScale;
     public void MarkDirty(){dirty=true;}
-    void ApplyReadiness(CardController card,ref Vector3 position,ref float scale)
+    void ApplyReadiness(CardController card,ref Vector3 position,ref float scale,bool immediate=false)
     {
         if(!card.hasSummonSickness)return;
+        var visual=card.GetComponent<CardReadinessVisual>();if(visual==null||!visual.PreparationLanded)return;
+        float blend=immediate?visual.PreparationBlend:1;
         if(turnManager==null)turnManager=FindFirstObjectByType<TurnManager>();
         var settings=CardReadinessSettings.Load();
-        position.y+=(turnManager!=null&&transform==turnManager.enemyBattleArea?1:-1)*settings.rearOffset;
-        scale*=settings.preparingScale;
+        position.y+=(turnManager!=null&&transform==turnManager.enemyBattleArea?1:-1)*settings.rearOffset*blend;
+        scale*=Mathf.Lerp(1,settings.preparingScale,blend);
     }
     private bool dirty = true;
     private bool lastFourCardBaseline;
@@ -189,10 +191,8 @@ public class BattleAreaLayout : MonoBehaviour
             CardController controller =
                 child.GetComponent<CardController>();
 
-            if (controller == null || controller.data == null)
+            if (controller == null || controller.data == null || IsSpell(controller.data))
                 continue;
-
-            if (IsSpell(controller.data)) continue;
 
             fieldCards.Add(controller);
         }
@@ -287,6 +287,7 @@ public class BattleAreaLayout : MonoBehaviour
                     card.parentCardGroup.RemoveCard(card);
                 }
 
+                controller.GetComponent<CardDrag>()?.ResetFieldVisualScale();
                 group.AddBack(card);
 
                 card.transform.localScale = savedScale;
@@ -375,13 +376,25 @@ public class BattleAreaLayout : MonoBehaviour
                 continue;
             }
 
-            card.MoveToPosition(
-                worldPosition,
-                worldRotation,
-                animationEase,
-                animationDuration,
-                targetScale
-            );
+            var readinessVisual=controller.GetComponent<CardReadinessVisual>();
+            bool preparing=controller.hasSummonSickness&&readinessVisual!=null&&readinessVisual.IsPreparationTransitioning;
+            if(preparing)
+            {
+                float duration=Mathf.Max(.01f,readinessVisual.PreparationTimeRemaining);
+                card.destinationPosition=worldPosition;card.destinationRotation=worldRotation;rect.DOKill();
+                rect.DOMove(worldPosition,duration).SetEase(Ease.InOutSine).SetUpdate(true);
+                rect.DORotateQuaternion(worldRotation,duration).SetEase(Ease.InOutSine).SetUpdate(true);
+                rect.DOScale(Vector3.one*targetScale,duration).SetEase(Ease.InOutSine).SetUpdate(true);
+            }
+            else
+            {
+                // Layout is presentation: it must continue while gameplay time is paused.
+                card.destinationPosition=worldPosition;card.destinationRotation=worldRotation;
+                rect.DOKill();
+                rect.DOMove(worldPosition,animationDuration).SetEase(animationEase).SetUpdate(true);
+                rect.DORotateQuaternion(worldRotation,animationDuration).SetEase(animationEase).SetUpdate(true);
+                rect.DOScale(Vector3.one*targetScale,animationDuration).SetEase(animationEase).SetUpdate(true);
+            }
         }
 
         RememberState();
@@ -406,8 +419,9 @@ public class BattleAreaLayout : MonoBehaviour
         CollectCards();int index=fieldCards.IndexOf(controller);if(index<0)return;
         Slot(fieldCards.Count,index,out Vector3 position,out float width);
         var rt=controller.GetComponent<RectTransform>();if(rt==null)return;
-        var card=controller.GetComponent<CCP.Card>();float scale=width/Mathf.Max(1,GetVisualWidth(card,rt))*Mathf.Max(.01f,cardSize);ApplyReadiness(controller,ref position,ref scale);rt.DOKill();rt.localPosition=position;rt.localRotation=Quaternion.identity;
+        var card=controller.GetComponent<CCP.Card>();float scale=width/Mathf.Max(1,GetVisualWidth(card,rt))*Mathf.Max(.01f,cardSize);ApplyReadiness(controller,ref position,ref scale,true);rt.DOKill();rt.localPosition=position;rt.localRotation=Quaternion.identity;
         rt.localScale=Vector3.one*scale;
+        controller.GetComponent<CardReadinessVisual>()?.NotifyFieldLanded();
     }
 
     private LayoutSetting GetSetting(int count)

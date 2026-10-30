@@ -1,0 +1,32 @@
+﻿%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 33a405f7ef773614ba8d8ed858851bf7, type: 3}
+  m_Name: EnemyPresentationSettings
+  m_EditorClassIdentifier: 
+  drawSize: {x: 130, y: 195}
+  drawOffset: {x: 0, y: 90}
+  drawTravel: 0.24
+  drawSettle: 0.22
+  drawHold: 0.25
+  drawToHand: 0.2
+  drawInterval: 0.08
+  highlightStrength: 0.5
+  outerGlow: 0.8
+  glowSpread: 32
+  highlightColor: {r: 1, g: 0.97, b: 0.84, a: 1}
+  shadowStrength: 0.24
+  shadowBlur: 22
+  shadowOffset: {x: 18, y: -34}
+  shadowColor: {r: 0.176, g: 0.114, b: 0.067, a: 1}
+  chargeTravel: 0.34
+  chargeHold: 0.28
+  afterChargeDelay: 0.5

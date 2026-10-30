@@ -46,7 +46,7 @@ public static class DefenseSelectionDiagnostics
   yield return null;yield return new WaitForEndOfFrame();Check(view.HighlightedGuardCount==1&&view.Graphic.material.GetInt("_Count")==2,"Defense confirmation lights unrelated cards");Capture("block-confirmation");
   try{Click(view.ConfirmButton);Check(!t.DefenseSelectionActive,"Confirmed guard did not execute");}
   catch(Exception e){Finish("FAIL: "+e);yield break;}
-  yield return new WaitForSeconds(1);
+  yield return new WaitForSeconds(AttackMotionSettings.Load().Duration/AttackMotionSettings.Load().speed+.3f);
   try{Check(target.transform.parent==t.playerBattleArea&&guard.transform.parent!=t.playerBattleArea,"Guard did not protect field target");}
   catch(Exception e){Finish("FAIL: "+e);yield break;}
   normal.isTapped=false;t.StartCoroutine(Call(t,"EnemyAttackRestedCardRoutine",normal,target));yield return new WaitForSeconds(.85f);
@@ -60,7 +60,7 @@ public static class DefenseSelectionDiagnostics
   yield return null;
   try{Click(view.ConfirmButton);}
   catch(Exception e){Finish("FAIL: "+e);yield break;}
-  yield return new WaitForSeconds(1);
+  yield return new WaitForSeconds(AttackMotionSettings.Load().Duration/AttackMotionSettings.Load().speed+.3f);
   try{Check(target.transform.parent!=t.playerBattleArea&&guard2.transform.parent==t.playerBattleArea,"Pass did not resolve original field target");}
   catch(Exception e){Finish("FAIL: "+e);yield break;}
   king.isTapped=false;t.StartCoroutine(Call(t,"EnemyBattlePhase"));yield return new WaitForSeconds(.9f);int before=LiveWalls(d);var chosen=t.IncomingWallTargets();
@@ -69,7 +69,7 @@ public static class DefenseSelectionDiagnostics
   yield return new WaitForEndOfFrame();Capture("monarch-wall-defense");yield return null;
   try{Click(view.ConfirmButton);}
   catch(Exception e){Finish("FAIL: "+e);yield break;}
-  yield return new WaitForSeconds(1.2f);
+  yield return new WaitForSeconds(AttackMotionSettings.Load().Duration/AttackMotionSettings.Load().speed+.3f);
   try{Check(LiveWalls(d)==before&&guard2.transform.parent!=t.playerBattleArea,"Blocking monarch did not protect both walls");}
   catch(Exception e){Finish("FAIL: "+e);yield break;}
   // A rested guard is not eligible and must never produce a pass prompt.
@@ -77,14 +77,14 @@ public static class DefenseSelectionDiagnostics
   t.StartCoroutine(Call(t,"EnemyAttackRestedCardRoutine",normal,restedGuard));yield return new WaitForSeconds(.75f);
   try{Check(!t.DefenseSelectionActive&&!t.HasPendingDefenseConfirmation&&!view.PassButton.gameObject.activeSelf,"Rested-only guard produced a pass prompt");}
   catch(Exception e){Finish("FAIL: "+e);yield break;}
-  yield return new WaitForSeconds(.8f);
+  yield return new WaitForSeconds(AttackMotionSettings.Load().Duration/AttackMotionSettings.Load().speed+.3f);
   try{Check(restedGuard.transform.parent!=t.playerBattleArea,"Rested guard target did not resolve automatically");}
   catch(Exception e){Finish("FAIL: "+e);yield break;}
   foreach(Transform w in d.wallArea){var c=w.GetComponent<CardController>();if(c!=null){var data=UnityEngine.Object.Instantiate(c.data);data.effectTypes=Array.Empty<EffectType>();c.data=data;}}
   king.isTapped=false;t.StartCoroutine(Call(t,"EnemyBattlePhase"));yield return new WaitForSeconds(.8f);
   try{Check(!t.DefenseSelectionActive&&!t.HasPendingDefenseConfirmation,"No-guard wall attack requested confirmation");}
   catch(Exception e){Finish("FAIL: "+e);yield break;}
-  yield return new WaitForSeconds(1.5f);
+  yield return new WaitForSeconds(AttackMotionSettings.Load().Duration/AttackMotionSettings.Load().speed+1.5f);
   try{Check(LiveWalls(d)==before-2,"Automatic monarch damage did not break exactly two walls");}
   catch(Exception e){Finish("FAIL: "+e);yield break;}
   foreach(Transform w in d.wallArea){var cg=w.GetComponent<CanvasGroup>();if(cg!=null){cg.alpha=0;cg.blocksRaycasts=false;}}

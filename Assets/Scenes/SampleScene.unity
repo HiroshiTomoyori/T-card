@@ -2452,7 +2452,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 220, y: 450}
+  m_AnchoredPosition: {x: 220, y: 405}
   m_SizeDelta: {x: 80, y: 80}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &274788460
@@ -4227,6 +4227,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   enemyResourceText: {fileID: 694404506}
+  liquidSettings: {fileID: 0}
   currentResource: 0
   maxResource: 0
 --- !u!1 &481301556
@@ -4262,7 +4263,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -220, y: -380}
+  m_AnchoredPosition: {x: -220, y: -390}
   m_SizeDelta: {x: 80, y: 120}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &489432782
@@ -4616,7 +4617,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 170}
+  m_AnchoredPosition: {x: 0, y: 140}
   m_SizeDelta: {x: 900, y: 220}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &564399310
@@ -4634,7 +4635,7 @@ MonoBehaviour:
   maxCards: 6
   fieldWidth: 850
   layoutCenter: {x: 0, y: 0}
-  cardSize: 0.57
+  cardSize: 0.54
   layouts:
   - cardWidth: 190
     gap: 0
@@ -8301,7 +8302,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -80}
+  m_AnchoredPosition: {x: 0, y: -90}
   m_SizeDelta: {x: 500, y: 250}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1045119678
@@ -8756,7 +8757,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -250}
+  m_AnchoredPosition: {x: 0, y: -260}
   m_SizeDelta: {x: 400, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1149260628
@@ -8774,7 +8775,7 @@ MonoBehaviour:
   maxWidth: 850
   overlapLimit: 90
   slotCount: 6
-  cardSize: {x: 69.6, y: 106.8}
+  cardSize: {x: 66.119995, y: 101.46}
   layoutCenter: {x: 0, y: 0}
   gapsByCount:
   - -10
@@ -9490,7 +9491,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 68, y: 100}
+  m_SizeDelta: {x: 58, y: 89}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1207640807
 MonoBehaviour:
@@ -10064,7 +10065,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 330}
+  m_AnchoredPosition: {x: 0, y: 300}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1310096524
@@ -10082,7 +10083,7 @@ MonoBehaviour:
   maxWidth: 850
   overlapLimit: 90
   slotCount: 9
-  cardSize: {x: 66.7, y: 102.35}
+  cardSize: {x: 62.813995, y: 96.387}
   layoutCenter: {x: 0, y: 0}
   gapsByCount:
   - -10
@@ -10465,8 +10466,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 62, y: 94}
+  m_AnchoredPosition: {x: 0, y: 10}
+  m_SizeDelta: {x: 52.2, y: 80.1}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1377010475
 MonoBehaviour:

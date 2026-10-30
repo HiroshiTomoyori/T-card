@@ -5,7 +5,7 @@ using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using DG.Tweening;
 
-public class HandDealer : MonoBehaviour
+public partial class HandDealer : MonoBehaviour
 {
     [Header("Hand")]
     public Transform handArea;
@@ -1441,102 +1441,7 @@ if (redrawButton != null)
     }
 
 
-    IEnumerator EnemyDrawAnimation(int amount)
-    {
-        /*DeckShuffle shuffle =
-        enemyDeckImage.GetComponent<DeckShuffle>();
-
-        if (shuffle != null)
-        {
-            shuffle.StartShuffle();
-        }*/
-        int remainingCapacity = Mathf.Max(0, maxHandSize - enemyHandCount);
-        int drawAmount = Mathf.Min(amount, enemyDeck.Count, remainingCapacity);
-
-        if (drawAmount <= 0)
-        {
-            Debug.Log("敵の手札が上限のためドローできません：" + maxHandSize + "枚");
-            yield break;
-        }
-
-        for (int i = 0; i < drawAmount; i++)
-        {
-            GameObject moveCard =
-                Instantiate(cardPrefab, transform.root);
-
-            RectTransform rt =
-                moveCard.GetComponent<RectTransform>();
-
-            SetupCardSize(moveCard, wallCardSize);
-
-            CardController card =
-                moveCard.GetComponent<CardController>();
-
-            if (card != null)
-            {
-                if (card.artworkImage != null)
-                    card.artworkImage.sprite = cardBackSprite;
-
-                if (card.costText != null)
-                    card.costText.gameObject.SetActive(false);
-
-                if (card.attackText != null)
-                    card.attackText.gameObject.SetActive(false);
-
-                if (card.hpText != null)
-                    card.hpText.gameObject.SetActive(false);
-            }
-
-            rt.position = enemyDeckPosition.position;
-
-            Vector3 target =
-                enemyHandCountText.transform.position;
-
-            float t=0;
-
-            while(t<0.25f)
-            {
-                t += Time.deltaTime;
-
-                rt.position =
-                    Vector3.Lerp(
-                        enemyDeckPosition.position,
-                        target,
-                        t/0.25f
-                    );
-
-                yield return null;
-            }
-
-            Destroy(moveCard);
-
-            int randomIndex =
-                SelectEnemyHandDrawIndex();
-
-            CardData drawn =
-                enemyDeck[randomIndex];
-
-            enemyDeck.RemoveAt(randomIndex);
-
-            enemyHandCards.Add(drawn);
-
-            enemyHandCount++;
-
-            RefreshEnemyHandVisual();
-
-            if (enemyHandCountText != null)
-            {
-                UpdateEnemyHandCountText();
-
-                if (enemyHandCount >= 10)
-                    enemyHandCountText.fontSize = 17;
-                else
-                    enemyHandCountText.fontSize = 30;
-            }
-
-            yield return new WaitForSeconds(0.08f);
-        }
-    }
+    IEnumerator EnemyDrawAnimation(int amount) { yield return EnemyFlowDraw(amount); }
 
     public void UpdateEnemyHandCountText()
     {
@@ -1703,10 +1608,12 @@ public void DamageEnemyWall(
             ChangeDangerBGM();
         }
     }
+    public bool SuppressAttackWallSlash {get;set;}
     public IEnumerator PlayWallSlash(
     GameObject targetWall
     )
     {
+        if(SuppressAttackWallSlash)yield break;
         Debug.Log("Slash再生開始");
             if(seSource != null && slashSE != null)
     {
@@ -2055,284 +1962,12 @@ public void DamageEnemyWall(
 
 public IEnumerator EnemyChargeResourceAnimation()
 {
-    Debug.Log("敵リソースアニメ開始");
-
-    if(enemyHandCards.Count <= 0)
-    {
-        Debug.Log("敵手札なし");
-        yield break;
-    }
-
-    int randomIndex =
-        Random.Range(
-            0,
-            enemyHandCards.Count
-        );
-
-    CardData selectedCard =
-        enemyHandCards[randomIndex];
-
-    enemyHandCards.RemoveAt(randomIndex);
-
-    GameObject moveCard =
-        Instantiate(
-            cardPrefab,
-            transform.root
-        );
-
-    RectTransform rt =
-        moveCard.GetComponent<RectTransform>();
-
-    SetupCardSize(
-        moveCard,
-        handCardSize
-    );
-
-    CardController card =
-        moveCard.GetComponent<CardController>();
-
-    if(card != null)
-    {
-        card.SetData(selectedCard);
-    }
-
-    rt.position =
-        enemyHandCountText.transform.position;
-
-    Vector3 start =
-        rt.position;
-
-    Vector3 end =
-        enemyResourcePosition.position;
-
-    //=====================
-    // ゆっくり移動
-    //=====================
-
-    float t = 0f;
-    float moveTime = 0.6f;
-
-    while(t < moveTime)
-    {
-        t += Time.deltaTime;
-
-        float rate =
-            Mathf.Clamp01(
-                t / moveTime
-            );
-
-        rt.position =
-            Vector3.Lerp(
-                start,
-                end,
-                rate
-            );
-
-        yield return null;
-    }
-
-    rt.position = end;
-
-    //=====================
-    // 到着して停止
-    //=====================
-
-    yield return new WaitForSeconds(0.4f);
-
-    //=====================
-    // 消える演出
-    //=====================
-
-    CanvasGroup cg =
-        moveCard.GetComponent<CanvasGroup>();
-
-    if(cg == null)
-    {
-        cg =
-            moveCard.AddComponent
-            <CanvasGroup>();
-    }
-
-    t = 0f;
-
-    float vanishTime = 0.25f;
-
-    Vector3 startScale =
-        Vector3.one;
-
-    Vector3 endScale =
-        Vector3.one * 0.6f;
-
-    while(t < vanishTime)
-    {
-        t += Time.deltaTime;
-
-        float rate =
-            Mathf.Clamp01(
-                t / vanishTime
-            );
-
-        cg.alpha =
-            Mathf.Lerp(
-                1f,
-                0f,
-                rate
-            );
-
-        rt.localScale =
-            Vector3.Lerp(
-                startScale,
-                endScale,
-                rate
-            );
-
-        yield return null;
-    }
-
-    enemyHandCount--;
-
-    UpdateEnemyHandCountText();
-
-    Destroy(moveCard);
-
-    Debug.Log(
-        "敵が手札を1枚リソースへ送った"
-    );
+    if(enemyHandCards==null || enemyHandCards.Count==0)yield break;
+    yield return EnemyFlowCharge(enemyHandCards[Random.Range(0,enemyHandCards.Count)]);
 }
 
-public IEnumerator EnemyChargeSpecificResourceAnimation(
-    CardData selectedCard
-)
-{
-    Debug.Log("敵指定リソースアニメ開始");
-
-    if(selectedCard == null)
-        yield break;
-
-    if(enemyHandCards == null)
-        yield break;
-
-    if(!enemyHandCards.Contains(selectedCard))
-        yield break;
-
-    enemyHandCards.Remove(selectedCard);
-
-    RefreshEnemyHandVisual();
-
-    GameObject moveCard =
-        Instantiate(
-            cardPrefab,
-            transform.root
-        );
-
-    RectTransform rt =
-        moveCard.GetComponent<RectTransform>();
-
-    SetupCardSize(
-        moveCard,
-        handCardSize
-    );
-
-    CardController card =
-        moveCard.GetComponent<CardController>();
-
-    if(card != null)
-    {
-        card.SetData(selectedCard);
-    }
-
-    rt.position =
-        enemyHandCountText.transform.position;
-
-    Vector3 start =
-        rt.position;
-
-    Vector3 end =
-        enemyResourcePosition.position;
-
-    float t = 0f;
-    float moveTime = 0.6f;
-
-    while(t < moveTime)
-    {
-        t += Time.deltaTime;
-
-        float rate =
-            Mathf.Clamp01(
-                t / moveTime
-            );
-
-        rt.position =
-            Vector3.Lerp(
-                start,
-                end,
-                rate
-            );
-
-        yield return null;
-    }
-
-    rt.position = end;
-
-    yield return new WaitForSeconds(0.4f);
-
-    CanvasGroup cg =
-        moveCard.GetComponent<CanvasGroup>();
-
-    if(cg == null)
-    {
-        cg =
-            moveCard.AddComponent
-            <CanvasGroup>();
-    }
-
-    t = 0f;
-
-    float vanishTime = 0.25f;
-
-    Vector3 startScale =
-        Vector3.one;
-
-    Vector3 endScale =
-        Vector3.one * 0.6f;
-
-    while(t < vanishTime)
-    {
-        t += Time.deltaTime;
-
-        float rate =
-            Mathf.Clamp01(
-                t / vanishTime
-            );
-
-        cg.alpha =
-            Mathf.Lerp(
-                1f,
-                0f,
-                rate
-            );
-
-        rt.localScale =
-            Vector3.Lerp(
-                startScale,
-                endScale,
-                rate
-            );
-
-        yield return null;
-    }
-
-    enemyHandCount--;
-
-    UpdateEnemyHandCountText();
-
-    Destroy(moveCard);
-
-    Debug.Log(
-        "敵が指定カードをリソースへ送った：" +
-        selectedCard.cardName
-    );
-}
+public IEnumerator EnemyChargeSpecificResourceAnimation(CardData selectedCard)
+{ yield return EnemyFlowCharge(selectedCard); }
 
     public void DamagePlayerWall(GameObject wall)
     {
@@ -2592,7 +2227,7 @@ bool shieldTrigger =
             );
 
             // Finish reverse 10 before continuing this attack or the next wall.
-            while(turnManager != null && turnManager.IsChoosingEnemyHand) yield return null;
+            while(PresentationSequenceLock.IsLocked || (turnManager != null && turnManager.IsChoosingEnemyHand)) yield return null;
 
             if(isAce)
             {
@@ -2911,14 +2546,17 @@ bool shieldTrigger =
         }
     }
 
-    void RefreshEnemyHandVisual()
+    public void RefreshEnemyHandVisual()
     {
         if(enemyHandArea == null)
             return;
 
         for(int i = enemyHandArea.childCount - 1; i >= 0; i--)
         {
-            Destroy(enemyHandArea.GetChild(i).gameObject);
+            // Destroy is deferred: retire rendering and layout immediately.
+            var old=enemyHandArea.GetChild(i).gameObject;
+            old.SetActive(false);
+            Destroy(old);
         }
 
         for(int i = 0; i < enemyHandCards.Count; i++)
