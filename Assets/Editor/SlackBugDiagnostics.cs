@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -26,6 +26,7 @@ public static class SlackBugDiagnostics
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode) return;
         if (SceneManager.GetActiveScene().path != "Assets/Scenes/SampleScene.unity") return;
+        launched=started=false;
         Directory.CreateDirectory(Folder);
         SessionState.SetBool("TCardSlackBugProbe", true);
         deadline = EditorApplication.timeSinceStartup + 180;
@@ -97,11 +98,13 @@ public static class SlackBugDiagnostics
             var own = enemy ? t.enemyBattleArea : t.playerBattleArea;
             var foe = enemy ? t.playerBattleArea : t.enemyBattleArea;
             var ally = Add(d,own,"Spade_2"); var victim = Add(d,foe,"Heart_2");
+            var otherJoker=Add(d,own,"Joker_1");
             var joker = Add(d,own,"Joker_1");
             if(reverse) joker.MarkPlayedFromReverse();
             effects.ActivateOnSummon(joker,reverse,enemy);
-            Check(ally.transform.parent == own && joker.transform.parent == own,"Joker retains own field: enemy="+enemy+" reverse="+reverse);
+            Check(ally.transform.parent == (enemy?t.enemyGraveyard:t.playerGraveyard) && joker.transform.parent == own,"Joker clears allied field but retains source: enemy="+enemy+" reverse="+reverse);
             Check(victim.transform.parent == (enemy?t.playerGraveyard:t.enemyGraveyard),"Joker clears opposing field: enemy="+enemy+" reverse="+reverse);
+            Check(otherJoker.transform.parent == (enemy?t.enemyGraveyard:t.playerGraveyard),"Other Joker is also cleared: enemy="+enemy+" reverse="+reverse);
             Check(CardActionIcon.CanAttack(joker),"Joker can attack: enemy="+enemy+" reverse="+reverse);
         }
         Clear(t.playerBattleArea); Clear(t.enemyBattleArea);

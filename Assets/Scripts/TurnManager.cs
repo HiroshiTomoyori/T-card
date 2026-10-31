@@ -3378,12 +3378,17 @@ public bool IsSelectingDestroyTarget()
         bool sourceIsEnemy = enemyBattleArea != null && summonedJoker.transform.IsChildOf(enemyBattleArea);
         bool sourceIsPlayer = playerBattleArea != null && summonedJoker.transform.IsChildOf(playerBattleArea);
         if (!sourceIsEnemy && !sourceIsPlayer) return;
-        Transform opposingField = sourceIsEnemy ? playerBattleArea : enemyBattleArea;
-        Transform graveyard = sourceIsEnemy ? playerGraveyard : enemyGraveyard;
-        if (opposingField == null || graveyard == null) return;
-        var targets = TCardAIUnityBridge.GetCards(opposingField);
-        foreach (var target in targets) SendToGraveyard(target.gameObject, graveyard);
-        Debug.Log("JOKER: opposing field cleared (" + targets.Count + ")");
+        // Snapshot both sides before moving cards; leave only the Joker that activated the effect.
+        var targets = TCardAIUnityBridge.GetCards(playerBattleArea);
+        targets.AddRange(TCardAIUnityBridge.GetCards(enemyBattleArea));
+        int cleared = 0;
+        foreach (var target in targets)
+        {
+            if (target == null || target == summonedJoker) continue;
+            SendCardToOwnGraveyard(target);
+            cleared++;
+        }
+        Debug.Log("JOKER: both fields cleared except source (" + cleared + ")");
     }
     bool HasSpecialWin(
         CardController attacker,
