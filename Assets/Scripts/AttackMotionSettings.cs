@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 [CreateAssetMenu(menuName="T-card/Attack Motion Settings")]
 public sealed class AttackMotionSettings : ScriptableObject
 {
@@ -60,6 +60,9 @@ public sealed class AttackMotionSettings : ScriptableObject
     public float cardLowlightFeather=6.4f;
     [Min(0), Tooltip("ウォールゾーン周りのローライト境界のぼかし幅。大きいほど柔らかい")]
     public float wallLowlightFeather=40;
+    [Header("ウォールゾーンの丸み・グローぼかし / 720px幅基準")]
+    [Min(0)] public float wallZoneCornerRadius=24;
+    [Min(1)] public float wallZoneGlowBlur=28;
     [Min(0)] public float wallPadding=12;
     [Min(1)] public int sortingOffset=140;
     public float ImpactTime=>liftDuration+anticipationDuration+lungeDuration;

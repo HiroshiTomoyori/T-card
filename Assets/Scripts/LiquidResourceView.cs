@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -109,7 +109,9 @@ public sealed class LiquidResourceView : MonoBehaviour
         var sr=surface.rectTransform;sr.sizeDelta=Settings.panelSize+Vector2.one*Settings.auraPadding*2;
         float impulse=Mathf.Exp(-4*rippleAge/Mathf.Max(.1f,Settings.rippleDuration));
         surface.Draw(Settings,clock,level,impulse,beamAge,false);
-        targetFx.rectTransform.sizeDelta=Settings.panelSize+Vector2.one*(Settings.targetRippleSpread*2+24);
+        // A square bounds the full circular ripple, including the panel corners.
+        float targetDiameter=Settings.panelSize.magnitude+Mathf.Max(0,Settings.targetRippleSpread)*2+24;
+        targetFx.rectTransform.sizeDelta=Vector2.one*targetDiameter;
         targetFx.gameObject.SetActive(targetActive);
         if(targetActive)targetFx.Draw(Settings,clock,beamAge,hoverAge,1);
         UpdateForeground();

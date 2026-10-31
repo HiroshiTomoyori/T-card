@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using System.Collections.Generic;
@@ -12,6 +12,7 @@ public sealed class AttackSelectionGraphic : MaskableGraphic,IPointerClickHandle
         owner=turn;cancelAction=cancel;if(owned==null){var shader=Resources.Load<Shader>("TCardField/AttackSelection");if(shader==null)return;owned=new Material(shader){hideFlags=HideFlags.HideAndDontSave};material=owned;}
         float scale=Screen.width/720f;owned.SetVectorArray("_Entries",boxes);owned.SetVectorArray("_Colors",colors);owned.SetVectorArray("_Flags",flags);owned.SetInt("_Count",count);
         owned.SetVector("_ViewSize",new Vector4(Screen.width,Screen.height,scale,0));owned.SetVector("_Tune",new Vector4(s.blur*scale,s.lineWidth*scale,s.glowStrength,0));
+        owned.SetVector("_WallTune",new Vector4(s.wallZoneCornerRadius*scale,s.wallZoneGlowBlur*scale,0,0));
         owned.SetColor("_DimColor",s.lowlightColor);owned.SetColor("_HighlightColor",s.attackerHighlightColor);owned.SetFloat("_Opacity",opacity);maskable=false;raycastTarget=captureInput??turn.AttackSelectionActive;
     }
     public bool IsRaycastLocationValid(Vector2 screenPoint,Camera camera){foreach(var r in passThrough)if(r.Contains(screenPoint))return false;return true;}

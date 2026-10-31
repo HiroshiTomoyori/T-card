@@ -3,16 +3,18 @@ using UnityEngine;
 using UnityEngine.UI;
 public sealed class CardPlayPresentation : MonoBehaviour
 {
-    static int active;
+    static int active,activeActs;
+    bool isActPresentation;
+    public static bool IsActPlaying=>activeActs>0;
     public static bool IsPlaying=>active>0;
     public float Elapsed {get;private set;}
     public bool IsEnemy {get;private set;}
     public Image Artwork {get;private set;}
     public CardPlayAtmosphereGraphic Atmosphere {get;private set;}
     void OnEnable(){active++;}
-    void OnDisable(){active=Mathf.Max(0,active-1);}
+    void OnDisable(){active=Mathf.Max(0,active-1);if(isActPresentation)activeActs=Mathf.Max(0,activeActs-1);}
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    static void ResetState(){active=0;}
+    static void ResetState(){active=activeActs=0;}
     static RectTransform Rect(Transform parent,string name)
     {
         var go=new GameObject(name,typeof(RectTransform));go.layer=parent.gameObject.layer;go.transform.SetParent(parent,false);
@@ -30,7 +32,7 @@ public sealed class CardPlayPresentation : MonoBehaviour
         var layer=root.gameObject.AddComponent<Canvas>();layer.overrideSorting=true;layer.sortingLayerID=owner.sortingLayerID;int order=owner.sortingOrder;
         foreach(var c in owner.GetComponentsInChildren<Canvas>(true))if(c!=layer&&c.sortingLayerID==layer.sortingLayerID)order=Mathf.Max(order,c.sortingOrder);
         layer.sortingOrder=Mathf.Min(32760,order+Mathf.Max(1,s.sortingOffset));root.gameObject.AddComponent<GraphicRaycaster>();
-        var fx=root.gameObject.AddComponent<CardPlayPresentation>();fx.IsEnemy=isEnemy;
+        var fx=root.gameObject.AddComponent<CardPlayPresentation>();fx.IsEnemy=isEnemy;fx.isActPresentation=BattleAreaLayout.IsSpell(data);if(fx.isActPresentation)activeActs++;
         var backdrop=Graphic<Image>(root,"Card play backdrop");backdrop.raycastTarget=true;var br=backdrop.rectTransform;br.anchorMin=Vector2.zero;br.anchorMax=Vector2.one;br.offsetMin=br.offsetMax=Vector2.zero;
         float fit=Mathf.Max(.01f,Mathf.Min(((RectTransform)owner.transform).rect.width/720f,((RectTransform)owner.transform).rect.height/760f));
         Vector2 reveal=new Vector2(Mathf.Max(1,s.revealSize.x),Mathf.Max(1,s.revealSize.y))*fit,center=(s.centerOffset+(isEnemy?Vector2.up*s.enemyCenterYOffset:Vector2.zero))*fit;

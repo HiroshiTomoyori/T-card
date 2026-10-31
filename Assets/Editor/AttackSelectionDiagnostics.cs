@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -47,7 +47,7 @@ public static class AttackSelectionDiagnostics
   try{Check(view.Opacity>.99f&&!view.WallZoneButton.gameObject.activeSelf,"Normal attack incorrectly exposes wall zone");Check(!view.Graphic.IsRaycastLocationValid(Center(target),null),"Target raycast blocked");Check(!view.Graphic.IsRaycastLocationValid(Center(queen),null),"Switching raycast blocked");Click(Center(normal));Check(!t.AttackSelectionActive,"Retap did not cancel");Click(Center(normal));Click(Center(queen));Check(t.GetCurrentAttacker()==queen.gameObject&&t.IsMonarchAttacker,"Attacker switch failed");}
   catch(Exception e){Finish("FAIL: "+e);yield break;}
   yield return new WaitForSecondsRealtime(.25f);
-  try{Check(view.WallZoneButton.gameObject.activeSelf&&view.WallZoneGlowVisible&&view.IndividualWallGlowCount==0,"Monarch first stage must show zone only");Click(new Vector2(5,Screen.height*.5f));Check(!t.AttackSelectionActive,"Outside click failed to cancel");t.StartBattleByAttackSelect(queen.gameObject);}
+  try{var tune=view.Graphic.material.GetVector("_WallTune");var zoneSettings=AttackSelectionSettings.Load();float unit=Screen.width/720f;Check(Mathf.Abs(tune.x-zoneSettings.wallZoneCornerRadius*unit)<.01f&&Mathf.Abs(tune.y-zoneSettings.wallZoneGlowBlur*unit)<.01f,"Wall corner/blur settings missing");Check(System.Array.Exists(view.Graphic.material.GetVectorArray("_Flags"),f=>f.z>0),"Monarch zone not marked for rounded glow");Check(view.WallZoneButton.gameObject.activeSelf&&view.WallZoneGlowVisible&&view.IndividualWallGlowCount==0,"Monarch first stage must show zone only");Click(new Vector2(5,Screen.height*.5f));Check(!t.AttackSelectionActive,"Outside click failed to cancel");t.StartBattleByAttackSelect(queen.gameObject);}
   catch(Exception e){Finish("FAIL: "+e);yield break;}
   yield return new WaitForSecondsRealtime(.25f);yield return new WaitForEndOfFrame();var lit=Capture("monarch-targets");UnityEngine.Object.Destroy(lit);
   var walls=t.LiveAttackWalls();int wallBefore=walls.Count;int enemyHand=d.enemyHandCount;

@@ -1,4 +1,4 @@
-using TMPro;
+﻿using TMPro;
 using UnityEngine;
 
 [CreateAssetMenu(menuName="T-card/Liquid Resource UI", fileName="LiquidResourceSettings")]
@@ -69,11 +69,19 @@ public sealed class LiquidResourceSettings : ScriptableObject
     [Header("Charge Layer / 手札より前")]
     [Min(1)] public int chargeSortingOffset=40;
     [Header("Drag Target / 判定内だけの発光と波紋")]
-    [Min(.15f)] public float targetRipplePeriod=.72f;
-    [Min(0)] public float targetRippleStrength=1.55f;
-    [Min(.1f)] public float targetRippleWidth=1.5f;
-    [Min(0)] public float targetRippleSpread=30;
-    [Range(0,1)] public float targetGlowStrength=.35f;
+    [Range(0,3), Tooltip("同時に広がる円形波紋の本数。0で波紋を無効") ] public int targetRippleCount=1;
+    [Min(.15f)] public float targetRipplePeriod=.62f;
+    [Min(0)] public float targetRippleStrength=2.8f;
+    [Min(.1f)] public float targetRippleWidth=2.6f;
+    [Min(0)] public float targetRippleSpread=48;
+    [Range(0,1)] public float targetGlowStrength=.85f;
+    [Header("Target Accent / 判定内の強調")]
+    public Color targetHighlightColor=new Color(.83f,.69f,1f,1f);
+    [Min(.2f)] public float targetPulsePeriod=.85f;
+    [Range(0,1)] public float targetMinimumGlow=.65f;
+    [Min(0)] public float targetEnterFlashStrength=.7f;
+    [Min(.05f)] public float targetEnterFlashDuration=.32f;
+    [Range(0,1)] public float targetFillStrength=.12f;
     [Header("Liquid Suits / 白いスートの光")]
     public Texture2D suitAtlas;
     public Color suitColor=Color.white;

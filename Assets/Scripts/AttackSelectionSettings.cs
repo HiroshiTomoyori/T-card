@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 [CreateAssetMenu(menuName="T-card/Attack Selection Settings")]
 public sealed class AttackSelectionSettings : ScriptableObject
 {
@@ -24,6 +24,9 @@ public sealed class AttackSelectionSettings : ScriptableObject
     public Vector2 confirmationOffset=new Vector2(0,80);
     public Vector2 confirmationSize=new Vector2(310,60);
     [HideInInspector] public int contrastRevision;
+    [Header("ウォールゾーンの丸み・グローぼかし / 720px幅基準")]
+    [Min(0)] public float wallZoneCornerRadius=24;
+    [Min(1)] public float wallZoneGlowBlur=28;
     static AttackSelectionSettings cached;
     public static AttackSelectionSettings Load(){if(cached!=null)return cached;cached=Resources.Load<AttackSelectionSettings>("TCardField/AttackSelectionSettings");if(cached==null){cached=CreateInstance<AttackSelectionSettings>();cached.hideFlags=HideFlags.HideAndDontSave;}return cached;}
 }

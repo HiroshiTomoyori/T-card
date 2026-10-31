@@ -86,7 +86,7 @@
             "power": 9,
             "cost": 9,
             "effects": [
-                "InstantDestroySelf",
+                "None",
                 "TapAllEnemyBattle",
                 "ShieldTrigger"
             ]
@@ -234,7 +234,7 @@
             "power": 9,
             "cost": 9,
             "effects": [
-                "InstantDestroySelf",
+                "None",
                 "TapAllEnemyBattle",
                 "ShieldTrigger"
             ]
@@ -382,7 +382,7 @@
             "power": 9,
             "cost": 9,
             "effects": [
-                "InstantDestroySelf",
+                "None",
                 "TapAllEnemyBattle",
                 "ShieldTrigger"
             ]
@@ -448,7 +448,7 @@
             "assetName": "Joker_1",
             "cardName": "Joker",
             "suit": "Joker",
-            "power": 11,
+            "power": 13,
             "cost": 13,
             "effects": [
                 "JokerClearBattleArea",
@@ -462,7 +462,7 @@
             "assetName": "Joker_2",
             "cardName": "Joker",
             "suit": "Joker",
-            "power": 11,
+            "power": 13,
             "cost": 13,
             "effects": [
                 "JokerClearBattleArea",
@@ -558,7 +558,7 @@
             "power": 9,
             "cost": 9,
             "effects": [
-                "InstantDestroySelf",
+                "None",
                 "TapAllEnemyBattle",
                 "ShieldTrigger"
             ]

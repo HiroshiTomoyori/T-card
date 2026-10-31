@@ -67,11 +67,18 @@ MonoBehaviour:
   rootGlowStrength: 1
   rootGlowTail: 0.32
   chargeSortingOffset: 40
-  targetRipplePeriod: 0.72
-  targetRippleStrength: 1.55
-  targetRippleWidth: 1.5
-  targetRippleSpread: 30
-  targetGlowStrength: 0.35
+  targetRippleCount: 2
+  targetRipplePeriod: 1
+  targetRippleStrength: 3
+  targetRippleWidth: 8
+  targetRippleSpread: 70
+  targetGlowStrength: 1
+  targetHighlightColor: {r: 0.6382821, g: 0.33490568, b: 1, a: 1}
+  targetPulsePeriod: 0.85
+  targetMinimumGlow: 0.65
+  targetEnterFlashStrength: 0.7
+  targetEnterFlashDuration: 0.32
+  targetFillStrength: 0.12
   suitAtlas: {fileID: 2800000, guid: f2a0c86601344cd785e2f71e165810d4, type: 3}
   suitColor: {r: 1, g: 1, b: 1, a: 1}
   suitCount: 6

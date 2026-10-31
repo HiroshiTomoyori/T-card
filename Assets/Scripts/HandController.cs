@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections.Generic;
 using DG.Tweening;
 using UnityEngine.Events;
@@ -45,6 +45,22 @@ public void RefreshProLayout()
     [Header("展開位置")]
     public Vector3 expandPosition =
         new Vector3(0f, 520f, 0f);
+
+    [Header("相手ターン中の展開位置")]
+    [Min(0f), Tooltip("相手ターン中だけ展開位置を下げる量（手札のローカルY座標）。大きいほど下、0で無効")]
+    public float opponentTurnExpandLowering = 100f;
+
+    bool lastLowerHandState;
+    bool ShouldLowerHand => handDealer != null && handDealer.turnManager != null && handDealer.turnManager.ShouldLowerPlayerHand;
+    Vector3 ExpandedPosition
+    {
+        get
+        {
+            Vector3 position = expandPosition;
+            if (ShouldLowerHand) position.y -= Mathf.Max(0f, opponentTurnExpandLowering);
+            return position;
+        }
+    }
 
     [Header("収納サイズ")]
     public float idleScale = 0.6f;
@@ -193,8 +209,30 @@ void Start()
     ChangeState(true);
 }
 
+    public void RefreshTurnPosition()
+    {
+        bool lower = ShouldLowerHand;
+        if (!isIdle && !isOpeningLook && lastLowerHandState != lower)
+        {
+            ChangeState(false);
+            // The AE turn signal pauses gameplay time. This UI movement starts
+            // at end-turn commit and must keep moving while that signal plays.
+            if (proHandGroup != null)
+                foreach (var card in proHandGroup.cards)
+                {
+                    if (card == null || card.transform.parent != transform) continue;
+                    var tweens = DOTween.TweensByTarget(card.transform, false);
+                    if (tweens != null) foreach (var tween in tweens) tween.SetUpdate(true);
+                }
+        }
+        lastLowerHandState = lower;
+    }
+
     void LateUpdate()
     {
+        RefreshTurnPosition();
+        if (!isIdle && !isOpeningLook && layoutSettingsChanged) ChangeState(false);
+
         if (proHandGroup != null)
         {
             if (layoutSettingsChanged || lastProCardCount != proHandGroup.cards.Count)
@@ -246,6 +284,7 @@ public void ChangeState(bool toIdle)
     }
 
     isIdle = toIdle;
+    lastLowerHandState = ShouldLowerHand;
 
     transform.localEulerAngles = Vector3.zero;
 
@@ -254,7 +293,7 @@ public void ChangeState(bool toIdle)
 
     transform.localPosition = isIdle
         ? idlePosition
-        : expandPosition;
+        : ExpandedPosition;
 
     // 親の位置変更によるカードの瞬間移動を打ち消す。
     for (int i = 0; i < animatedCards.Count; i++)

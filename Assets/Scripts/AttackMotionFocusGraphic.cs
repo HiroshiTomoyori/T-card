@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 // Execution-only material; selection/confirmation shaders and settings stay independent.
 [RequireComponent(typeof(CanvasRenderer))]
@@ -15,6 +15,7 @@ public sealed class AttackMotionFocusGraphic : MaskableGraphic
         float unit=Screen.width/720f;
         owned.SetVector("_ViewSize",new Vector4(Screen.width,Screen.height,unit,0));
         owned.SetVector("_Tune",new Vector4(settings.glowBlur*unit,settings.glowLineWidth*unit,1,0));
+        owned.SetVector("_WallTune",new Vector4(settings.wallZoneCornerRadius*unit,settings.wallZoneGlowBlur*unit,0,0));
         owned.SetColor("_DimColor",settings.lowlightColor);owned.SetFloat("_Opacity",opacity);
         maskable=false;raycastTarget=false;color=Color.white;canvasRenderer.cull=false;SetVerticesDirty();
     }

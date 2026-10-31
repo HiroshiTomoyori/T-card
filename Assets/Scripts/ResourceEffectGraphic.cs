@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 [RequireComponent(typeof(CanvasRenderer))]
 public sealed class ResourceEffectGraphic : MaskableGraphic
@@ -16,7 +16,11 @@ public sealed class ResourceEffectGraphic : MaskableGraphic
         owned.SetVector("_Timing",new Vector4(s.beamFadeStart,s.beamFadePower,s.beamCurveAmount,s.beamFilamentStrength));
         owned.SetVector("_Root",new Vector4(s.rootGlowStrength,s.rootGlowTail/Mathf.Max(.1f,s.beamDuration),0,0));
         owned.SetVector("_Target",new Vector4(s.targetRipplePeriod,s.targetRippleStrength,s.targetRippleWidth,s.targetRippleSpread));
+        owned.SetFloat("_TargetCount",Mathf.Clamp(s.targetRippleCount,0,3));
         owned.SetFloat("_TargetGlow",s.targetGlowStrength);
+        owned.SetVector("_TargetPulse",new Vector4(s.targetPulsePeriod,s.targetMinimumGlow,s.targetEnterFlashStrength,s.targetEnterFlashDuration));
+        owned.SetFloat("_TargetFill",s.targetFillStrength);
+        owned.SetColor("_TargetColor",ToLinear(s.targetHighlightColor));
         owned.SetColor("_BeamColor",ToLinear(s.beamColor));owned.SetColor("_RootColor",ToLinear(s.rootGlowColor));
         owned.SetColor("_GlowColor",ToLinear(s.glowColor));owned.SetColor("_WaveColor",ToLinear(s.wave2Color));
         raycastTarget=false;maskable=false;

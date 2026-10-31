@@ -16,6 +16,7 @@
    struct appdata{float4 vertex:POSITION;float2 uv:TEXCOORD0;};
    struct v2f{float4 vertex:SV_POSITION;float2 uv:TEXCOORD0;};
    float4 _Entries[32],_Colors[32],_Flags[32];
+   float4 _WallTune;
    float4 _ViewSize,_DimColor,_HighlightColor,_Tune;
    int _Count;float _Opacity;
    v2f vert(appdata v){v2f o;o.vertex=UnityObjectToClipPos(v.vertex);o.uv=v.uv;return o;}
@@ -26,9 +27,9 @@
     for(int n=0;n<32;n++)
     {
      if(n>=_Count)break;
-     float d=distanceToBox(p,_Entries[n],8*_ViewSize.z);
+     float d=distanceToBox(p,_Entries[n],lerp(8*_ViewSize.z,_WallTune.x,_Flags[n].z));
      float inside=1-smoothstep(-1,1,d);hole=max(hole,inside*_Flags[n].x);highlight=max(highlight,inside*_Flags[n].y);
-     float blur=max(1,_Tune.x),strokeWidth=max(.3,_Tune.y);
+     float blur=max(1,lerp(_Tune.x,_WallTune.y,_Flags[n].z)),strokeWidth=max(.3,_Tune.y);
      float halo=exp(-d*d/(blur*blur))* .55+exp(-d*d/(blur*blur*.25))*.35+exp(-d*d/(strokeWidth*strokeWidth))*.65;
      float a=saturate(halo*_Colors[n].a*_Opacity*_Tune.z)*smoothstep(-2*_ViewSize.z,0,d);
      light+=_Colors[n].rgb*a;glowAlpha+=a;

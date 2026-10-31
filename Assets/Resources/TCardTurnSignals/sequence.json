@@ -1,0 +1,18 @@
+{
+  "sourceAE": "T-card-Turn-Signals-v7-No-Afterglow-HD.aep",
+  "sourceSize": [
+    1800,
+    1000
+  ],
+  "crop": [
+    0,
+    300,
+    1800,
+    700
+  ],
+  "frameRate": 60,
+  "frameCount": 72,
+  "alpha": "RGBA",
+  "transparentFramesAreNull": true,
+  "finalAfterlight": false
+}

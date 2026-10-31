@@ -12,15 +12,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f252a292349d8f64eab3a310917acb34, type: 3}
   m_Name: AttackSelectionSettings
   m_EditorClassIdentifier: 
-  normalTargetColor: {r: 0.8396226, g: 0.21782663, b: 0.3144056, a: 1}
-  monarchTargetColor: {r: 0.6653097, g: 0.427451, b: 1, a: 1}
+  normalTargetColor: {r: 0.81960785, g: 0, b: 0.1254902, a: 1}
+  monarchTargetColor: {r: 0.5415423, g: 0.2599235, b: 0.9339623, a: 1}
   attackerColor: {r: 0.7294118, g: 1, b: 0.8224064, a: 0.57254905}
   selectedWallColor: {r: 0.976, g: 0.929, b: 1, a: 1}
   lowlightColor: {r: 0.039, g: 0.059, b: 0.078, a: 0.5}
   attackerHighlightColor: {r: 1, g: 1, b: 0.92, a: 1}
-  glowStrength: 0.98
+  glowStrength: 0.37
   pulsePeriod: 3.2
-  minimumPulse: 0.3
+  minimumPulse: 0.467
   blur: 15
   lineWidth: 2.8
   attackerHighlight: 0.031
@@ -31,3 +31,5 @@ MonoBehaviour:
   confirmationOffset: {x: 0, y: 80}
   confirmationSize: {x: 310, y: 60}
   contrastRevision: 1
+  wallZoneCornerRadius: 24
+  wallZoneGlowBlur: 28

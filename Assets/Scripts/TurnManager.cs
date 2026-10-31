@@ -45,6 +45,15 @@ public bool CanDragPlayerHand
     }
 }
 
+    public bool IsOpponentTurn => !IsBattleEnded && actionGlowTurn == 2;
+    bool lowerPlayerHandForOpponent;
+    public bool ShouldLowerPlayerHand => !IsBattleEnded && (lowerPlayerHandForOpponent || IsOpponentTurn);
+    void SyncPlayerHandTurnPosition()
+    {
+        if (handDealer != null && handDealer.handArea != null)
+            handDealer.handArea.GetComponent<HandController>()?.RefreshTurnPosition();
+    }
+
     public bool IsBattlePhase
     {
         get { return isBattlePhase; }
@@ -166,6 +175,9 @@ public bool CanDragPlayerHand
 
     void Awake()
     {
+        TurnSignalSettings.Load(); // Preload AE frames before the match.
+        if (playerTurnLogo != null) playerTurnLogo.SetActive(false);
+        if (enemyTurnLogo != null) enemyTurnLogo.SetActive(false);
         // シーン上でボタンが有効になっていても、マッチ開始前は必ず隠す。
         SetEndTurnButton(false);
 
@@ -194,6 +206,8 @@ public bool CanDragPlayerHand
         PositionPlayerDecisionPanel();
         PositionEnemyHandChoice();
         PositionHandLimitChoice();
+        ObserveEarlyTurnHand();
+        TryAutoEndEarlyTurn();
         TickDecisionTimer();
         // Animatorや別UI処理に再表示されても、自ターン以外では必ず隠す。
         SyncEndTurnButtonVisibility();
@@ -247,6 +261,7 @@ IEnumerator FirstTurnRoutine()
     {
         Debug.Log("プレイヤー先攻1ターン目");
 
+        yield return ShowTurnLogo(playerTurnLogo, playerTurnSE);
         isFirstTurnStarting = false;
         StartPlayerTurn(true);
 
@@ -704,16 +719,12 @@ if(handDealer != null)
             }
             return;
         }
+        // A late resource callback cannot restart a finished turn or an existing phase.
+        if (!isPlayerTurnActive || isEndingTurn || IsBattleEnded || isPlayerMainPhase || isBattlePhase) return;
         Debug.Log("Resource完了");
-
-        if (ShouldAutoEndEarlyTurn())
-        {
-            Debug.Log("最初の5ターン・行動不能のため自動ターン終了");
-            RunAutomaticDecision(EndPlayerTurn);
-            return;
-        }
-
+        ObserveEarlyTurnHand();
         StartMainPhase();
+        TryAutoEndEarlyTurn();
     }
     public bool IsSelectingTarget()
     {
@@ -767,39 +778,13 @@ public void HideAttackArrow()
 
     public void EndPlayerTurn()
     {
-        if (PresentationSequenceLock.IsLocked) return;
-        if (automaticDecisionDepth > 0 && turnCount <= 5 && !ShouldAutoEndEarlyTurn()) return;
-        if (resolvingPlayerCardAttack || IsChoosingEnemyHand) return;
-        // マッチ開始前・敵ターン中・二重クリックからの呼び出しを拒否する。
-        if(!isPlayerTurnActive || isEndingTurn || (CardEffectManager.I != null && (CardEffectManager.I.IsResolvingNine || CardEffectManager.I.IsResolvingSummon)) || (handDealer != null && (handDealer.IsHandLimitSelecting || handDealer.IsWallPlacementRunning || handDealer.IsResolvingWallAttack)))
-        {
-            Debug.Log("自分のターンではないためターン終了不可");
-            return;
-        }
-    
-    if(HandDealer.IsRedrawSelecting)
-    {
-        Debug.Log("引き直し選択中のためターン終了不可");
-        return;
-    }
-
-
-    if (RequestPlayerDecision("end-turn", "ターンを終了します。\nよろしいですか？", EndPlayerTurn)) return;
-
-    ResourcePhaseManager resourcePhase =
-    FindFirstObjectByType<ResourcePhaseManager>();
-
-    if(resourcePhase != null)
-    {
-        resourcePhase.EndResourcePhase();
-    }
-        // コルーチン開始前に無効化し、同一フレームの連打も遮断する。
-        isPlayerTurnActive = false;
-        isEndingTurn = true;
-
-        SetEndTurnButton(false);
-
-        StartCoroutine(EndPlayerTurnRoutine());
+        // Automatic callers use the stricter three-turn/no-actions policy.
+        if (automaticDecisionDepth > 0) { TryAutoEndEarlyTurn(); return; }
+        if (!CanBeginPlayerTurnEnd() || HasMovingPlayerCard()) return;
+        // The button owns this decision, including a later cancellation.
+        earlyTurnAutoEndSuppressed = true;
+        if (RequestPlayerDecision("end-turn", "ターンを終了します。\nよろしいですか？", EndPlayerTurn)) return;
+        CommitPlayerTurnEnd();
     }
 
     IEnumerator EndPlayerTurnRoutine()
@@ -875,7 +860,10 @@ void StartPlayerTurn(bool firstTurn = false)
     }
 
     isPlayerTurnActive = true;
+    earlyTurnAutoEndSuppressed = false;
     actionGlowTurn = 1;
+    lowerPlayerHandForOpponent = false;
+    SyncPlayerHandTurnPosition();
     ClearEnemySummonSickness();
     mainTurnCountdown.Reset();
     mainTurnCountdown.Advance("player-turn", 25f, 0f, false, false);
@@ -1114,6 +1102,7 @@ void SetEnemyWallClickable(bool value)
         IEnumerator EnemyTurnRoutine()
         {
             actionGlowTurn = 2;
+            SyncPlayerHandTurnPosition();
             ClearPlayerSummonSickness();
             try
             {
@@ -1126,7 +1115,8 @@ void SetEnemyWallClickable(bool value)
             }
             yield return ShowTurnLogo(
                 enemyTurnLogo,
-                enemyTurnSE
+                enemyTurnSE,
+                true
             );
 
             if(handDealer != null)
@@ -2451,9 +2441,22 @@ void ShowEnemyAttackArrow(GameObject attacker, GameObject target)
 
         IEnumerator ShowTurnLogo(
         GameObject logo,
-        AudioClip se
+        AudioClip se,
+        bool opponent = false
     )
     {
+        var signalSettings = TurnSignalSettings.Load();
+        if (signalSettings != null && !signalSettings.enabledEffect)
+        {
+            if (seSource != null && se != null) seSource.PlayOneShot(se);
+            yield break;
+        }
+        if (TurnSignalPresentation.CanPlay(this, opponent))
+        {
+            yield return TurnSignalPresentation.Play(this, opponent, se);
+            yield break;
+        }
+        // Keep the legacy fade as a fallback if the AE asset is unavailable.
         if(logo == null)
             yield break;
 
@@ -3603,6 +3606,22 @@ public bool IsSelectingDestroyTarget()
         SyncEndTurnButtonVisibility();
     }
 
+    public bool IsResolvingActCard => CardPlayPresentation.IsActPlaying ||
+        isSelectingDestroyTarget || pendingDestroySelfCard != null ||
+        (CardEffectManager.I != null && CardEffectManager.I.IsResolvingNine) ||
+        HasPendingAct(playerBattleArea) || HasPendingAct(enemyBattleArea);
+
+    static bool HasPendingAct(Transform area)
+    {
+        if (area == null) return false;
+        foreach (Transform child in area)
+        {
+            var card = child.GetComponent<CardController>();
+            if (child.gameObject.activeInHierarchy && card != null && BattleAreaLayout.IsSpell(card.data)) return true;
+        }
+        return false;
+    }
+
     void SyncEndTurnButtonVisibility()
     {
         if(endTurnButton == null)
@@ -3616,7 +3635,7 @@ public bool IsSelectingDestroyTarget()
         if(target.activeSelf != shouldShow)
             target.SetActive(shouldShow);
 
-        endTurnButton.interactable = shouldShow;
+        endTurnButton.interactable = shouldShow && CanBeginPlayerTurnEnd();
     }
 
 IEnumerator BattleEndResultRoutine()
@@ -3826,29 +3845,6 @@ void OnSelectJokerClear()
     {
         Debug.Log("敵エクストラターン予約");
         enemyExtraTurnRequested = true;
-    }
-
-    bool ShouldAutoEndEarlyTurn()
-    {
-        if (turnCount > 5 || !isPlayerTurnActive || isEndingTurn || IsBattleEnded)
-            return false;
-
-        // An unresolved choice or animation is not proof that the player has no actions.
-        if (PresentationSequenceLock.IsLocked || AttackMotionPresentation.IsPlaying || CardPlayPresentation.IsPlaying || IsPlayerDecisionOpen || IsChoosingEnemyHand ||
-            IsSelectingTarget() || IsSelectingDestroyTarget() || HasPendingAttackConfirmation ||
-            waitingBlockSelect || resolvingEnemyBlock || resolvingPlayerCardAttack ||
-            pendingJokerEffectCard != null ||
-            (ReverseChoiceManager.I != null && ReverseChoiceManager.I.IsChoosing) ||
-            (CardEffectManager.I != null && (CardEffectManager.I.IsResolvingNine || CardEffectManager.I.IsResolvingSummon)) ||
-            (resourcePhaseManager != null && resourcePhaseManager.IsRunning()))
-            return false;
-        if (handDealer == null || handDealer.handArea == null || playerBattleArea == null ||
-            HandDealer.IsRedrawSelecting || handDealer.IsHandLimitSelecting ||
-            handDealer.IsTurnDrawAnimating || handDealer.IsWallPlacementRunning ||
-            handDealer.IsResolvingWallAttack || handDealer.IsResolvingEnemyWallAttack)
-            return false;
-
-        return !CanPlayerSummonAnything() && !CanPlayerAttackAnything();
     }
 
     bool CanPlayerSummonAnything()
@@ -4137,6 +4133,7 @@ public partial class TurnManager
     public void NotifyPlayerActionCommitted()
     {
         if (!isPlayerTurnActive || isEndingTurn || IsBattleEnded) return;
+        ObserveEarlyTurnHand();
         mainTurnCountdown.Reset();
         mainTurnCountdown.Advance("player-turn", 30f, 0f, false, false);
     }
@@ -4289,27 +4286,18 @@ public partial class TurnManager
             return;
         }
         bool hasDecision = TryGetTimedDecision(out PendingDecision decision);
-        bool endConfirmation = IsPlayerDecisionOpen && pendingPlayerDecisionKey == "end-turn";
         bool sub = hasDecision && decision.kind != TimedDecision.Resource &&
             decision.kind != TimedDecision.Main && decision.kind != TimedDecision.Battle;
-        bool mainRunning = isPlayerTurnActive && !isEndingTurn && hasDecision && (!sub || endConfirmation);
+        // A countdown is never allowed to override a protected/late turn or a manual confirmation.
+        bool mainRunning = isPlayerTurnActive && !isEndingTurn && turnCount <= EarlyAutoEndLastTurn &&
+            !earlyTurnAutoEndSuppressed && hasDecision && !sub;
         // Main expires first, including when both clocks reach zero in one frame.
         if (mainRunning && mainTurnCountdown.Advance("player-turn",
             mainTurnCountdown.Context == null ? 25f : mainTurnCountdown.Duration,
             Time.unscaledDeltaTime, false, false))
         {
-            // Early-turn auto advance may never interrupt an available action or choice.
-            if (turnCount <= 5 && !ShouldAutoEndEarlyTurn())
-            {
-                mainTurnCountdown.Reset();
-                return;
-            }
-            ReturnTimedDrags();
-            if (IsPlayerDecisionOpen) RejectPlayerDecision();
-            CancelTimedAttackSelection();
-            RunAutomaticDecision(EndPlayerTurn);
-            decisionCountdown.Reset();
-            if (decisionTimerPanel != null) decisionTimerPanel.gameObject.SetActive(false);
+            TryAutoEndEarlyTurn();
+            mainTurnCountdown.Reset();
             return;
         }
         bool timeout = false;
@@ -4334,13 +4322,37 @@ public partial class TurnManager
             if (drag != null && drag.IsDragging) drag.OnEndDrag(null);
     }
 
+    void ResolveActTargetTimeout()
+    {
+        var source = pendingDestroySelfCard;
+        if (source == null || !isSelectingDestroyTarget) return;
+        bool enemy = enemyBattleArea != null && source.transform.IsChildOf(enemyBattleArea);
+        Transform opponents = enemy ? playerBattleArea : enemyBattleArea;
+        CardController strongest = null;
+        foreach (var card in TCardAIUnityBridge.GetCards(opponents))
+            if (card != null && card.data != null && (strongest == null || card.data.power > strongest.data.power)) strongest = card;
+        if (strongest != null)
+        {
+            RunAutomaticDecision(() => TrySelectDestroyTarget(strongest));
+            return;
+        }
+        isSelectingDestroyTarget = false;
+        pendingDestroySelfCard = null;
+        if (aceSelectionEffect != null) Destroy(aceSelectionEffect.gameObject);
+        SendCardToOwnGraveyard(source);
+    }
+
     void ResolveDecisionTimeout(TimedDecision kind)
     {
         if (IsBattleEnded) return;
         switch (kind)
         {
             case TimedDecision.EnemyHand: ChooseEnemyHandCard(0); break;
-            case TimedDecision.Confirmation: RejectPlayerDecision(); break;
+            case TimedDecision.Confirmation:
+                bool choosingActTarget = isSelectingDestroyTarget && pendingDestroySelfCard != null;
+                RejectPlayerDecision();
+                if (choosingActTarget) ResolveActTargetTimeout();
+                break;
             case TimedDecision.Opening: handDealer.ConfirmHand(); break;
             case TimedDecision.Resource: resourcePhaseManager.CompleteResourcePhase(); break;
             case TimedDecision.Main: StartPlayerBattlePhase(); break;
@@ -4350,11 +4362,7 @@ public partial class TurnManager
                 break;
             case TimedDecision.Discard: handDealer.ResolveHandLimitInactivity(); break;
             case TimedDecision.Destroy:
-                CardController source = pendingDestroySelfCard;
-                pendingDestroySelfCard = null;
-                isSelectingDestroyTarget = false;
-                if (aceSelectionEffect != null) Destroy(aceSelectionEffect.gameObject);
-                if (source != null) SendCardToOwnGraveyard(source);
+                ResolveActTargetTimeout();
                 break;
             case TimedDecision.Joker:
                 jokerEffectPanel.SetActive(false);
@@ -4366,9 +4374,7 @@ public partial class TurnManager
                 CancelTimedAttackSelection();
                 break;
             case TimedDecision.Battle:
-                if (turnCount <= 5 && !ShouldAutoEndEarlyTurn()) break;
-                CancelTimedAttackSelection();
-                RunAutomaticDecision(EndPlayerTurn);
+                TryAutoEndEarlyTurn();
                 break;
         }
     }

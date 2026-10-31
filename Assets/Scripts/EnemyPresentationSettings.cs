@@ -24,7 +24,7 @@ public sealed class EnemyPresentationSettings:ScriptableObject
  [Tooltip("リソース水面の上方を基準に公開位置を調整。Xは左右、Yは上下のUI単位") ]
  public Vector2 chargeRevealOffset=Vector2.zero;
  [Tooltip("公開カードの大きさ。水面へ落とすカードとは独立して調整")]
- public Vector2 chargeRevealSize=new Vector2(130,195);
+ public Vector2 chargeRevealSize=new Vector2(117,175.5f);
  [Min(0),Tooltip("手札中央から下へずらして公開する距離")]
  public float chargeRevealBelowHand=135;
  [Min(0)]public float chargeScreenPadding=20;

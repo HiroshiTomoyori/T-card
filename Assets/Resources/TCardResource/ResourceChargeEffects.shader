@@ -20,7 +20,8 @@ Shader "T-card/Resource Charge Effects"
  #pragma target 3.0
  #include "UnityCG.cginc"
  float4 _RectSize,_Panel,_Motion,_Shape,_Beam,_Timing,_Root,_Target,_BeamColor,_RootColor,_GlowColor,_WaveColor;
- float _TargetGlow;
+ float _TargetGlow,_TargetFill,_TargetCount;
+ float4 _TargetPulse,_TargetColor;
  struct a2v{float4 vertex:POSITION;float2 uv:TEXCOORD0;float4 color:COLOR;};
  struct v2f{float4 pos:SV_POSITION;float2 uv:TEXCOORD0;float4 color:COLOR;};
  v2f vert(a2v v){v2f o;o.pos=UnityObjectToClipPos(v.vertex);o.uv=v.uv;o.color=v.color;return o;}
@@ -28,19 +29,28 @@ Shader "T-card/Resource Charge Effects"
  float4 frag(v2f i):SV_Target {
   if(_Panel.w>.5){
    float2 p=(i.uv-.5)*_RectSize.xy;float d=rounded(p,_Panel.xy,min(_Panel.z,min(_Panel.x,_Panel.y)*.45));
-   float entry=smoothstep(0,.16,_Motion.z),period=max(.15,_Target.x),ripple=0;
-   [unroll]for(int n=0;n<2;n++){
-    float phase=frac(_Motion.z/period+n*.5),spread=(3+phase*_Target.w);
-    float rd=rounded(p,_Panel.xy+float2(spread*2,spread),_Panel.z+spread*.5);
-    float env=pow(max(0,sin(phase*3.14159265)),1.6)*(1-phase);
-    float direction=.4+.6*saturate(.5+(p.x-p.y)/max(1,_Panel.x));
+   float entry=smoothstep(0,.08,_Motion.z),period=max(.15,_Target.x),ripple=0;
+   float pulse=lerp(saturate(_TargetPulse.y),1,.5+.5*sin(_Motion.z*6.283185/max(.2,_TargetPulse.x)));
+   float flash=pow(saturate(1-_Motion.z/max(.05,_TargetPulse.w)),2)*max(0,_TargetPulse.z);
+   float gain=max(0,_TargetGlow)*pulse+flash;
+   [unroll]for(int n=0;n<3;n++){
+    if(n>=_TargetCount)continue;
+    float phase=frac(_Motion.z/period+n/max(1,_TargetCount)),spread=(3+phase*_Target.w);
+    float radius=length(_Panel.xy*.5)-_Panel.z*.3+spread;
+    float rd=length(p)-radius;
+    float env=pow(max(0,sin(phase*3.14159265)),1.25)*(1-phase);
+    float direction=.75+.25*saturate(.5+(p.x-p.y)/max(1,_Panel.x));
     ripple+=exp(-abs(rd)/max(.1,_Target.z))*env*_Target.y*direction;
    }
-   float border=exp(-abs(d)/max(.5,_Target.z))*.6;
-   float glow=exp(-max(0,d)/12)*_TargetGlow*.18;
-   float alpha=saturate((border+ripple+glow)*entry);
+   float inside=1-smoothstep(-1.5,1.5,d);
+   float border=exp(-abs(d)/max(.5,_Target.z))*(.8+.4*gain);
+   float softEdge=exp(-abs(d)/max(4,_Target.z*4))*.28*gain;
+   float glow=exp(-max(0,d)/15)*gain*.38*(1-inside);
+   float fill=inside*gain*saturate(_TargetFill);
+   float alpha=saturate((border+ripple+softEdge+glow+fill)*entry);
    float2 edge=(.5-abs(i.uv-.5))*_RectSize.xy;alpha*=smoothstep(0,8,min(edge.x,edge.y));
-   return float4(lerp(_GlowColor.rgb,_WaveColor.rgb,saturate(ripple+border)),alpha)*i.color;
+   float3 tint=lerp(_TargetColor.rgb,_WaveColor.rgb,saturate((ripple+border)*.55+flash*.35));
+   return float4(tint,alpha*_TargetColor.a)*i.color;
   }
   // y=0 is the water surface. A shallow horizontal glow covers the base.
   float x=(i.uv.x-.5)*_RectSize.x,y=i.uv.y*_RectSize.y-_Shape.w;

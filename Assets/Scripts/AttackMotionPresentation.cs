@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -110,7 +110,7 @@ public sealed class AttackMotionPresentation : MonoBehaviour
                         Rect b=ScreenBox(c.artworkImage!=null?c.artworkImage.rectTransform:(RectTransform)child,camera);
                         zone=first?b:Rect.MinMaxRect(Mathf.Min(zone.xMin,b.xMin),Mathf.Min(zone.yMin,b.yMin),Mathf.Max(zone.xMax,b.xMax),Mathf.Max(zone.yMax,b.yMax));first=false;
                     }
-                    if(!first){float pad=s.wallPadding*Screen.width/720f;zone.xMin-=pad;zone.yMin-=pad;zone.xMax+=pad;zone.yMax+=pad;Put(zone,targetTint,s.wallGlow,s.wallLowlightFeather,boxes,colors,flags,ref count);}
+                    if(!first){float pad=s.wallPadding*Screen.width/720f;zone.xMin-=pad;zone.yMin-=pad;zone.xMax+=pad;zone.yMax+=pad;Put(zone,targetTint,s.wallGlow,s.wallLowlightFeather,boxes,colors,flags,ref count,true);}
                     // Zone focus keeps the full wall row lit; only the chosen cards receive red outlines.
                     highlighted.Clear();
                     foreach(var card in related)
@@ -147,8 +147,8 @@ public sealed class AttackMotionPresentation : MonoBehaviour
         foreach(var p in c){var point=RectTransformUtility.WorldToScreenPoint(camera,p);min=Vector2.Min(min,point);max=Vector2.Max(max,point);}
         return Rect.MinMaxRect(min.x,min.y,max.x,max.y);
     }
-    static void Put(Rect box,Color tint,float power,float feather,Vector4[] boxes,Vector4[] colors,Vector4[] flags,ref int count)
+    static void Put(Rect box,Color tint,float power,float feather,Vector4[] boxes,Vector4[] colors,Vector4[] flags,ref int count,bool wallZone=false)
     {
-        if(count>=32)return;boxes[count]=new Vector4(box.center.x,box.center.y,box.width,box.height);colors[count]=new Vector4(tint.r,tint.g,tint.b,power*tint.a);flags[count]=new Vector4(feather,1,0,0);count++;
+        if(count>=32)return;boxes[count]=new Vector4(box.center.x,box.center.y,box.width,box.height);colors[count]=new Vector4(tint.r,tint.g,tint.b,power*tint.a);flags[count]=new Vector4(feather,1,wallZone?1:0,0);count++;
     }
 }

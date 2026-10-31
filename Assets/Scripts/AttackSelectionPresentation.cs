@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
 [DefaultExecutionOrder(500)]
@@ -35,10 +35,10 @@ public sealed class AttackSelectionPresentation : MonoBehaviour
         foreach(var c in corners){var p=RectTransformUtility.WorldToScreenPoint(EventCamera,c);min=Vector2.Min(min,p);max=Vector2.Max(max,p);}return UnityEngine.Rect.MinMaxRect(min.x,min.y,max.x,max.y);
     }
     Rect CardBounds(CardController card){return Bounds(card.artworkImage!=null?card.artworkImage.rectTransform:(RectTransform)card.transform);}
-    void Add(Rect bounds,Color tint,float power,bool keepLit,float highlight=0)
+    void Add(Rect bounds,Color tint,float power,bool keepLit,float highlight=0,bool wallZone=false)
     {
         if(count>=32)return;var s=AttackSelectionSettings.Load();float scale=Screen.width/720f;bounds.center+=s.glowOffset*scale;bounds.size+=s.glowSizeAdjustment*scale;
-        boxes[count]=new Vector4(bounds.center.x,bounds.center.y,bounds.width,bounds.height);colors[count]=new Vector4(tint.r,tint.g,tint.b,power*tint.a);flags[count]=new Vector4(keepLit?1:0,highlight,0,0);count++;
+        boxes[count]=new Vector4(bounds.center.x,bounds.center.y,bounds.width,bounds.height);colors[count]=new Vector4(tint.r,tint.g,tint.b,power*tint.a);flags[count]=new Vector4(keepLit?1:0,highlight,wallZone?1:0,0);count++;
     }
     void Place(RectTransform rect,Rect screen)
     {
@@ -78,7 +78,7 @@ public sealed class AttackSelectionPresentation : MonoBehaviour
                 wallBounds=first?bounds:UnityEngine.Rect.MinMaxRect(Mathf.Min(wallBounds.xMin,bounds.xMin),Mathf.Min(wallBounds.yMin,bounds.yMin),Mathf.Max(wallBounds.xMax,bounds.xMax),Mathf.Max(wallBounds.yMax,bounds.yMax));first=false;
             }
             bool zoneActive=owner.IsMonarchAttacker&&walls.Count>1&&!wallsMode&&!confirming;
-            if(zoneActive){float pad=s.wallZonePadding*Screen.width/720f;wallBounds.xMin-=pad;wallBounds.xMax+=pad;wallBounds.yMin-=pad;wallBounds.yMax+=pad;Add(wallBounds,targetColor,wave,true);WallZoneGlowVisible=true;Place(zone.rectTransform,wallBounds);}
+            if(zoneActive){float pad=s.wallZonePadding*Screen.width/720f;wallBounds.xMin-=pad;wallBounds.xMax+=pad;wallBounds.yMin-=pad;wallBounds.yMax+=pad;Add(wallBounds,targetColor,wave,true,0,true);WallZoneGlowVisible=true;Place(zone.rectTransform,wallBounds);}
             zone.gameObject.SetActive(zoneActive&&!wallsMode);
             if(owner.CanDirectAttack()&&!wallsMode)foreach(var direct in Object.FindObjectsByType<EnemyDirectClick>(FindObjectsSortMode.None)){if(direct.transform is RectTransform dr){var bounds=Bounds(dr);if(!confirming||owner.IsAttackConfirmationTarget(direct.gameObject))Add(bounds,targetColor,wave,true);graphic.passThrough.Add(bounds);}}
             bool pending=owner.HasPendingAttackConfirmation;

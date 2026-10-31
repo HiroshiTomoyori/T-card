@@ -6,8 +6,8 @@ using UnityEngine;
 public static class PresentationRevisionValidation
 {
  const string Key="TCard.PresentationRevisionSuite.";
- static readonly string[] Menus={"Validate Summon Sequences (Play)","Validate Card Readiness (Play)","Validate Discard and Enemy Hand (Play)","Validate Enemy Presentation (Play)","Validate Attack Motion (Play)","Validate Field Geometry (Play)"};
- static readonly string[] Reports={"TCardSummonSequenceValidation","TCardReadinessValidation","TCardDiscardDisplayValidation","TCardEnemyPresentationValidation","TCardAttackMotionValidation","TCardFieldGeometryValidation"};
+ static readonly string[] Menus={"Validate Summon Sequences (Play)","Validate Card Readiness (Play)","Validate Discard and Enemy Hand (Play)","Validate Enemy Presentation (Play)","Validate Attack Motion (Play)","Validate Field Geometry (Play)","Validate Act Resolution (Play)","Validate Attack Selection (Play)"};
+ static readonly string[] Reports={"TCardSummonSequenceValidation","TCardReadinessValidation","TCardDiscardDisplayValidation","TCardEnemyPresentationValidation","TCardAttackMotionValidation","TCardFieldGeometryValidation","TCardActResolutionValidation","TCardAttackSelectionValidation"};
  static PresentationRevisionValidation(){EditorApplication.update+=Tick;}
  [MenuItem("Tools/T-card/Run Presentation Checks",false,-10)]
  static void Begin(){if(EditorApplication.isPlayingOrWillChangePlaymode)return;SessionState.SetInt(Key+"First",0);SessionState.SetInt(Key+"Limit",Menus.Length);SessionState.SetInt(Key+"Index",0);SessionState.SetString(Key+"State","start");}
@@ -17,6 +17,8 @@ public static class PresentationRevisionValidation
  static void DiscardOnly(){Begin();if(!EditorApplication.isPlayingOrWillChangePlaymode){SessionState.SetInt(Key+"Index",2);SessionState.SetInt(Key+"First",2);SessionState.SetInt(Key+"Limit",3);}}
  [MenuItem("Tools/T-card/Check Field Card Sizes",false,-7)]
  static void GeometryOnly(){Begin();if(!EditorApplication.isPlayingOrWillChangePlaymode){SessionState.SetInt(Key+"Index",5);SessionState.SetInt(Key+"First",5);SessionState.SetInt(Key+"Limit",6);}}
+ [MenuItem("Tools/T-card/Check Act and Wall Revisions",false,-6)]
+ static void ActAndWalls(){Begin();if(!EditorApplication.isPlayingOrWillChangePlaymode){SessionState.SetInt(Key+"Index",3);SessionState.SetInt(Key+"First",3);SessionState.SetInt(Key+"Limit",Menus.Length);}}
  static void Tick()
  {
   string state=SessionState.GetString(Key+"State","");if(state==""||EditorApplication.isCompiling)return;int index=SessionState.GetInt(Key+"Index",0);
