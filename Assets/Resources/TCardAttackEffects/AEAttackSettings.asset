@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e206ee30476254088fe70100ec20961a, type: 3}
+  m_Name: AEAttackSettings
+  m_EditorClassIdentifier: 
+  enabledEffect: 1
+  normal:
+    blade: {r: 1, g: 0.9920907, b: 0.9198113, a: 1}
+    bloom: {r: 0.764151, g: 0.72314996, b: 0.5298594, a: 1}
+    fragments: {r: 0.72, g: 1, b: 0.91, a: 1}
+  monarchNormal:
+    blade: {r: 0.9614362, g: 0.8349056, b: 1, a: 1}
+    bloom: {r: 0.49966076, g: 0.23028658, b: 0.7075472, a: 1}
+    fragments: {r: 0.9, g: 0.75, b: 1, a: 1}
+  monarchWall:
+    blade: {r: 0.8694632, g: 0.8443396, b: 1, a: 1}
+    bloom: {r: 0.5196471, g: 0.23949803, b: 0.735849, a: 1}
+    fragments: {r: 0.9, g: 0.75, b: 1, a: 1}
+  opacity: 1
+  glowOpacity: 1
+  cardHeightMultiplier: 2.2
+  cardSizeMultiplier: {x: 1, y: 1}
+  cardOffset: {x: 0, y: 0}
+  cardAngle: 12
+  wallWidthMultiplier: 1.35
+  wallSizeMultiplier: {x: 1, y: 1}
+  wallOffset: {x: 0, y: 0}
+  wallAngle: 0
+  wallReferenceCount: 5
+  effectSpeed: 1
+  battleStartAtContactFrame: 1
+  alignBattleContact: 1
+  attackerContactShare: 0.8
+  battleLateralMotion: 0.204
+  contactGap: 0
+  straightClip: {fileID: 11400000, guid: df8f8663f1d5565f9bac8a9b38e55d56, type: 2}
+  wallCrossClip: {fileID: 11400000, guid: ed7a507abd8f5367b582dd3a67ff2e7a, type: 2}

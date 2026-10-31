@@ -176,6 +176,7 @@ public bool CanDragPlayerHand
     void Awake()
     {
         TurnSignalSettings.Load(); // Preload AE frames before the match.
+        AEAttackSettings.Load(); // Cache approved attack frames before combat.
         if (playerTurnLogo != null) playerTurnLogo.SetActive(false);
         if (enemyTurnLogo != null) enemyTurnLogo.SetActive(false);
         // シーン上でボタンが有効になっていても、マッチ開始前は必ず隠す。

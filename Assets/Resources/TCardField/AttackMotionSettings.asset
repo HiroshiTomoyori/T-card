@@ -33,19 +33,19 @@ MonoBehaviour:
   defenderFloatingScale: 1.08
   defenderRecoilDistance: 13.6
   defenderRecoilDuration: 0.3
-  hitShake: 4
+  hitShake: 3
   hitShakeFrequency: 84
   hitShakeDecay: 14
-  attackerColor: {r: 0.322, g: 0.878, b: 0.82, a: 1}
+  attackerColor: {r: 0.62767, g: 0.8584906, b: 0.8341082, a: 1}
   targetColor: {r: 0.8207547, g: 0, b: 0.124671705, a: 1}
   attackerGlow: 0.65
   targetGlow: 0.3
   wallGlow: 0.25
-  wallTargetColor: {r: 0.81960785, g: 0, b: 0.1254902, a: 1}
-  wallTargetGlow: 0.6
+  wallTargetColor: {r: 0.81960785, g: 0, b: 0.1254902, a: 0.14117648}
+  wallTargetGlow: 0
   glowBlur: 15
-  glowLineWidth: 2
-  fieldShadow: 0.22
+  glowLineWidth: 1.96
+  fieldShadow: 0.419
   shadowOffset: {x: 8, y: -18}
   shadowBlur: 18
   hitColor: {r: 1, g: 0.902, b: 0.682, a: 1}
@@ -54,12 +54,12 @@ MonoBehaviour:
   hitDuration: 0.49
   hitScale: 1
   slashAngle: -35
-  lowlightColor: {r: 0.031, g: 0.047, b: 0.078, a: 0.64}
+  lowlightColor: {r: 0.031, g: 0.047, b: 0.078, a: 0.42}
   fadeIn: 0.13
   fadeOut: 0.25
   cardLowlightFeather: 6.4
-  wallLowlightFeather: 40
-  wallZoneCornerRadius: 24
-  wallZoneGlowBlur: 28
+  wallLowlightFeather: 120
+  wallZoneCornerRadius: 72
+  wallZoneGlowBlur: 64
   wallPadding: 12
   sortingOffset: 140

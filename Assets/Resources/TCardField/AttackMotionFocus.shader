@@ -26,13 +26,14 @@
     for(int n=0;n<32;n++)
     {
      if(n>=_Count)break;
-     float d=distanceToBox(p,_Entries[n],lerp(8*_ViewSize.z,_WallTune.x,_Flags[n].z));
+     float softWall=max(_Flags[n].z,_Flags[n].w);
+     float d=distanceToBox(p,_Entries[n],lerp(lerp(8,24,_Flags[n].w)*_ViewSize.z,_WallTune.x,_Flags[n].z));
      // Fade outwards from the zone. Cards inside the wall zone remain fully lit.
      float feather=max(1,_Flags[n].x*_ViewSize.z);
-     hole=max(hole,(1-smoothstep(0,feather,max(0,d)))*_Flags[n].y);
-     float blur=max(1,lerp(_Tune.x,_WallTune.y,_Flags[n].z)),width=max(.3,_Tune.y);
-     float halo=exp(-d*d/(blur*blur))*.55+exp(-d*d/(blur*blur*.25))*.35+exp(-d*d/(width*width))*.65;
-     float a=saturate(halo*_Colors[n].a*_Opacity)*smoothstep(-2*_ViewSize.z,0,d);
+     hole=max(hole,(1-smoothstep(-feather*.35*softWall,feather,d))*_Flags[n].y);
+     float blur=max(1,lerp(_Tune.x,_WallTune.y,softWall)),width=max(.3,_Tune.y);
+     float halo=exp(-d*d/(blur*blur))*.55+exp(-d*d/(blur*blur*.25))*.35+exp(-d*d/(width*width))*.65*(1-softWall);
+     float a=saturate(halo*_Colors[n].a*_Opacity)*lerp(smoothstep(-2*_ViewSize.z,0,d),smoothstep(-blur,blur*.1,d),softWall);
      light+=_Colors[n].rgb*a;glowAlpha+=a;
     }
     float dim=_DimColor.a*_Opacity*(1-hole);

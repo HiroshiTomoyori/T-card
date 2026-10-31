@@ -27,7 +27,7 @@ public sealed class AttackMotionSettings : ScriptableObject
     [Range(1,1.5f)] public float defenderFloatingScale=1.08f;
     [Min(0)] public float defenderRecoilDistance=13.6f;
     [Min(.01f)] public float defenderRecoilDuration=.30f;
-    [Min(0)] public float hitShake=4;
+    [Min(0)] public float hitShake=3;
     [Min(0)] public float hitShakeFrequency=84;
     [Min(0)] public float hitShakeDecay=14;
     [Header("Glow / 実行中の発光")]
@@ -53,16 +53,16 @@ public sealed class AttackMotionSettings : ScriptableObject
     [Min(.1f)] public float hitScale=1;
     public float slashAngle=-35;
     [Header("Lowlight / 実行中は関連部分以外を暗くする")]
-    public Color lowlightColor=new Color(.031f,.047f,.078f,.64f);
+    public Color lowlightColor=new Color(.031f,.047f,.078f,.42f);
     [Min(.01f)] public float fadeIn=.13f;
     [Min(.01f)] public float fadeOut=.25f;
     [Min(0), Tooltip("カードの周囲で暗さが滑らかに変わる幅")]
     public float cardLowlightFeather=6.4f;
     [Min(0), Tooltip("ウォールゾーン周りのローライト境界のぼかし幅。大きいほど柔らかい")]
-    public float wallLowlightFeather=40;
+    public float wallLowlightFeather=120;
     [Header("ウォールゾーンの丸み・グローぼかし / 720px幅基準")]
-    [Min(0)] public float wallZoneCornerRadius=24;
-    [Min(1)] public float wallZoneGlowBlur=28;
+    [Min(0)] public float wallZoneCornerRadius=72;
+    [Min(1)] public float wallZoneGlowBlur=64;
     [Min(0)] public float wallPadding=12;
     [Min(1)] public int sortingOffset=140;
     public float ImpactTime=>liftDuration+anticipationDuration+lungeDuration;
