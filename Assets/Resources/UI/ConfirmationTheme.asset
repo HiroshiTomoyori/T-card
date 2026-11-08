@@ -1,0 +1,59 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 41df2628f72d4d24a4f01760bc077a4e, type: 3}
+  m_Name: ConfirmationTheme
+  m_EditorClassIdentifier: 
+  windowSize: {x: 500, y: 300}
+  cornerRadius: 11
+  backdropBlur: 12
+  confirmationLowlightBoost: 0.1
+  glassOpacity: 0.67
+  glassColor: {r: 0.06666667, g: 0.1137255, b: 0.19607843, a: 1}
+  lowerLight: {r: 0.34509805, g: 0.4745098, b: 0.62352943, a: 1}
+  frameColor: {r: 0.6784314, g: 0.75686276, b: 0.85490197, a: 0.4117647}
+  reflectionStrength: 0.76
+  textColor: {r: 0.972549, g: 0.9764706, b: 0.9843137, a: 1}
+  buttonSize: {x: 134, y: 44}
+  buttonCornerRadius: 6
+  primaryButtonColor: {r: 0.19607843, g: 0.27450982, b: 0.36862746, a: 0.9098039}
+  secondaryButtonColor: {r: 0.1137255, g: 0.16078432, b: 0.22745098, a: 0.9098039}
+  buttonTextColor: {r: 0.9843137, g: 0.9882353, b: 1, a: 1}
+  fieldAttackOffset: {x: 0, y: -480}
+  wallAttackOffset: {x: 0, y: -480}
+  monarchWallAttackOffset: {x: 0, y: -480}
+  directAttackOffset: {x: 0, y: -480}
+  avoidCardsAndSwords: 0
+  blockConfirmation:
+    fieldTarget: {x: 0, y: 0}
+    wallTarget: {x: 0, y: 0}
+    monarchWallTarget: {x: 0, y: 0}
+    directAttack: {x: 0, y: 0}
+  passConfirmation:
+    fieldTarget: {x: 0, y: 0}
+    wallTarget: {x: 0, y: 0}
+    monarchWallTarget: {x: 0, y: 0}
+    directAttack: {x: 0, y: 0}
+  passButtonOffset: {x: 0, y: -90}
+  playCardOffset: {x: 0, y: -80}
+  endTurnOffset: {x: 0, y: -80}
+  useShieldEffectOffset: {x: 0, y: 0}
+  takeShieldIntoHandOffset: {x: 0, y: 0}
+  shieldOrderOffset: {x: 0, y: 0}
+  destroyCardOffset: {x: 0, y: 0}
+  jokerClearFieldOffset: {x: 0, y: 0}
+  jokerExtraTurnOffset: {x: 0, y: 0}
+  otherActionOffset: {x: 0, y: 0}
+  openingHandOffset: {x: 0, y: 0}
+  handLimitOffset: {x: 0, y: 0}
+  enemyHandDiscardOffset: {x: 0, y: 0}
+  victoryOffset: {x: 0, y: 0}
+  defeatOffset: {x: 0, y: 0}

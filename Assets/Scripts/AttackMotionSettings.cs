@@ -63,6 +63,8 @@ public sealed class AttackMotionSettings : ScriptableObject
     [Header("ウォールゾーンの丸み・グローぼかし / 720px幅基準")]
     [Min(0)] public float wallZoneCornerRadius=72;
     [Min(1)] public float wallZoneGlowBlur=64;
+    [Min(.01f), Tooltip("攻撃実行時のウォールゾーン全体のハイライト倍率。中心位置を保って縦横に拡大") ]
+    public float wallZoneHighlightScale=1.2f;
     [Min(0)] public float wallPadding=12;
     [Min(1)] public int sortingOffset=140;
     public float ImpactTime=>liftDuration+anticipationDuration+lungeDuration;

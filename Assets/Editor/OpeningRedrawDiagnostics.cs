@@ -143,7 +143,13 @@ public static class OpeningRedrawDiagnostics
                 {Require(!dealer.enemyDeckImage.enabled,"Enemy visible before first drop");sawEmptyEnemy=true;}
                 if(!dealer.IsOpeningDecisionReady)return;
                 CheckDeal();playerPool=Pool(false);enemyPool=Pool(true);enemyState=EnemyState();enemyStackId=OpeningShuffleView.ForDeck(dealer.enemyDeckPosition).GetInstanceID();turn=dealer.turnManager;
-                dealer.turnManager=null;stage=1;reservedHand=null;landed.Clear();deadline=EditorApplication.timeSinceStartup+60;dealer.RedrawHand();
+                stage=1;reservedHand=null;landed.Clear();deadline=EditorApplication.timeSinceStartup+60;
+                var redraw = dealer.redrawButton.GetComponent<Button>();
+                Require(redraw.targetGraphic is ConfirmationGlass && dealer.confirmButton.GetComponent<Button>().targetGraphic is ConfirmationGlass,
+                    "Opening options are missing the shared choice design");
+                redraw.onClick.Invoke();
+                Require(!turn.IsPlayerDecisionOpen,"Redraw opened an extra confirmation");
+                dealer.turnManager=null;
             }
             else if(stage==1)
             {

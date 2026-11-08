@@ -1,13 +1,45 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 public sealed class AttackMotionPresentation : MonoBehaviour
 {
+    RectTransform retainedWallRoot;
+    int wallFocusHolds;
+    public AttackMotionFocusGraphic WallFocusGraphic {get;private set;}
+    public bool HasWallDestructionFocus=>retainedWallRoot!=null&&retainedWallRoot.gameObject.activeSelf;
+    sealed class WallFocusHold : IDisposable
+    {
+        AttackMotionPresentation owner;readonly RectTransform root;
+        public WallFocusHold(AttackMotionPresentation owner,RectTransform root){this.owner=owner;this.root=root;}
+        public void Dispose(){var previous=owner;owner=null;if(previous!=null&&previous.retainedWallRoot==root&&--previous.wallFocusHolds<=0&&root!=null)root.gameObject.SetActive(false);}
+    }
+    public IDisposable HoldWallDestructionFocus()
+    {
+        if(retainedWallRoot==null)return null;
+        wallFocusHolds++;retainedWallRoot.gameObject.SetActive(true);
+        return new WallFocusHold(this,retainedWallRoot);
+    }
+    public void ClearWallDestructionFocus()
+    {
+        if(retainedWallRoot!=null){retainedWallRoot.gameObject.SetActive(false);Destroy(retainedWallRoot.gameObject);}
+        retainedWallRoot=null;WallFocusGraphic=null;wallFocusHolds=0;
+    }
+    void RetainWallFocus(RectTransform source,AttackMotionFocusGraphic graphic)
+    {
+        ClearWallDestructionFocus();
+        retainedWallRoot=Make(source.parent,"Wall destruction attack focus");Stretch(retainedWallRoot);
+        var original=source.GetComponent<Canvas>();var canvas=retainedWallRoot.gameObject.AddComponent<Canvas>();
+        canvas.overrideSorting=true;canvas.sortingLayerID=original.sortingLayerID;canvas.sortingOrder=original.sortingOrder;
+        graphic.transform.SetParent(retainedWallRoot,false);Stretch(graphic.rectTransform);WallFocusGraphic=graphic;
+    }
+    void OnDisable(){ClearWallDestructionFocus();}
+    void OnDestroy(){ClearWallDestructionFocus();}
     static int active;
     public static bool IsPlaying=>active>0;
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)] static void ResetStatics(){active=0;}
+    internal static bool IsEnemyAttackPlaying { get; private set; }
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)] static void ResetStatics(){active=0;IsEnemyAttackPlaying=false;}
     public float Elapsed {get;private set;}
     public bool ImpactEmitted {get;private set;}
     public RectTransform MovingCard {get;private set;}
@@ -64,6 +96,8 @@ public sealed class AttackMotionPresentation : MonoBehaviour
         public float alpha;
         public Vector3 center;
         public Vector2 size;
+        public Image artwork;
+        public CardGuardBadge.Visual badge;
     }
     static float Smooth(float start,float end,float t)=>Mathf.SmoothStep(0,1,Mathf.InverseLerp(start,Mathf.Max(start+.0001f,end),t));
     static float Forward(AttackMotionSettings s,float t)
@@ -89,7 +123,7 @@ public sealed class AttackMotionPresentation : MonoBehaviour
         var go=new GameObject(name,typeof(RectTransform));go.layer=parent.gameObject.layer;go.transform.SetParent(parent,false);return (RectTransform)go.transform;
     }
     static void Stretch(RectTransform rt){rt.anchorMin=Vector2.zero;rt.anchorMax=Vector2.one;rt.offsetMin=rt.offsetMax=Vector2.zero;}
-    static Actor CreateActor(RectTransform root,CardController card,string name)
+    static Actor CreateActor(RectTransform root,CardController card,string name,bool enemyAttack)
     {
         var art=card.artworkImage;var corners=new Vector3[4];art.rectTransform.GetWorldCorners(corners);
         Vector3 min=root.InverseTransformPoint(corners[0]),max=root.InverseTransformPoint(corners[2]);
@@ -97,6 +131,9 @@ public sealed class AttackMotionPresentation : MonoBehaviour
         actor.shade=Make(root,name+" field shadow");actor.shade.gameObject.AddComponent<CanvasRenderer>();actor.shadow=actor.shade.gameObject.AddComponent<TurnDrawFieldShadowGraphic>();actor.shadow.raycastTarget=false;actor.shade.sizeDelta=actor.size+Vector2.one*88;
         actor.visual=Make(root,name);actor.visual.sizeDelta=actor.size;actor.visual.localPosition=actor.center;
         var copy=actor.visual.gameObject.AddComponent<Image>();copy.sprite=art.sprite;copy.color=Color.white;copy.raycastTarget=false;copy.preserveAspect=true;
+        actor.artwork = copy;
+        var badge = card.GetComponent<CardGuardBadge>();
+        if (badge != null) actor.badge = badge.CopyToAttackVisual(copy, enemyAttack);
         actor.original=card.GetComponent<CanvasGroup>();if(actor.original==null)actor.original=card.gameObject.AddComponent<CanvasGroup>();actor.alpha=actor.original.alpha;actor.original.alpha=0;
         return actor;
     }
@@ -107,13 +144,15 @@ public sealed class AttackMotionPresentation : MonoBehaviour
         actor.shade.localPosition=actor.center+(Vector3)s.shadowOffset*unit;actor.shade.localScale=Vector3.one*(1+.02f*pose.z);
         actor.shadow.Configure(actor.size*.94f,s.shadowBlur*unit,s.fieldShadow*pose.z,new Color(.12f,.08f,.04f,1));
     }
-    public IEnumerator Play(TurnManager owner,CardController attacker,IList<CardController> related,IList<CardController> victims,Transform wallZone,bool enemy,bool monarch,Action impact)
+    public IEnumerator Play(TurnManager owner,CardController attacker,IList<CardController> related,IList<CardController> victims,Transform wallZone,bool enemy,bool monarch,Action impact,bool preserveWallFocus=false)
     {
         while(IsPlaying)yield return null;
         if(attacker==null||attacker.artworkImage==null)yield break;
         var source=attacker.GetComponentInParent<Canvas>();if(source==null)yield break;source=source.rootCanvas;
         var s=AttackMotionSettings.Load();RectTransform root=null;var actors=new List<Actor>();Actor moving=null;
+        ClearWallDestructionFocus();bool completed=false;
         active++;Elapsed=0;ImpactEmitted=false;VictimCount=victims.Count;effectVisuals.Clear();effectVictims.Clear();ContactFrameGap=float.NaN;
+        IsEnemyAttackPlaying = enemy;
         var ae=AEAttackSettings.Load();UsesWallCross=monarch&&wallZone!=null;
         var clip=ae!=null?(UsesWallCross?ae.wallCrossClip:ae.straightClip):null;
         bool useAE=ae!=null&&ae.enabledEffect&&clip!=null&&clip.IsValid;
@@ -127,9 +166,9 @@ public sealed class AttackMotionPresentation : MonoBehaviour
             var dimRect=Make(root,"Attack execution lowlight");Stretch(dimRect);FocusGraphic=dimRect.gameObject.AddComponent<AttackMotionFocusGraphic>();
             // Defender first, attacker last: the attacker's card stays above the target's glow/artwork.
             if(wallZone==null)foreach(var card in related)
-                if(card!=null&&card!=attacker&&card.artworkImage!=null&&!actors.Exists(a=>a.card==card))actors.Add(CreateActor(root,card,"Defending card visual"));
+                if(card!=null&&card!=attacker&&card.artworkImage!=null&&!actors.Exists(a=>a.card==card))actors.Add(CreateActor(root,card,"Defending card visual",enemy));
             DefendingCard=actors.Count>0?actors[0].visual:null;
-            moving=CreateActor(root,attacker,"Attacking card visual");actors.Add(moving);MovingCard=moving.visual;foreach(var actor in actors)actor.shade.SetSiblingIndex(1);
+            moving=CreateActor(root,attacker,"Attacking card visual",enemy);actors.Add(moving);MovingCard=moving.visual;foreach(var actor in actors)actor.shade.SetSiblingIndex(1);
             var fxRect=Make(root,"Attack impacts");Stretch(fxRect);
             AttackImpactGraphic fx=null;
             if(useAE)
@@ -159,6 +198,7 @@ public sealed class AttackMotionPresentation : MonoBehaviour
                 // Render the exact contact pose once even when a frame steps over its timestamp.
                 float motionTime=!ImpactEmitted&&Elapsed>=s.ImpactTime?s.ImpactTime:Elapsed;
                 float age=motionTime-s.ImpactTime;int count=0;
+                float opacity=Smooth(0,s.fadeIn,Elapsed)*(preserveWallFocus&&wallZone!=null?1:1-Smooth(duration-s.fadeOut,duration,Elapsed));
                 foreach(var actor in actors)
                 {
                     if(actor.card==null)continue;
@@ -171,8 +211,24 @@ public sealed class AttackMotionPresentation : MonoBehaviour
                     moving.visual.localPosition+=(Vector3)(attackerCorrection*forward);
                     defending.visual.localPosition+=(Vector3)(defenderCorrection*forward);
                 }
-                foreach(var actor in actors)if(actor.card!=null)
-                    Put(ScreenBox(actor.visual,camera),actor==moving?s.attackerColor:targetTint,actor==moving?s.attackerGlow:s.targetGlow,s.cardLowlightFeather,boxes,colors,flags,ref count);
+                foreach (var actor in actors)
+                {
+                    if (actor.card == null) continue;
+                    bool badgeOnly = enemy && actor.badge != null;
+                    if (actor.badge != null)
+                    {
+                        actor.badge.Apply(CardActionGlowSettings.Load(), 1f, badgeOnly, Time.unscaledTime - actor.badge.StartTime);
+                        if (badgeOnly)
+                        {
+                            Color shade = Color.Lerp(Color.white, s.lowlightColor, s.lowlightColor.a * opacity);
+                            shade.a = 1f;
+                            actor.artwork.color = shade;
+                        }
+                    }
+                    float power = actor == moving ? s.attackerGlow : s.targetGlow;
+                    Put(ScreenBox(actor.visual,camera), actor==moving?s.attackerColor:targetTint, badgeOnly ? 0f : power,
+                        s.cardLowlightFeather,boxes,colors,flags,ref count);
+                }
                 if(wallZone!=null)
                 {
                     bool first=true;Rect zone=new Rect();
@@ -183,7 +239,7 @@ public sealed class AttackMotionPresentation : MonoBehaviour
                         Rect b=ScreenBox(c.artworkImage!=null?c.artworkImage.rectTransform:(RectTransform)child,camera);
                         zone=first?b:Rect.MinMaxRect(Mathf.Min(zone.xMin,b.xMin),Mathf.Min(zone.yMin,b.yMin),Mathf.Max(zone.xMax,b.xMax),Mathf.Max(zone.yMax,b.yMax));first=false;
                     }
-                    if(!first){float pad=s.wallPadding*Screen.width/720f;zone.xMin-=pad;zone.yMin-=pad;zone.xMax+=pad;zone.yMax+=pad;Put(zone,targetTint,s.wallGlow,s.wallLowlightFeather,boxes,colors,flags,ref count,true);}
+                    if(!first){float pad=s.wallPadding*Screen.width/720f;zone.xMin-=pad;zone.yMin-=pad;zone.xMax+=pad;zone.yMax+=pad;Vector2 center=zone.center;zone.size*=Mathf.Max(.01f,s.wallZoneHighlightScale);zone.center=center;Put(zone,targetTint,s.wallGlow,s.wallLowlightFeather,boxes,colors,flags,ref count,true);}
                     // Zone focus keeps the full wall row lit; only the chosen cards receive red outlines.
                     highlighted.Clear();
                     foreach(var card in related)
@@ -194,7 +250,6 @@ public sealed class AttackMotionPresentation : MonoBehaviour
                         Put(ScreenBox(artwork,camera),s.wallTargetColor,s.wallTargetGlow,s.cardLowlightFeather,boxes,colors,flags,ref count,false,true);
                     }
                 }
-                float opacity=Smooth(0,s.fadeIn,Elapsed)*(1-Smooth(duration-s.fadeOut,duration,Elapsed));
                 FocusGraphic.Configure(s,boxes,colors,flags,count,opacity);
                 points.Clear();foreach(var victim in victims)if(victim!=null)
                 {
@@ -237,12 +292,18 @@ public sealed class AttackMotionPresentation : MonoBehaviour
                 }
                 yield return null;
             }
+            completed=true;
         }
         finally
         {
-            foreach(var actor in actors)if(actor.original!=null)actor.original.alpha=actor.alpha;
+            foreach (var actor in actors)
+            {
+                if (actor.original != null) actor.original.alpha = actor.alpha;
+                actor.badge?.Dispose();
+            }
+            if(completed&&preserveWallFocus&&wallZone!=null&&FocusGraphic!=null)RetainWallFocus(root,FocusGraphic);
             if(root!=null){root.gameObject.SetActive(false);Destroy(root.gameObject);}
-            effectVisuals.Clear();effectVictims.Clear();MovingCard=null;DefendingCard=null;FocusGraphic=null;active=Mathf.Max(0,active-1);
+            effectVisuals.Clear();effectVictims.Clear();MovingCard=null;DefendingCard=null;FocusGraphic=null;active=Mathf.Max(0,active-1);IsEnemyAttackPlaying=false;
         }
     }
     static Rect ScreenBox(RectTransform rt,Camera camera)

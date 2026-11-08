@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
+using System.Collections;
 public partial class TurnManager
 {
     readonly List<GameObject> pendingEnemyWallTargets=new List<GameObject>();
@@ -8,14 +9,29 @@ public partial class TurnManager
     CardController selectedDefenseBlocker;
     bool defenseConfirmationApproved;
     DefenseSelectionPresentation defenseSelectionPresentation;
+    bool incomingSwordPreview;
+    float incomingSwordStartedAt;
+    public bool IncomingSwordVisible => DefenseSelectionActive ||
+        (incomingSwordPreview && !IsBattleEnded && pendingEnemyAttacker != null);
+    public float IncomingSwordElapsed => Time.unscaledTime - incomingSwordStartedAt + 1.2f;
     public bool DefenseSelectionActive=>!IsBattleEnded&&waitingBlockSelect&&!resolvingEnemyBlock&&pendingEnemyAttacker!=null;
     public CardController IncomingAttacker=>pendingEnemyAttacker;
     public CardController IncomingFieldTarget=>pendingEnemyRestedTarget;
     public bool IncomingMonarchAttack=>pendingEnemyAttacker!=null&&IsMonarchCard(pendingEnemyAttacker.data);
     public bool HasPendingDefenseConfirmation=>pendingDefenseConfirmation!=null;
     public CardController SelectedDefenseBlocker=>selectedDefenseBlocker;
-    public string DefenseConfirmationLabel=>selectedDefenseBlocker!=null?GetCardName(selectedDefenseBlocker.data)+"で防御しますか？":"攻撃を通しますか？";
-    public bool CanChooseDefenseCard(CardController card)=>!PresentationSequenceLock.IsLocked&&DefenseSelectionActive&&card!=null&&card.gameObject.activeInHierarchy&&card.transform.parent==playerBattleArea&&CardActionIcon.CanBlock(card);
+    public string DefenseConfirmationLabel => selectedDefenseBlocker != null
+        ? $"Block with {GetCardName(selectedDefenseBlocker.data).Replace('_', ' ')}?"
+        : "Let the attack through?";
+    internal bool IsEligibleDefenseGuard(CardController card)=>!PresentationSequenceLock.IsLocked&&card!=null&&card.gameObject.activeInHierarchy&&card.transform.parent==playerBattleArea&&CardActionIcon.CanBlock(card);
+    public bool CanChooseDefenseCard(CardController card)=>DefenseSelectionActive&&IsEligibleDefenseGuard(card);
+    IEnumerator ShowIncomingSwordPreview()
+    {
+        incomingSwordStartedAt = Time.unscaledTime;
+        incomingSwordPreview = true;
+        try { yield return new WaitForSeconds(.6f); }
+        finally { incomingSwordPreview = false; }
+    }
     public List<GameObject> IncomingWallTargets()
     {
         var result=new List<GameObject>();

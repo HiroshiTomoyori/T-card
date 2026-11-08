@@ -5,26 +5,36 @@ public partial class TurnManager
     bool choosingMonarchWalls;
     System.Action pendingAttackConfirmation;
     readonly List<GameObject> pendingAttackTargets=new List<GameObject>();
-    public bool AttackExecutionConfirmationActive=>HasPendingAttackConfirmation||(ChoosingMonarchWalls&&RequiredAttackWallCount>0&&SelectedAttackWallCount==RequiredAttackWallCount);
-    public bool IsAttackConfirmationTarget(GameObject target)=>pendingAttackTargets.Contains(target)||(ChoosingMonarchWalls&&SelectedAttackWallCount==RequiredAttackWallCount&&pendingWallTargets.Contains(target));
+    float attackConfirmationStartedAt;
+    public bool AttackExecutionConfirmationActive => HasPendingAttackConfirmation;
+    public bool IsAttackConfirmationTarget(GameObject target) => pendingAttackTargets.Contains(target);
+    public IReadOnlyList<GameObject> AttackConfirmationTargets => pendingAttackTargets;
+    public float AttackConfirmationElapsed => Time.unscaledTime - attackConfirmationStartedAt;
     bool attackConfirmationApproved;
     public bool HasPendingAttackConfirmation=>pendingAttackConfirmation!=null;
     public string AttackConfirmationLabel {get;private set;}
+    internal AttackConfirmationKind AttackConfirmationType { get; private set; }
     void ClearPendingAttackConfirmation(){pendingAttackConfirmation=null;pendingAttackTargets.Clear();AttackConfirmationLabel=null;}
-    bool RequestAttackConfirmation(string label,System.Action execute,params GameObject[] targets)
+    bool RequestAttackConfirmation(AttackConfirmationKind kind, string label,System.Action execute,params GameObject[] targets)
     {
         if(attackConfirmationApproved)return false;
         pendingAttackConfirmation=execute;pendingAttackTargets.Clear();pendingAttackTargets.AddRange(targets);AttackConfirmationLabel=label;
+        AttackConfirmationType = kind;
+        attackConfirmationStartedAt = Time.unscaledTime;
         if(attackSelectionPresentation!=null)attackSelectionPresentation.Refresh();
         return true;
     }
     public void ConfirmAttackSelection()
     {
-        if(!AttackSelectionActive)return;
-        if(pendingAttackConfirmation==null){ConfirmMonarchWallChoice();return;}
+        if(!AttackSelectionActive || !HasPendingAttackConfirmation)return;
         var execute=pendingAttackConfirmation;ClearPendingAttackConfirmation();
         attackConfirmationApproved=true;
-        try{execute();}finally{attackConfirmationApproved=false;}
+        try { execute(); }
+        finally
+        {
+            attackConfirmationApproved = false;
+            if (attackSelectionPresentation != null) attackSelectionPresentation.Refresh();
+        }
     }
     AttackSelectionPresentation attackSelectionPresentation;
     public bool AttackSelectionActive => selectingTarget && CanChooseAttackCard(currentAttacker);
@@ -65,19 +75,32 @@ public partial class TurnManager
     public void CancelAttackSelection(){ClearPendingAttackConfirmation();choosingMonarchWalls=false;CancelTimedAttackSelection();if(attackSelectionPresentation!=null)attackSelectionPresentation.Refresh();}
     public void ConfirmMonarchWallChoice()
     {
-        if(!ChoosingMonarchWalls)return;
-        pendingWallTargets.RemoveAll(w=>!IsLiveAttackWall(w));
-        if(RequiredAttackWallCount==0||pendingWallTargets.Count!=RequiredAttackWallCount)return;
-        // The two-wall confirmation button is already the final confirmation.
-        attackConfirmationApproved=true;
-        try{CommitSelectedWallAttack(new List<GameObject>(pendingWallTargets));}
-        finally{attackConfirmationApproved=false;}
+        if (ChoosingMonarchWalls) ConfirmAttackSelection();
+    }
+    void ToggleMonarchWallTarget(GameObject target)
+    {
+        pendingWallTargets.RemoveAll(wall => !IsLiveAttackWall(wall));
+        int required = RequiredAttackWallCount;
+        if (!pendingWallTargets.Remove(target))
+        {
+            if (pendingWallTargets.Count >= required) return;
+            pendingWallTargets.Add(target);
+        }
+
+        ClearPendingAttackConfirmation();
+        wallBreakCount = pendingWallTargets.Count;
+        if (wallBreakCount == required)
+            CommitSelectedWallAttack(new List<GameObject>(pendingWallTargets));
+        else if (attackSelectionPresentation != null)
+            attackSelectionPresentation.Refresh();
     }
     void CommitSelectedWallAttack(List<GameObject> walls)
     {
         if(!AttackSelectionActive||handDealer==null||walls.Count==0||walls.Count!=RequiredAttackWallCount)return;
         var unique=new HashSet<GameObject>();foreach(var wall in walls)if(!IsLiveAttackWall(wall)||!unique.Add(wall))return;
-        if(RequestAttackConfirmation("BREAK "+walls.Count+"  —  CONFIRM",()=>CommitSelectedWallAttack(walls),walls.ToArray()))return;
+        var kind = IsMonarchAttacker ? AttackConfirmationKind.MonarchWall : AttackConfirmationKind.Wall;
+        string label = walls.Count == 1 ? "Attack this Wall card?" : $"Attack these {walls.Count} Wall cards?";
+        if(RequestAttackConfirmation(kind,label,()=>CommitSelectedWallAttack(walls),walls.ToArray()))return;
         var attacker=currentAttacker.GetComponent<CardController>();var blocker=SelectEnemyBlocker(attacker);
         StartPlayerBattlePhase();NotifyPlayerActionCommitted();CancelAttackSelection();
         attacker.Tap();attacker.SetAttackable(false);

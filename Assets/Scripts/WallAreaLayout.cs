@@ -232,9 +232,40 @@ public class WallAreaLayout : MonoBehaviour
         }
         finally{foreach(var layer in layers)layer?.Dispose();}
     }
-    void LateUpdate() { LayoutWalls(); }
+    int presentationHolds;
+    readonly List<WallPose> heldPoses=new List<WallPose>();
+    struct WallPose {public Transform transform;public Vector3 position,scale;public Quaternion rotation;}
+    public bool IsPresentationHeld=>presentationHolds>0;
+    public IDisposable HoldPresentationLayout()
+    {
+        Prepare();
+        if(presentationHolds++==0)
+        {
+            heldPoses.Clear();
+            foreach(Transform child in transform)if(child.GetComponent<CardController>()!=null)
+                heldPoses.Add(new WallPose{transform=child,position=child.localPosition,scale=child.localScale,rotation=child.localRotation});
+        }
+        return new PresentationHold(this);
+    }
+    sealed class PresentationHold:IDisposable
+    {
+        WallAreaLayout owner;
+        public PresentationHold(WallAreaLayout value){owner=value;}
+        public void Dispose(){if(owner==null)return;if(--owner.presentationHolds==0)owner.heldPoses.Clear();owner=null;}
+    }
+    void LateUpdate()
+    {
+        if(IsPresentationHeld)
+        {
+            foreach(var pose in heldPoses)if(pose.transform!=null&&pose.transform.parent==transform)
+            {pose.transform.localPosition=pose.position;pose.transform.localScale=pose.scale;pose.transform.localRotation=pose.rotation;}
+            return;
+        }
+        LayoutWalls();
+    }
     public void LayoutWalls()
     {
+        if(IsPresentationHeld)return;
         Prepare();
         ReleaseBrokenWalls();
         for(int i = 0; i < slots.Length; i++)
@@ -277,6 +308,7 @@ public class WallAreaLayout : MonoBehaviour
     }
     void ReleaseBrokenWalls()
     {
+        if(IsPresentationHeld)return;
         for (int i = 0; i < slots.Length; i++)
         {
             CCP.Card card = slots[i];

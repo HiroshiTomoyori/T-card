@@ -95,6 +95,9 @@ public class CardController : MonoBehaviour
         if(data == null)
             return;
 
+        if (CardActionIcon.IsGuard(data) && GetComponent<CardGuardBadge>() == null)
+            gameObject.AddComponent<CardGuardBadge>();
+
 
         // =========================
         // Cost
@@ -196,7 +199,8 @@ public class CardController : MonoBehaviour
         bool shouldGlow =
             isAttackable &&
             !isTapped &&
-            !hasSummonSickness;
+            !hasSummonSickness &&
+            !CardActionIcon.IsGuard(data);
 
 
         // 旧AttackGlow

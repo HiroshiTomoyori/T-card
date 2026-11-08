@@ -174,7 +174,7 @@ public IEnumerator ShowChoiceRoutine(
     {
         if (!isChoosing || choosingOrder) return;
         TurnManager manager = FindFirstObjectByType<TurnManager>();
-        if (manager != null && manager.RequestPlayerDecision("shield-use", "シールド効果を使用します。\nよろしいですか？", OnUseSelected)) return;
+        if (manager != null && manager.RequestPlayerDecision("shield-use", "Use this Shield effect?", OnUseSelected)) return;
         result = true;
         isChoosing = false;
 
@@ -185,7 +185,7 @@ public IEnumerator ShowChoiceRoutine(
     {
         if (!isChoosing || choosingOrder) return;
         TurnManager manager = FindFirstObjectByType<TurnManager>();
-        if (manager != null && manager.RequestPlayerDecision("shield-hand", "このシールドを手札に加えます。\nよろしいですか？", OnHandSelected)) return;
+        if (manager != null && manager.RequestPlayerDecision("shield-hand", "Add this Shield to your hand?", OnHandSelected)) return;
         result = false;
         isChoosing = false;
 
@@ -197,7 +197,7 @@ public IEnumerator ShowChoiceRoutine(
         if (!IsChoosingOrder) return;
         TurnManager manager = FindFirstObjectByType<TurnManager>();
         if (manager != null && manager.RequestPlayerDecision("shield-order:" + index,
-            "選択したシールドから先に処理します。\nよろしいですか？", () => SelectShieldOrder(index))) return;
+            "Resolve this Shield first?", () => SelectShieldOrder(index))) return;
         orderSelection = index;
     }
 }

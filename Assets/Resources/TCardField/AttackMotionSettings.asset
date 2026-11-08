@@ -61,5 +61,6 @@ MonoBehaviour:
   wallLowlightFeather: 120
   wallZoneCornerRadius: 72
   wallZoneGlowBlur: 64
+  wallZoneHighlightScale: 1.2
   wallPadding: 12
   sortingOffset: 140

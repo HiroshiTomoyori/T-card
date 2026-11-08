@@ -23,6 +23,13 @@ public sealed class AttackSelectionSettings : ScriptableObject
     [Min(0)] public float wallZonePadding=12;
     public Vector2 confirmationOffset=new Vector2(0,80);
     public Vector2 confirmationSize=new Vector2(310,60);
+    [Header("攻撃確認の剣")]
+    [Min(.1f)] public float confirmationSwordScale = 1.1f;
+    [Min(.1f)] public float confirmationFieldSwordScale = .9f;
+    [Min(.1f)] public float confirmationSwordSpeed = 1f;
+    [Range(0f, 1f)] public float confirmationSwordShadowStrength = .62f;
+    public Vector2 confirmationSwordPoint = new Vector2(.5f, .52f);
+    [Min(0)] public float confirmationClearance = 14f;
     [HideInInspector] public int contrastRevision;
     [Header("ウォールゾーンの丸み・グローぼかし / 720px幅基準")]
     [Min(0)] public float wallZoneCornerRadius=24;

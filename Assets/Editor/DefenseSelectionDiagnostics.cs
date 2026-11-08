@@ -25,6 +25,21 @@ public static class DefenseSelectionDiagnostics
  static void Click(Vector2 p){Canvas.ForceUpdateCanvases();var e=new PointerEventData(EventSystem.current){position=p,button=PointerEventData.InputButton.Left};var hits=new List<RaycastResult>();EventSystem.current.RaycastAll(e,hits);Check(hits.Count>0,"No raycast");var handled=ExecuteEvents.ExecuteHierarchy(hits[0].gameObject,e,ExecuteEvents.pointerClickHandler);File.AppendAllText(Path.Combine(Folder,"clicks.txt"),p+" "+hits[0].gameObject.name+" -> "+(handled!=null?handled.name:"none")+"\n");}
  static void Click(UnityEngine.UI.Button b)=>Click(RectTransformUtility.WorldToScreenPoint(null,b.transform.position));
  static void Capture(string n){var im=ScreenCapture.CaptureScreenshotAsTexture();File.WriteAllBytes(Path.Combine(Folder,n+".png"),im.EncodeToPNG());UnityEngine.Object.Destroy(im);}
+ static Vector3[] CheckSwords(DefenseSelectionPresentation view,int expected)
+ {
+  var layer=view.PassButton.transform.parent.Find("Incoming attack swords");
+  var swords=layer.GetComponentsInChildren<UnityEngine.UI.RawImage>();
+  Check(swords.Length==expected&&swords.All(sword=>sword.texture!=null&&!sword.raycastTarget),"Incoming sword count or rendering is incorrect");
+  var shadows=layer.GetComponentsInChildren<UnityEngine.UI.Image>();
+  if(AttackSelectionSettings.Load().confirmationSwordShadowStrength>0f)
+   Check(shadows.Length==expected&&shadows.All(shadow=>shadow.sprite!=null&&!shadow.raycastTarget),"Sword gradient shadow is missing");
+  if(expected>0)
+  {
+   float lowlight=view.Graphic.material.GetFloat("_Opacity");
+   Check(view.Graphic.gameObject.activeInHierarchy&&lowlight>0f&&Mathf.Approximately(layer.GetComponent<CanvasGroup>().alpha,lowlight),"Sword and lowlight fade are out of sync");
+  }
+  return swords.Select(sword=>sword.transform.position).ToArray();
+ }
  static int LiveWalls(HandDealer d)=>d.wallArea.Cast<Transform>().Count(x=>x.GetComponent<CardController>()!=null&&(x.GetComponent<CanvasGroup>()==null||x.GetComponent<CanvasGroup>().alpha>.01f));
  static IEnumerator Probe(HandDealer d)
  {
@@ -32,21 +47,53 @@ public static class DefenseSelectionDiagnostics
   Set(t,"isPlayerTurnActive",false);Set(t,"isPlayerMainPhase",false);Set(t,"isEndingTurn",false);Set(t,"actionGlowTurn",2);Set(t,"inactivityTimersEnabled",false);t.enemyAIBrain=null;
   var target=Add(d,t.playerBattleArea,"2",true);var guard=Add(d,t.playerBattleArea,"8");var guard2=Add(d,t.playerBattleArea,"8");var king=Add(d,t.enemyBattleArea,"K");var normal=Add(d,t.enemyBattleArea,"10",true);
   yield return null;foreach(var area in new[]{t.playerBattleArea,t.enemyBattleArea}){var layout=area.GetComponent<BattleAreaLayout>();layout.Refresh();foreach(var c in area.GetComponentsInChildren<CardController>())if(c.transform.parent==area)layout.PlaceImmediately(c);}
-  t.StartCoroutine(Call(t,"EnemyAttackRestedCardRoutine",king,target));yield return new WaitForSeconds(.9f);var view=t.GetComponent<DefenseSelectionPresentation>();
-  try{Check(t.DefenseSelectionActive&&view!=null,"Field defense did not open");Check(view.HighlightedGuardCount==2,"Eligible guard highlight count");Check(view.Graphic.material.GetColor("_DimColor")==AttackSelectionSettings.Load().lowlightColor&&view.Graphic.material.GetColor("_DimColor").a>=.5f,"Shared stronger lowlight absent");Check(view.CurrentTargetColor==AttackSelectionSettings.Load().monarchTargetColor,"Monarch target not purple");Check(view.CurrentAttackerColor==AttackSelectionSettings.Load().attackerColor,"Enemy attacker not configured emerald");Check(view.PassButton.gameObject.activeSelf,"Pass button absent");Check(t.noBlockButton==null||!t.noBlockButton.activeSelf,"Legacy pass button still visible");}
+  t.StartCoroutine(Call(t,"EnemyAttackRestedCardRoutine",king,target));yield return new WaitForEndOfFrame();var view=t.GetComponent<DefenseSelectionPresentation>();
+  try{Check(!t.DefenseSelectionActive&&!view.PassButton.gameObject.activeSelf&&!view.Graphic.raycastTarget,"Defense controls opened during the attack preview");CheckSwords(view,1);Check(view.HighlightedGuardCount==2&&view.Graphic.material.GetInt("_Count")==4,"Attacker, target and guard highlights did not start with the sword and lowlight");}
+  catch(Exception e){Finish("FAIL: "+e);yield break;}
+  yield return new WaitForSeconds(.9f);
+  try{Check(view.PassButton.targetGraphic is ConfirmationGlass&&view.PassButton.transform.parent!=view.ConfirmButton.transform.parent,"Pass is not an independent shared choice button");}
+  catch(Exception e){Finish("FAIL: "+e);yield break;}
+  try{Check(t.DefenseSelectionActive&&view!=null,"Field defense did not open");CheckSwords(view,1);Check(view.HighlightedGuardCount==2,"Eligible guard highlight count");Check(view.Graphic.material.GetColor("_DimColor")==AttackSelectionSettings.Load().lowlightColor&&view.Graphic.material.GetColor("_DimColor").a>=.5f,"Shared stronger lowlight absent");Check(view.CurrentTargetColor==AttackSelectionSettings.Load().monarchTargetColor,"Monarch target not purple");Check(view.CurrentAttackerColor==AttackSelectionSettings.Load().attackerColor,"Enemy attacker not configured emerald");Check(view.PassButton.gameObject.activeSelf,"Pass button absent");Check(t.noBlockButton==null||!t.noBlockButton.activeSelf,"Legacy pass button still visible");}
   catch(Exception e){Finish("FAIL: "+e);yield break;}
   yield return new WaitForEndOfFrame();Capture("monarch-field-defense");
+  try
+  {
+   var badge=guard.GetComponent<CardGuardBadge>();
+   var aura=guard.GetComponent<CardActionGlow>().Graphic;
+   var rippleShader=Shader.Find("T-card/UI/Guard Badge Ripple");
+   Check(rippleShader!=null&&!ShaderUtil.ShaderHasError(rippleShader),"Guard ripple shader did not compile");
+   Check(badge.IsRippling&&Mathf.Approximately(badge.BadgeOpacity,1f),"Eligible guard badge did not become opaque and ripple");
+   Check(aura==null||!aura.gameObject.activeSelf,"Card edge still glows during the guard prompt");
+   var flags=view.Graphic.material.GetVectorArray("_Flags");
+   var colors=view.Graphic.material.GetVectorArray("_Colors");
+   Check(flags[1].w==1f&&flags[2].w==1f&&colors[1].w==0f&&colors[2].w==0f,"Incoming guard target or candidate gets a whole-card glow");
+  }
+  catch(Exception e){Finish("FAIL: "+e);yield break;}
+  var fieldSwordPosition=CheckSwords(view,1)[0];
   try{Click(Center(guard));Check(t.HasPendingDefenseConfirmation&&t.DefenseSelectionActive&&guard.transform.parent==t.playerBattleArea&&target.transform.parent==t.playerBattleArea,"Block ran before confirmation");}
   catch(Exception e){Finish("FAIL: "+e);yield break;}
   yield return null;
+  try{Check(Vector3.Distance(CheckSwords(view,1)[0],fieldSwordPosition)<.01f,"Sword moved from the original field target to a guard");}
+  catch(Exception e){Finish("FAIL: "+e);yield break;}
   try{Click(view.BackButton);Check(!t.HasPendingDefenseConfirmation&&t.DefenseSelectionActive,"Back did not preserve defense choice");}
   catch(Exception e){Finish("FAIL: "+e);yield break;}
   yield return null;
   try{Click(Center(guard));Check(t.HasPendingDefenseConfirmation,"Second guard selection failed");}catch(Exception e){Finish("FAIL: "+e);yield break;}
   yield return null;yield return new WaitForEndOfFrame();Check(view.HighlightedGuardCount==1&&view.Graphic.material.GetInt("_Count")==2,"Defense confirmation lights unrelated cards");Capture("block-confirmation");
-  try{Click(view.ConfirmButton);Check(!t.DefenseSelectionActive,"Confirmed guard did not execute");}
+  try{Click(view.ConfirmButton);Check(!t.DefenseSelectionActive,"Confirmed guard did not execute");CheckSwords(view,0);}
   catch(Exception e){Finish("FAIL: "+e);yield break;}
-  yield return new WaitForSeconds(AttackMotionSettings.Load().Duration/AttackMotionSettings.Load().speed+.3f);
+  yield return new WaitForSeconds(.24f);yield return new WaitForEndOfFrame();
+  try
+  {
+   var motion=t.GetComponent<AttackMotionPresentation>();
+   var proxyBadge=motion.DefendingCard.Find("Guard badge");
+   var ripple=proxyBadge.Find("Guard ripple").GetComponent<UnityEngine.UI.RawImage>();
+   Check(proxyBadge.GetComponent<CanvasGroup>().alpha==1f&&ripple.enabled&&!ripple.raycastTarget,"Moving defender lost the opaque shield/ripple or captures input");
+   Check(motion.FocusGraphic.material.GetVectorArray("_Colors")[0].w==0f,"Moving guard still has an execution outline");
+   Capture("guard-execution-ripple");
+  }
+  catch(Exception e){Finish("FAIL: "+e);yield break;}
+  yield return new WaitForSeconds(AttackMotionSettings.Load().Duration/AttackMotionSettings.Load().speed+.06f);
   try{Check(target.transform.parent==t.playerBattleArea&&guard.transform.parent!=t.playerBattleArea,"Guard did not protect field target");}
   catch(Exception e){Finish("FAIL: "+e);yield break;}
   normal.isTapped=false;t.StartCoroutine(Call(t,"EnemyAttackRestedCardRoutine",normal,target));yield return new WaitForSeconds(.85f);
@@ -64,9 +111,15 @@ public static class DefenseSelectionDiagnostics
   try{Check(target.transform.parent!=t.playerBattleArea&&guard2.transform.parent==t.playerBattleArea,"Pass did not resolve original field target");}
   catch(Exception e){Finish("FAIL: "+e);yield break;}
   king.isTapped=false;t.StartCoroutine(Call(t,"EnemyBattlePhase"));yield return new WaitForSeconds(.9f);int before=LiveWalls(d);var chosen=t.IncomingWallTargets();
-  try{Check(t.DefenseSelectionActive&&chosen.Count==2&&view.HighlightedWallCount==2,"Monarch two-wall targets were not frozen/highlighted");Check(view.CurrentTargetColor==AttackSelectionSettings.Load().monarchTargetColor,"Wall monarch not purple");Click(Center(guard2));Check(t.HasPendingDefenseConfirmation&&LiveWalls(d)==before,"Wall block ran before confirmation");}
+  try{Check(t.DefenseSelectionActive&&chosen.Count==2&&view.HighlightedWallCount==2,"Monarch two-wall targets were not frozen/highlighted");CheckSwords(view,2);Check(view.CurrentTargetColor==AttackSelectionSettings.Load().monarchTargetColor,"Wall monarch not purple");}
   catch(Exception e){Finish("FAIL: "+e);yield break;}
+  var wallSwordPositions=CheckSwords(view,2);
   yield return new WaitForEndOfFrame();Capture("monarch-wall-defense");yield return null;
+  try{Click(Center(guard2));Check(t.HasPendingDefenseConfirmation&&LiveWalls(d)==before,"Wall block ran before confirmation");}
+  catch(Exception e){Finish("FAIL: "+e);yield break;}
+  yield return null;
+  try{var current=CheckSwords(view,2);Check(Vector3.Distance(current[0],wallSwordPositions[0])<.01f&&Vector3.Distance(current[1],wallSwordPositions[1])<.01f,"Sword moved from the original walls to a guard");}
+  catch(Exception e){Finish("FAIL: "+e);yield break;}
   try{Click(view.ConfirmButton);}
   catch(Exception e){Finish("FAIL: "+e);yield break;}
   yield return new WaitForSeconds(AttackMotionSettings.Load().Duration/AttackMotionSettings.Load().speed+.3f);
@@ -74,8 +127,11 @@ public static class DefenseSelectionDiagnostics
   catch(Exception e){Finish("FAIL: "+e);yield break;}
   // A rested guard is not eligible and must never produce a pass prompt.
   var restedGuard=Add(d,t.playerBattleArea,"8",true);normal.isTapped=false;
-  t.StartCoroutine(Call(t,"EnemyAttackRestedCardRoutine",normal,restedGuard));yield return new WaitForSeconds(.75f);
-  try{Check(!t.DefenseSelectionActive&&!t.HasPendingDefenseConfirmation&&!view.PassButton.gameObject.activeSelf,"Rested-only guard produced a pass prompt");}
+  t.StartCoroutine(Call(t,"EnemyAttackRestedCardRoutine",normal,restedGuard));yield return new WaitForSeconds(.25f);
+  try{Check(!t.DefenseSelectionActive&&t.IncomingSwordVisible&&!view.PassButton.gameObject.activeSelf,"Automatic attack did not show its preview without opening a prompt");CheckSwords(view,1);}
+  catch(Exception e){Finish("FAIL: "+e);yield break;}
+  yield return new WaitForSeconds(.5f);
+  try{Check(!t.DefenseSelectionActive&&!t.HasPendingDefenseConfirmation&&!view.PassButton.gameObject.activeSelf,"Rested-only guard produced a pass prompt");CheckSwords(view,0);}
   catch(Exception e){Finish("FAIL: "+e);yield break;}
   yield return new WaitForSeconds(AttackMotionSettings.Load().Duration/AttackMotionSettings.Load().speed+.3f);
   try{Check(restedGuard.transform.parent!=t.playerBattleArea,"Rested guard target did not resolve automatically");}

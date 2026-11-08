@@ -36,6 +36,10 @@ public static class CardActionGlowDiagnostics
    Check(!UnityEditor.ShaderUtil.ShaderHasError(Shader.Find("T-card/UI/Card Action Glow")),"Shader compilation failed");
    Check(normal.GetComponent<CardActionGlow>().Opacity>.99f,"Attack-ready card not glowing during main phase");
    Check(enemyBlocker.GetComponent<CardActionGlow>().Opacity>.99f,"Enemy eight not glowing for defense during player main phase");
+   var enemyBadge=enemyBlocker.GetComponent<CardGuardBadge>();
+   Check(enemyBadge!=null&&enemyBadge.IsVisible&&Mathf.Approximately(enemyBadge.BadgeOpacity,settings.guardIdleOpacity)&&!enemyBadge.IsRippling,"Ordinary guard badge is not translucent and quiet");
+   Check(enemyBlocker.GetComponent<CardActionGlow>().Graphic.gameObject.activeInHierarchy,"Enemy guard lacks the ordinary breathing edge");
+   Check(normal.GetComponent<CardGuardBadge>()==null,"An ordinary card was given a guard badge");
    Check(blocker.GetComponent<CardActionGlow>()==null||blocker.GetComponent<CardActionGlow>().Opacity<.001f,"Eight incorrectly glows for attack");
    Check(enemyNormal.GetComponent<CardActionGlow>()==null||enemyNormal.GetComponent<CardActionGlow>().Opacity<.001f,"Enemy attacker glows out of turn");
    Check(sick.GetComponent<CardActionGlow>()==null||sick.GetComponent<CardActionGlow>().Opacity<.001f,"Summon sickness glows");
@@ -48,9 +52,12 @@ public static class CardActionGlowDiagnostics
   typeof(TurnManager).GetField("actionGlowTurn",Flags).SetValue(turn,2);normal.isTapped=true;Set(turn,"isPlayerTurnActive",false);Set(turn,"isBattlePhase",false);Set(turn,"enemyBattleIconsActive",true);yield return new WaitForSecondsRealtime(.4f);
   try{Check(normal.GetComponent<CardActionGlow>().Opacity<.001f,"Attack glow remains on opponent turn");Check(blocker.GetComponent<CardActionGlow>().Opacity>.99f,"Actual eight defender not glowing during enemy main phase");Check(enemyNormal.GetComponent<CardActionGlow>().Opacity>.99f,"Enemy attacker not glowing during enemy main phase");Check(enemyBlocker.GetComponent<CardActionGlow>().Opacity<.001f,"Enemy eight incorrectly glows for attack");}catch(Exception e){error=e.ToString();}if(error!=null){Finish("FAIL: "+error);yield break;}
   yield return new WaitForEndOfFrame();var defense=Capture("defense");UnityEngine.Object.Destroy(defense);blocker.isTapped=true;yield return new WaitForSecondsRealtime(.4f);
-  try{Check(blocker.GetComponent<CardActionGlow>().Opacity<.001f,"Used defender still glowing");}catch(Exception e){error=e.ToString();}
+  try{Check(blocker.GetComponent<CardActionGlow>().Opacity<.001f&&!blocker.GetComponent<CardActionGlow>().Graphic.gameObject.activeSelf,"Used defender still glowing");}catch(Exception e){error=e.ToString();}
   blocker.isTapped=false;yield return new WaitForSecondsRealtime(.3f);blocker.transform.SetParent(dealer.handArea,false);yield return null;yield return null;
-  try{Check(blocker.GetComponent<CardActionGlow>().Opacity==0&&!blocker.GetComponent<CardActionGlow>().Graphic.gameObject.activeSelf,"Card leaving field retains glow");}catch(Exception e){error=e.ToString();}
+  try{var badge=blocker.GetComponent<CardGuardBadge>();Check(badge.IsVisible&&Mathf.Approximately(badge.BadgeOpacity,settings.guardIdleOpacity)&&!badge.IsRippling&&blocker.GetComponent<CardActionGlow>().Opacity==0f,"Hand guard badge missing or still action-highlighted");}catch(Exception e){error=e.ToString();}
+  var artwork=blocker.artworkImage.sprite;blocker.artworkImage.sprite=dealer.cardBackSprite;yield return null;yield return null;
+  try{Check(!blocker.GetComponent<CardGuardBadge>().IsVisible,"Face-down card shows a guard badge");}catch(Exception e){error=e.ToString();}
+  blocker.artworkImage.sprite=artwork;
   Finish(error!=null?"FAIL: "+error:"PASS: Both fields glow for attack/defense throughout main phase, independent of battle-only icons. Actual Spade/Club eight assets correctly glow for defense, never attack; sick/tapped cards stay unlit; used/moved cards clear glow. Shader visibly renders behind artwork, no raycast or canvas override. 4.4s stationary breathing and brightness control validated. Settings restored; scene not saved.");
  }
 }

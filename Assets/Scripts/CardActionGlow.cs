@@ -1,8 +1,8 @@
 ﻿using UnityEngine;
-[DisallowMultipleComponent]
+[DisallowMultipleComponent, DefaultExecutionOrder(530)]
 public sealed class CardActionGlow : MonoBehaviour
 {
-    CardController controller;CardActionGlowGraphic graphic;Transform field;bool attack,defense;float opacity;
+    CardController controller;CardActionGlowGraphic graphic;CardGuardBadge guardBadge;Transform field;bool attack,defense;float opacity;
     public float Opacity=>opacity;
     public CardActionGlowGraphic Graphic=>graphic;
     public void SetAvailability(Transform area,bool canAttack,bool canBlock){field=area;attack=canAttack;defense=canBlock;}
@@ -15,6 +15,11 @@ public sealed class CardActionGlow : MonoBehaviour
         // A card leaving the field must never retain an aura in the hand, graveyard or K stack.
         if(!inField){opacity=0;Hide();return;}
         opacity=Mathf.MoveTowards(opacity,available?1:0,s.fadeDuration<=0?1:Time.unscaledDeltaTime/s.fadeDuration);
+        if (CardActionIcon.IsGuard(controller.data))
+        {
+            if (guardBadge == null) guardBadge = GetComponent<CardGuardBadge>();
+            if (guardBadge != null && guardBadge.SuppressCardOutline) { Hide(); return; }
+        }
         var source=controller.artworkImage;
         if(opacity<=.0001f||source==null||!source.enabled||source.sprite==null||!source.gameObject.activeInHierarchy||source.transform==transform){Hide();return;}
         if(graphic==null){var go=new GameObject("Action glow (behind artwork)",typeof(RectTransform),typeof(CanvasRenderer),typeof(CardActionGlowGraphic));go.layer=source.gameObject.layer;graphic=go.GetComponent<CardActionGlowGraphic>();}

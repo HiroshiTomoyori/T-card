@@ -153,7 +153,7 @@ public class BattleDropZone :
             }
 
             if (decisionManager != null && decisionManager.RequestPlayerDecision("summon:" + card.GetInstanceID(),
-                card.data.cardName + "を場に出します。\nよろしいですか？", () => TryPlayConfirmedCard(cardDrag, selectedBaseCard))) return;
+                "Play " + (card.data.cardName ?? "this card").Replace('_', ' ') + "?", () => TryPlayConfirmedCard(cardDrag, selectedBaseCard))) return;
             resourceManager.UseResource(
                 summonCost
             );
@@ -180,7 +180,7 @@ public class BattleDropZone :
          * playerBattleAreaの子として維持する。
          */
         if (!useCostCheck && decisionManager != null && decisionManager.RequestPlayerDecision("summon:" + card.GetInstanceID(),
-            card.data.cardName + "を場に出します。\nよろしいですか？", () => TryPlayConfirmedCard(cardDrag, selectedBaseCard))) return;
+            "Play " + (card.data.cardName ?? "this card").Replace('_', ' ') + "?", () => TryPlayConfirmedCard(cardDrag, selectedBaseCard))) return;
         if (decisionManager != null) decisionManager.NotifyPlayerActionCommitted();
         if(CardPlaySettings.Load().enabledEffect)
         {

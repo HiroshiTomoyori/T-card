@@ -1,4 +1,4 @@
-﻿using DG.Tweening;
+using DG.Tweening;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
@@ -207,6 +207,7 @@ public bool CanDragPlayerHand
         PositionPlayerDecisionPanel();
         PositionEnemyHandChoice();
         PositionHandLimitChoice();
+        if (resultChoiceVisible && resultWindow != null) PositionResultChoice();
         ObserveEarlyTurnHand();
         TryAutoEndEarlyTurn();
         TickDecisionTimer();
@@ -353,9 +354,8 @@ public void SelectAttackTarget(GameObject target)
     if(IsMonarchAttacker && LiveAttackWalls().Count>1)
     {
         if(!choosingMonarchWalls){BeginMonarchWallChoice();return;}
-        if(pendingWallTargets.Contains(target))pendingWallTargets.Remove(target);
-        else if(pendingWallTargets.Count<RequiredAttackWallCount)pendingWallTargets.Add(target);
-        wallBreakCount=pendingWallTargets.Count;return;
+        ToggleMonarchWallTarget(target);
+        return;
     }
     CommitSelectedWallAttack(new System.Collections.Generic.List<GameObject>{target});
 }
@@ -557,7 +557,7 @@ int GetAliveEnemyWallCount()
             return;
 
         if(!AttackSelectionActive || choosingMonarchWalls)return;
-        if(RequestAttackConfirmation("ATTACK  —  CONFIRM",()=>SelectEnemyBattleCardTarget(target),target))return;
+        if(RequestAttackConfirmation(AttackConfirmationKind.Field, "Attack this card?",()=>SelectEnemyBattleCardTarget(target),target))return;
         StartPlayerBattlePhase();
 
         NotifyPlayerActionCommitted();
@@ -784,7 +784,7 @@ public void HideAttackArrow()
         if (!CanBeginPlayerTurnEnd() || HasMovingPlayerCard()) return;
         // The button owns this decision, including a later cancellation.
         earlyTurnAutoEndSuppressed = true;
-        if (RequestPlayerDecision("end-turn", "ターンを終了します。\nよろしいですか？", EndPlayerTurn)) return;
+        if (RequestPlayerDecision("end-turn", "End your turn?", EndPlayerTurn)) return;
         CommitPlayerTurnEnd();
     }
 
@@ -942,7 +942,7 @@ void UntapPlayerBattleCards()
         }
 
         if(!AttackSelectionActive || choosingMonarchWalls)return;
-        if(RequestAttackConfirmation("DIRECT ATTACK  —  CONFIRM",()=>SelectDirectAttackTarget(target),target))return;
+        if(RequestAttackConfirmation(AttackConfirmationKind.Direct, "Attack the opponent directly?",()=>SelectDirectAttackTarget(target),target))return;
         StartPlayerBattlePhase();
 
         Debug.Log(
@@ -2082,7 +2082,7 @@ IEnumerator EnemyBattlePhase()
             pendingEnemyWallTargets.Clear();
             enemyAttackBlocked = false;
             attacker.Tap();
-            yield return new WaitForSeconds(0.6f);
+            yield return ShowIncomingSwordPreview();
             if (!IsBattleEnded&&HasUntappedPlayerBlocker())
             {
                 waitingBlockSelect = true;
@@ -2124,8 +2124,6 @@ IEnumerator EnemyBattlePhase()
                 attacker.GetComponent<RectTransform>(),
                 targetWall
             );
-
-            yield return new WaitForSeconds(0.6f);
         }
 
         pendingEnemyAttacker = attacker;
@@ -2133,6 +2131,8 @@ IEnumerator EnemyBattlePhase()
         pendingEnemyRestedTarget = null;
         PrepareIncomingWallTargets(attacker,pendingEnemyTargetWall,targets);
         enemyAttackBlocked = false;
+        yield return ShowIncomingSwordPreview();
+        if (IsBattleEnded) yield break;
 
         if(!IsBattleEnded&&HasUntappedPlayerBlocker())
         {
@@ -3324,7 +3324,7 @@ public bool TrySelectDestroyTarget(
     }
 
     if (sourceIsPlayer && RequestPlayerDecision("destroy-target:" + target.GetInstanceID(),
-        GetCardName(target.data) + "を効果で破壊します。\nよろしいですか？", () => TrySelectDestroyTarget(target))) return true;
+        $"Destroy {GetCardName(target.data).Replace('_', ' ')}?", () => TrySelectDestroyTarget(target))) return true;
 
     Debug.Log(
         "選択破壊：" +
@@ -3751,7 +3751,6 @@ void OnDestroy()
     if (enemyHandChoiceOverlay != null) Destroy(enemyHandChoiceOverlay.gameObject);
     if (handLimitChoiceOverlay != null) Destroy(handLimitChoiceOverlay.gameObject);
     if (playerDecisionOverlay != null) Destroy(playerDecisionOverlay.gameObject);
-    if (ownsResultChoiceFont && resultChoiceFont != null) Destroy(resultChoiceFont);
         if (decisionTimerPanel != null) Destroy(decisionTimerPanel.gameObject);
     if (!battleFrozen) return;
     // A scene reload/retry must not inherit the frozen clock.
@@ -3817,7 +3816,7 @@ public void ShowJokerEffectSelectPanel(CardController jokerCard)
 
 void OnSelectJokerClear()
 {
-    if (RequestPlayerDecision("joker-clear", "Jokerの効果で場のカードを一掃します。\nよろしいですか？", OnSelectJokerClear)) return;
+    if (RequestPlayerDecision("joker-clear", "Use Joker to clear all cards from the field?", OnSelectJokerClear)) return;
     if(jokerEffectPanel != null)
         jokerEffectPanel.SetActive(false);
 
@@ -3832,7 +3831,7 @@ void OnSelectJokerClear()
 
     public void OnSelectJokerExtraTurn()
     {
-        if (RequestPlayerDecision("joker-extra", "Jokerの効果で追加ターンを選びます。\nよろしいですか？", OnSelectJokerExtraTurn)) return;
+        if (RequestPlayerDecision("joker-extra", "Use Joker to take an extra turn?", OnSelectJokerExtraTurn)) return;
         if(jokerEffectPanel != null)
             jokerEffectPanel.SetActive(false);
 
@@ -4291,6 +4290,13 @@ public partial class TurnManager
             if (!inactivityTimersEnabled || IsBattleEnded) { decisionCountdown.Reset(); mainTurnCountdown.Reset(); }
             return;
         }
+#if UNITY_EDITOR
+        if (DecisionTimersPausedInEditor)
+        {
+            if (decisionTimerPanel != null) decisionTimerPanel.gameObject.SetActive(false);
+            return;
+        }
+#endif
         bool hasDecision = TryGetTimedDecision(out PendingDecision decision);
         bool sub = hasDecision && decision.kind != TimedDecision.Resource &&
             decision.kind != TimedDecision.Main && decision.kind != TimedDecision.Battle;
@@ -4320,6 +4326,28 @@ public partial class TurnManager
         decisionCountdown.Reset();
         if (decisionTimerPanel != null) decisionTimerPanel.gameObject.SetActive(false);
     }
+
+#if UNITY_EDITOR
+    const string PauseDecisionTimersMenu = "Tools/T-card/Pause Game Timers (Editor)";
+    static string pauseDecisionTimersKey;
+    static string PauseDecisionTimersKey => pauseDecisionTimersKey ??= "T-card.PauseDecisionTimers:" + Application.dataPath;
+    static bool DecisionTimersPausedInEditor => UnityEditor.EditorPrefs.GetBool(PauseDecisionTimersKey, false);
+
+    [UnityEditor.MenuItem(PauseDecisionTimersMenu)]
+    static void ToggleDecisionTimerPause()
+    {
+        bool paused = !DecisionTimersPausedInEditor;
+        UnityEditor.EditorPrefs.SetBool(PauseDecisionTimersKey, paused);
+        UnityEditor.Menu.SetChecked(PauseDecisionTimersMenu, paused);
+    }
+
+    [UnityEditor.MenuItem(PauseDecisionTimersMenu, true)]
+    static bool UpdateDecisionTimerPauseCheck()
+    {
+        UnityEditor.Menu.SetChecked(PauseDecisionTimersMenu, DecisionTimersPausedInEditor);
+        return true;
+    }
+#endif
 
     void ReturnTimedDrags()
     {
@@ -4506,9 +4534,8 @@ public partial class TurnManager
     [Header("Result choice panel size")]
     [SerializeField, Min(0.5f)] float resultChoiceScale = 2f;
     bool resultChoiceVisible;
+    ConfirmationWindow resultWindow;
     bool resultSceneReloadRequested;
-    Font resultChoiceFont;
-    bool ownsResultChoiceFont;
 
     GameObject FindResultObject(string objectName)
     {
@@ -4544,34 +4571,32 @@ public partial class TurnManager
         Image shade = resultPanel.GetComponent<Image>();
         if (shade == null) shade = resultPanel.AddComponent<Image>();
         shade.sprite = null;
-        shade.color = new Color(0f, 0f, 0f, 0.58f);
+        shade.color = ConfirmationTheme.Load().StrengthenLowlight(new Color(0f, 0f, 0f, 0.32f));
         shade.raycastTarget = true;
         CanvasGroup group = resultPanel.GetComponent<CanvasGroup>();
         if (group == null) group = resultPanel.AddComponent<CanvasGroup>();
         group.alpha = 1f; group.interactable = group.blocksRaycasts = true; group.ignoreParentGroups = true;
 
-        if (resultChoiceFont == null)
-        {
-        resultChoiceFont = Font.CreateDynamicFontFromOSFont(new[] { "Yu Gothic", "Meiryo", "Noto Sans CJK JP", "Arial" }, 28);
-        ownsResultChoiceFont = resultChoiceFont != null;
-        if (resultChoiceFont == null) resultChoiceFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        }
-        GameObject body = new GameObject("Result Choices", typeof(RectTransform), typeof(Image), typeof(Outline));
-        body.layer = resultPanel.layer;
-        body.transform.SetParent(overlay, false);
-        RectTransform bodyRect = body.GetComponent<RectTransform>();
-        bodyRect.anchorMin = bodyRect.anchorMax = new Vector2(0.5f, 0.5f);
-        bodyRect.sizeDelta = new Vector2(330f, 280f);
-        bodyRect.localScale = Vector3.one * Mathf.Max(0.5f, resultChoiceScale);
-        body.GetComponent<Image>().color = new Color(0.16f, 0.12f, 0.08f, 0.98f);
-        Outline border = body.GetComponent<Outline>();
-        border.effectColor = new Color(0.86f, 0.69f, 0.36f, 1f);
-        border.effectDistance = new Vector2(2f, -2f);
-        CreateResultLabel(bodyRect, "Outcome", resultPlayerDefeated ? "敗北" : "勝利", new Vector2(0f, 98f), new Vector2(300f, 46f), 32,
-            new Color(1f, 0.85f, 0.52f, 1f));
-        CreateResultLabel(bodyRect, "Prompt", "もう一度対戦しますか？", new Vector2(0f, 53f), new Vector2(300f, 34f), 20, Color.white);
-        retryButton = ConfigureResultButton(retryButton, bodyRect, "RetryButton", "再戦", new Vector2(0f, -8f), RetryMatchFromBeginning);
-        exitButton = ConfigureResultButton(exitButton, bodyRect, "ExitButton", "タイトルに戻る", new Vector2(0f, -79f), ReturnToTitle);
+        if (retryButton != null) retryButton.SetActive(false);
+        if (exitButton != null) exitButton.SetActive(false);
+        resultWindow = new ConfirmationWindow(overlay, "Result Choices", resultPlayerDefeated ? "Defeat" : "Victory",
+            "ExitButton", "Main Menu", ReturnToTitle, "RetryButton", "Rematch", RetryMatchFromBeginning);
+        resultWindow.Message.text = "Play another match?";
+        PositionResultChoice();
+        retryButton = resultWindow.Accept.gameObject;
+        exitButton = resultWindow.Back.gameObject;
+    }
+
+    void PositionResultChoice()
+    {
+        var overlay = (RectTransform)resultWindow.Rect.parent;
+        var canvas = overlay.GetComponentInParent<Canvas>().rootCanvas;
+        var theme = ConfirmationTheme.Load();
+        float units = Screen.width / 720f * Mathf.Max(.5f, resultChoiceScale) / 2f;
+        resultWindow.Rect.sizeDelta = Vector2.Min(theme.WindowSize * units, Screen.safeArea.size) / canvas.scaleFactor;
+        ConfirmationWindow.PositionOnScreen(resultWindow.Rect, overlay, overlay.TransformPoint(overlay.rect.center),
+            resultPlayerDefeated ? theme.defeatOffset : theme.victoryOffset);
+        resultWindow.Layout();
     }
 
     Text CreateResultLabel(Transform parent, string name, string text, Vector2 position, Vector2 size, int fontSize, Color color)
@@ -4583,48 +4608,13 @@ public partial class TurnManager
         rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
         rect.anchoredPosition = position; rect.sizeDelta = size;
         Text value = label.GetComponent<Text>();
-        value.font = resultChoiceFont; value.text = text; value.fontSize = fontSize;
+        value.font = ConfirmationWindow.WindowFont; value.text = text; value.fontSize = fontSize;
         value.alignment = TextAnchor.MiddleCenter; value.color = color;
+        value.resizeTextForBestFit = true;
+        value.resizeTextMaxSize = fontSize;
+        value.resizeTextMinSize = Mathf.RoundToInt(fontSize * .68f);
         value.raycastTarget = false;
         return value;
-    }
-
-    GameObject ConfigureResultButton(GameObject existing, RectTransform parent, string objectName, string caption,
-        Vector2 position, UnityEngine.Events.UnityAction action)
-    {
-        // Result buttons have their own geometry; old sprites and controls can
-        // compress the frame or bring overlapping labels into the modal.
-        if (existing != null) existing.SetActive(false);
-        GameObject buttonObject = new GameObject(objectName, typeof(RectTransform));
-        buttonObject.layer = parent.gameObject.layer;
-        RectTransform rect = buttonObject.GetComponent<RectTransform>();
-        rect.SetParent(parent, false);
-        rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
-        rect.anchoredPosition = position; rect.sizeDelta = new Vector2(278f, 62f); rect.localScale = Vector3.one;
-        rect.localRotation = Quaternion.identity;
-        Image image = buttonObject.GetComponent<Image>();
-        if (image == null) image = buttonObject.AddComponent<Image>();
-        image.sprite = null;
-        image.type = Image.Type.Simple;
-        image.preserveAspect = false;
-        image.color = new Color(1f, 0.92f, 0.73f, 1f); image.raycastTarget = true;
-        Outline border = buttonObject.AddComponent<Outline>();
-        border.effectColor = new Color(0.86f, 0.65f, 0.27f, 1f);
-        border.effectDistance = new Vector2(1f, -1f);
-        Button button = buttonObject.GetComponent<Button>();
-        if (button == null) button = buttonObject.AddComponent<Button>();
-        button.targetGraphic = image; button.interactable = true;
-        button.onClick = new Button.ButtonClickedEvent();
-        button.onClick.AddListener(action);
-        CanvasGroup group = buttonObject.GetComponent<CanvasGroup>();
-        if (group != null) { group.alpha = 1f; group.interactable = group.blocksRaycasts = true; }
-        Text label = CreateResultLabel(rect, "Choice Label", caption, Vector2.zero, new Vector2(254f, 54f), 26,
-            new Color(0.18f, 0.12f, 0.06f, 1f));
-        label.resizeTextForBestFit = true;
-        label.resizeTextMinSize = 18;
-        label.resizeTextMaxSize = 26;
-        buttonObject.SetActive(true);
-        return buttonObject;
     }
 
     public void RetryMatchFromBeginning() { ReloadAfterResult(true); }
@@ -4694,7 +4684,7 @@ public partial class TurnManager
         attacker.Tap();
         if (attackArrowManager != null)
             attackArrowManager.ShowEnemyArrow(attacker.GetComponent<RectTransform>(), target.GetComponent<RectTransform>());
-        yield return new WaitForSeconds(0.6f);
+        yield return ShowIncomingSwordPreview();
         if (!IsBattleEnded&&HasUntappedPlayerBlocker())
         {
             waitingBlockSelect = true;
@@ -4727,7 +4717,7 @@ public partial class TurnManager
     RectTransform playerDecisionOverlay;
     RectTransform playerDecisionBody;
     RectTransform playerDecisionBoard;
-    Text playerDecisionMessage;
+    ConfirmationWindow playerDecisionWindow;
     System.Action pendingPlayerDecision;
     System.Action pendingPlayerCancellation;
     string pendingPlayerDecisionKey;
@@ -4749,7 +4739,7 @@ public partial class TurnManager
         pendingPlayerDecision = accept;
         pendingPlayerCancellation = cancel;
         playerDecisionRevision++;
-        playerDecisionMessage.text = message;
+        playerDecisionWindow.Message.text = message;
         playerDecisionOverlay.gameObject.SetActive(true);
         PositionPlayerDecisionPanel();
         decisionCountdown.Reset();
@@ -4799,12 +4789,6 @@ public partial class TurnManager
         if (source == null) source = FindFirstObjectByType<Canvas>();
         if (source == null) { Debug.LogError("Player decisions need a Canvas"); return; }
         source = source.rootCanvas;
-        if (resultChoiceFont == null)
-        {
-            resultChoiceFont = Font.CreateDynamicFontFromOSFont(new[] { "Yu Gothic", "Meiryo", "Noto Sans CJK JP", "Arial" }, 28);
-            ownsResultChoiceFont = resultChoiceFont != null;
-            if (resultChoiceFont == null) resultChoiceFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        }
         TitleManager titleManager = FindFirstObjectByType<TitleManager>();
         playerDecisionBoard = titleManager != null && titleManager.gameScreen != null
             ? titleManager.gameScreen.transform as RectTransform : null;
@@ -4818,35 +4802,28 @@ public partial class TurnManager
         canvas.overrideSorting = true; canvas.sortingLayerID = source.sortingLayerID;
         canvas.sortingOrder = source.sortingOrder + 220;
         Image shade = overlay.GetComponent<Image>();
-        shade.color = new Color(0f, 0f, 0f, 0.4f); shade.raycastTarget = true;
+        shade.color = ConfirmationTheme.Load().StrengthenLowlight(new Color(0f, 0f, 0f, 0.18f)); shade.raycastTarget = true;
         CanvasGroup group = overlay.GetComponent<CanvasGroup>();
         group.ignoreParentGroups = true; group.interactable = group.blocksRaycasts = true;
-        GameObject body = new GameObject("Decision Content", typeof(RectTransform), typeof(Image), typeof(Outline));
-        body.layer = overlay.layer; body.transform.SetParent(overlay.transform, false);
-        playerDecisionBody = body.GetComponent<RectTransform>();
-        playerDecisionBody.anchorMin = playerDecisionBody.anchorMax = new Vector2(0.5f, 0.5f);
-        playerDecisionBody.sizeDelta = new Vector2(330f, 320f);
-        body.GetComponent<Image>().color = new Color(0.16f, 0.12f, 0.08f, 0.98f);
-        Outline border = body.GetComponent<Outline>();
-        border.effectColor = new Color(0.86f, 0.69f, 0.36f, 1f); border.effectDistance = new Vector2(2f, -2f);
-        CreateResultLabel(body.transform, "Decision Title", "行動の確認", new Vector2(0f, 125f), new Vector2(300f, 44f), 28,
-            new Color(1f, 0.85f, 0.52f, 1f));
-        playerDecisionMessage = CreateResultLabel(body.transform, "Decision Message", "", new Vector2(0f, 55f), new Vector2(298f, 96f), 22, Color.white);
-        playerDecisionMessage.resizeTextForBestFit = true;
-        playerDecisionMessage.resizeTextMinSize = 17; playerDecisionMessage.resizeTextMaxSize = 22;
-        ConfigureResultButton(null, playerDecisionBody, "Confirm Action", "はい", new Vector2(0f, -28f), AcceptPlayerDecision);
-        ConfigureResultButton(null, playerDecisionBody, "Cancel Action", "いいえ", new Vector2(0f, -103f), RejectPlayerDecision);
+        playerDecisionWindow = new ConfirmationWindow(playerDecisionOverlay, "Decision Content", "Confirm Action",
+            "Cancel Action", "Back", RejectPlayerDecision, "Confirm Action", "Confirm", AcceptPlayerDecision);
+        playerDecisionBody = playerDecisionWindow.Rect;
         overlay.SetActive(false);
     }
 
     void PositionPlayerDecisionPanel()
     {
         if (playerDecisionBody == null || !IsPlayerDecisionOpen) return;
-        playerDecisionBody.localScale = Vector3.one * Mathf.Max(0.5f, playerDecisionPanelScale);
-        // Use the game board's center, independent of the chosen card or pointer.
-        RectTransform board = playerDecisionBoard;
-        if (board != null) playerDecisionBody.position = board.TransformPoint(board.rect.center);
-        else playerDecisionBody.anchoredPosition = Vector2.zero;
+        playerDecisionOverlay.GetComponent<Image>().color = ConfirmationTheme.Load().StrengthenLowlight(new Color(0f, 0f, 0f, .18f));
+        var canvas = playerDecisionOverlay.GetComponentInParent<Canvas>().rootCanvas;
+        float unit = Screen.width / 720f * Mathf.Max(.5f, playerDecisionPanelScale) / 2f;
+        var theme = ConfirmationTheme.Load();
+        Vector2 size = Vector2.Min(theme.WindowSize * unit, Screen.safeArea.size);
+        RectTransform board = playerDecisionBoard != null ? playerDecisionBoard : playerDecisionOverlay;
+        playerDecisionBody.sizeDelta = size / canvas.scaleFactor;
+        ConfirmationWindow.PositionOnScreen(playerDecisionBody, playerDecisionOverlay, board.TransformPoint(board.rect.center),
+            theme.ActionOffset(pendingPlayerDecisionKey));
+        playerDecisionWindow.Layout();
         playerDecisionOverlay.SetAsLastSibling();
     }
 }
@@ -4897,7 +4874,7 @@ public partial class TurnManager
             handDealer.DiscardEnemyHandAt(0);
             return;
         }
-        EnsurePlayerDecisionUi(); // Share the board reference and Japanese font.
+        EnsurePlayerDecisionUi(); // Share the board reference.
         if (playerDecisionOverlay == null) return;
         if (enemyHandChoiceOverlay != null) Destroy(enemyHandChoiceOverlay.gameObject);
         Canvas source = playerDecisionOverlay.GetComponentInParent<Canvas>().rootCanvas;
@@ -4927,9 +4904,9 @@ public partial class TurnManager
         Outline frame = body.GetComponent<Outline>();
         frame.effectColor = new Color(0.86f, 0.69f, 0.36f, 1f);
         frame.effectDistance = new Vector2(2f, -2f);
-        CreateResultLabel(body.transform, "Title", "10 の効果", new Vector2(0f, 197f),
+        CreateResultLabel(body.transform, "Title", "Rank 10 Effect", new Vector2(0f, 197f),
             new Vector2(410f, 40f), 28, new Color(1f, 0.85f, 0.52f, 1f));
-        CreateResultLabel(body.transform, "Instruction", "相手の手札を1枚タップして破棄", new Vector2(0f, 154f),
+        CreateResultLabel(body.transform, "Instruction", "Choose a card to discard from the opponent's hand.", new Vector2(0f, 154f),
             new Vector2(410f, 38f), 21, Color.white);
         int count = handDealer.enemyHandCards.Count;
         int rows = Mathf.CeilToInt(count / 5f);
@@ -4962,7 +4939,7 @@ public partial class TurnManager
             if (back.sprite == null)
                 CreateResultLabel(rect, "Hidden", "?", Vector2.zero, rect.sizeDelta, 28, Color.white);
         }
-        CreateResultLabel(body.transform, "Timeout Hint", "10秒経過すると左端のカードを破棄します", new Vector2(0f, -158f),
+        CreateResultLabel(body.transform, "Timeout Hint", "The leftmost card is discarded after 10 seconds.", new Vector2(0f, -158f),
             new Vector2(418f, 34f), 17, new Color(0.88f, 0.84f, 0.74f, 1f));
         IsChoosingEnemyHand = true;
         enemyHandChoiceRevision++;
@@ -4993,7 +4970,8 @@ public partial class TurnManager
         float scale = Mathf.Min(Mathf.Max(0.5f, playerDecisionPanelScale),
             Mathf.Min(size.x / 460f, size.y / 490f) * 0.92f);
         enemyHandChoiceBody.localScale = Vector3.one * Mathf.Max(0.1f, scale);
-        enemyHandChoiceBody.position = board.TransformPoint(board.rect.center);
+        ConfirmationWindow.PositionOnScreen(enemyHandChoiceBody, enemyHandChoiceOverlay,
+            board.TransformPoint(board.rect.center), ConfirmationTheme.Load().enemyHandDiscardOffset);
         enemyHandChoiceOverlay.SetAsLastSibling();
     }
 }
@@ -5030,20 +5008,18 @@ public partial class TurnManager
         CanvasGroup group = overlay.GetComponent<CanvasGroup>();
         group.ignoreParentGroups = true;
         group.interactable = group.blocksRaycasts = true;
-        GameObject body = new GameObject("Discard Content", typeof(RectTransform), typeof(Image), typeof(Outline));
+        GameObject body = new GameObject("Discard Content", typeof(RectTransform));
         body.layer = overlay.layer;
         handLimitChoiceBody = body.GetComponent<RectTransform>();
         handLimitChoiceBody.SetParent(overlay.transform, false);
         handLimitChoiceBody.anchorMin = handLimitChoiceBody.anchorMax = new Vector2(0.5f, 0.5f);
         handLimitChoiceBody.sizeDelta = new Vector2(660f, 610f);
-        body.GetComponent<Image>().color = new Color(0.16f, 0.12f, 0.08f, 1f);
-        Outline frame = body.GetComponent<Outline>();
-        frame.effectColor = new Color(0.86f, 0.69f, 0.36f, 1f);
-        frame.effectDistance = new Vector2(2f, -2f);
-        CreateResultLabel(body.transform, "Title", "手札上限：カードを破棄", new Vector2(0f, 266f),
-            new Vector2(620f, 40f), 28, new Color(1f, 0.85f, 0.52f, 1f));
+        ConfirmationWindow.AddSurface(handLimitChoiceBody);
+        var theme = ConfirmationTheme.Load();
+        CreateResultLabel(body.transform, "Title", "Hand Limit: Discard a Card", new Vector2(0f, 266f),
+            new Vector2(620f, 40f), 28, theme.textColor);
         CreateResultLabel(body.transform, "Instruction",
-            "手札 " + cards.Count + "枚 ／ 上限 " + handDealer.maxHandSize + "枚。破棄する1枚を選んでください。",
+            $"Hand: {cards.Count} / Limit: {handDealer.maxHandSize}. Choose one card to discard.",
             new Vector2(0f, 222f), new Vector2(628f, 34f), 20, Color.white);
         int rows = Mathf.CeilToInt(cards.Count / 6f);
         float height = Mathf.Min(132f, (304f - (rows - 1) * 20f) / rows);
@@ -5079,16 +5055,19 @@ public partial class TurnManager
             if (image.sprite == null)
                 CreateResultLabel(rect, "Card Name", original.data.cardName, Vector2.zero, rect.sizeDelta, 18, Color.white);
             if (original.gameObject == handDealer.HandLimitDrawnCardObject)
-                CreateResultLabel(rect, "New Card", "追加カード", new Vector2(0f, -height * 0.5f - 8f),
+                CreateResultLabel(rect, "New Card", "New Card", new Vector2(0f, -height * 0.5f - 8f),
                     new Vector2(width + 12f, 20f), 13, new Color(1f, 0.85f, 0.52f, 1f));
         }
-        GameObject confirm = ConfigureResultButton(null, handLimitChoiceBody, "Discard", "破棄する",
-            new Vector2(-156f, -166f), handDealer.ConfirmHandLimitDiscard);
-        handLimitConfirmButton = confirm.GetComponent<Button>();
+        handLimitConfirmButton = ConfirmationWindow.CreateChoice(handLimitChoiceBody, "Discard", "Discard", true,
+            handDealer.ConfirmHandLimitDiscard);
+        var reselect = ConfirmationWindow.CreateChoice(handLimitChoiceBody, "Reselect", "Clear Selection", false,
+            handDealer.CancelHandLimitDiscardSelection);
+        var choiceSize = new Vector2(Mathf.Clamp(theme.buttonSize.x * 1.7f, 100f, 280f),
+            Mathf.Clamp(theme.buttonSize.y * 1.35f, 42f, 64f));
+        ConfirmationWindow.SetRect((RectTransform)handLimitConfirmButton.transform, new Vector2(-146f, -166f), choiceSize);
+        ConfirmationWindow.SetRect((RectTransform)reselect.transform, new Vector2(146f, -166f), choiceSize);
         handLimitConfirmButton.interactable = false;
-        ConfigureResultButton(null, handLimitChoiceBody, "Reselect", "選び直す",
-            new Vector2(156f, -166f), handDealer.CancelHandLimitDiscardSelection);
-        CreateResultLabel(body.transform, "Timeout Hint", "10秒経過すると選択中のカード、未選択なら追加カードを破棄します。",
+        CreateResultLabel(body.transform, "Timeout Hint", "After 10 seconds, the selected card or the new card is discarded.",
             new Vector2(0f, -220f), new Vector2(640f, 30f), 16, new Color(0.88f, 0.84f, 0.74f, 1f));
         decisionCountdown.Reset();
         PositionHandLimitChoice();
@@ -5118,7 +5097,8 @@ public partial class TurnManager
         float scale = Mathf.Min(Mathf.Max(0.5f, playerDecisionPanelScale),
             Mathf.Min(size.x / 680f, size.y / 630f) * 0.92f);
         handLimitChoiceBody.localScale = Vector3.one * Mathf.Max(0.1f, scale);
-        handLimitChoiceBody.position = board.TransformPoint(board.rect.center);
+        ConfirmationWindow.PositionOnScreen(handLimitChoiceBody, handLimitChoiceOverlay,
+            board.TransformPoint(board.rect.center), ConfirmationTheme.Load().handLimitOffset);
         handLimitChoiceOverlay.SetAsLastSibling();
     }
 }

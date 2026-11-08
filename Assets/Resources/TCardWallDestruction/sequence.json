@@ -1,0 +1,16 @@
+{
+  "approvedSource": "card-shatter-platinum-v5",
+  "frameRate": 60,
+  "frameCount": 96,
+  "sourceSize": [
+    1280,
+    720
+  ],
+  "nativeMasterSize": [
+    3840,
+    2160
+  ],
+  "alphaMasks": true,
+  "croppedWithoutResizing": true,
+  "estimatedBC4MiB": 13.048618793487549
+}

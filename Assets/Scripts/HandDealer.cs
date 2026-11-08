@@ -889,11 +889,51 @@ IEnumerator AnimateCardToHand(RectTransform cardRect,float durationOverride=-1)
         }
     }
 
+    ConfirmationWindow openingChoice;
+    Vector2 openingChoicePosition;
+
+    void PrepareOpeningChoice()
+    {
+        if (openingChoice == null)
+        {
+            var panel = redrawChoicePanel.transform as RectTransform;
+            if (panel == null) return;
+            var legacyFrame = panel.Find("WindowUI") as RectTransform;
+            openingChoicePosition = legacyFrame != null ? legacyFrame.anchoredPosition : Vector2.zero;
+            foreach (Transform child in panel) child.gameObject.SetActive(false);
+            openingChoice = new ConfirmationWindow(panel, "Opening Hand Choice", "Opening Hand",
+                "RedrawButton", "Redraw", RedrawHand, "KeepButton", "Keep", ConfirmHand);
+            openingChoice.Message.text = "Keep this hand?";
+            redrawButton = openingChoice.Back.gameObject;
+            confirmButton = openingChoice.Accept.gameObject;
+        }
+        PositionOpeningChoice();
+    }
+
+    void LateUpdate()
+    {
+        if (openingChoice != null && openingChoice.Rect.gameObject.activeInHierarchy)
+            PositionOpeningChoice();
+    }
+
+    void PositionOpeningChoice()
+    {
+        var parent = (RectTransform)openingChoice.Rect.parent;
+        var canvas = parent.GetComponentInParent<Canvas>().rootCanvas;
+        var theme = ConfirmationTheme.Load();
+        Vector2 size = Vector2.Min(theme.WindowSize * (Screen.width / 720f), Screen.safeArea.size);
+        openingChoice.Rect.sizeDelta = size / canvas.scaleFactor;
+        ConfirmationWindow.PositionOnScreen(openingChoice.Rect, parent,
+            parent.TransformPoint(parent.rect.center + openingChoicePosition), theme.openingHandOffset);
+        openingChoice.Layout();
+    }
+
 void ShowButtons()
 {
     if(redrawChoicePanel != null)
     {
         redrawChoicePanel.SetActive(true);
+        PrepareOpeningChoice();
         redrawChoicePanel.transform.SetAsLastSibling();
     }
 
@@ -913,6 +953,7 @@ void ShowButtons()
             cg = redrawButton.AddComponent<CanvasGroup>();
 
         cg.alpha = 1f;
+        cg.ignoreParentGroups = true;
         cg.blocksRaycasts = true;
         cg.interactable = true;
     }
@@ -928,6 +969,7 @@ void ShowButtons()
             cg = confirmButton.AddComponent<CanvasGroup>();
 
         cg.alpha = 1f;
+        cg.ignoreParentGroups = true;
         cg.blocksRaycasts = true;
         cg.interactable = true;
     }
@@ -999,8 +1041,7 @@ if (redrawButton != null)
         if(hasRedrawn)
             return;
 
-        if (turnManager != null && turnManager.RequestPlayerDecision("redraw-hand",
-            "初期手札を引き直します。\nよろしいですか？", RedrawHand)) return;
+        if (!IsOpeningDecisionReady) return;
 
         IsRedrawSelecting = true;
         hasRedrawn = true;
@@ -1110,8 +1151,7 @@ if (redrawButton != null)
             return;
         }
 
-        if (turnManager != null && turnManager.RequestPlayerDecision("confirm-hand",
-            "この手札でゲームを開始します。\nよろしいですか？", ConfirmHand)) return;
+        if (!IsOpeningDecisionReady) return;
         CompleteOpeningSelection();
     }
 
@@ -1552,6 +1592,7 @@ public void DamageEnemyWall(
         yield return PlayWallSlash(
             targetWall
         );
+        yield return WallDestructionPresentation.Play(this,new[] { targetWall });
 
         if(targetWall == null)
             yield break;
@@ -2008,6 +2049,7 @@ public IEnumerator DamagePlayerWallsAndWait(IEnumerable<GameObject> requested)
         var animations = new List<Coroutine>();
         foreach (var wall in walls) animations.Add(StartCoroutine(PlayWallSlash(wall)));
         foreach (var animation in animations) yield return animation;
+        yield return WallDestructionPresentation.Play(this,walls);
         foreach (var wall in walls)
         {
             var cg = wall.GetComponent<CanvasGroup>(); if (cg == null) cg = wall.AddComponent<CanvasGroup>();

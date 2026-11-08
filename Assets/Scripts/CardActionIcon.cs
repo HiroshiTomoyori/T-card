@@ -22,10 +22,11 @@ public class CardActionIcon : MonoBehaviour
 
     public static bool CanBlock(CardController controller)
     {
-        return controller != null && controller.data != null && !controller.isTapped &&
-            controller.data.effectTypes != null && Array.Exists(controller.data.effectTypes,
-                effect => effect == EffectType.BlockOnly);
+        return controller != null && !controller.isTapped && IsGuard(controller.data);
     }
+
+    internal static bool IsGuard(CardData data) => data != null && data.effectTypes != null &&
+        Array.IndexOf(data.effectTypes, EffectType.BlockOnly) >= 0;
 
     public void EnsureIcons(CardActionIcon template)
     {

@@ -30,6 +30,11 @@ MonoBehaviour:
   wallZonePadding: 12
   confirmationOffset: {x: 0, y: 80}
   confirmationSize: {x: 310, y: 60}
+  confirmationSwordScale: 1.1
+  confirmationSwordSpeed: 1
+  confirmationSwordShadowStrength: 0
+  confirmationSwordPoint: {x: 0.5, y: 0.52}
+  confirmationClearance: 14
   contrastRevision: 1
   wallZoneCornerRadius: 24
   wallZoneGlowBlur: 28
