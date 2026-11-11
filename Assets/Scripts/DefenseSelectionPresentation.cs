@@ -32,24 +32,6 @@ public sealed class DefenseSelectionPresentation:MonoBehaviour
     Rect CardBounds(CardController c)=>Bounds(c.artworkImage!=null?c.artworkImage.rectTransform:(RectTransform)c.transform);
     void Place(RectTransform rt,Rect screen){RectTransformUtility.ScreenPointToLocalPointInRectangle(root,screen.min,EventCamera,out var a);RectTransformUtility.ScreenPointToLocalPointInRectangle(root,screen.max,EventCamera,out var b);rt.localPosition=(a+b)*.5f;rt.sizeDelta=b-a;}
     void Add(Rect bounds,Color color,float power,float highlight){if(count>=32)return;var s=AttackSelectionSettings.Load();float unit=Screen.width/720f;bounds.center+=s.glowOffset*unit;bounds.size+=s.glowSizeAdjustment*unit;boxes[count]=new Vector4(bounds.center.x,bounds.center.y,bounds.width,bounds.height);colors[count]=new Vector4(color.r,color.g,color.b,power*color.a);flags[count]=new Vector4(1,highlight,0,0);count++;}
-    void FocusGuardBadge(CardController card)
-    {
-        var badge = card.GetComponent<CardGuardBadge>();
-        var marker = badge != null ? badge.FocusForDefense() : null;
-        if (marker == null || count >= boxes.Length) return;
-        Rect bounds = Bounds(marker);
-        float diameter = Mathf.Max(bounds.width, bounds.height) *
-            Mathf.Max(1f, 2.10f * CardActionGlowSettings.Load().guardRippleSize);
-        boxes[count] = new Vector4(bounds.center.x, bounds.center.y, diameter, diameter);
-        colors[count] = Vector4.zero;
-        flags[count++] = new Vector4(1, 0, 0, 1);
-    }
-
-    void FocusCombatant(CardController card, Color color, float power, float highlight)
-    {
-        if (CardActionIcon.IsGuard(card.data)) FocusGuardBadge(card);
-        else Add(CardBounds(card), color, power, highlight);
-    }
     Button Guard(int index){while(guards.Count<=index){var rt=Rect(root,"Choose defender");var im=rt.gameObject.AddComponent<Image>();im.color=Color.clear;var b=rt.gameObject.AddComponent<Button>();b.transition=Selectable.Transition.None;guards.Add(b);}return guards[index];}
     void RefreshSwords(AttackSelectionSettings settings, bool visible, List<GameObject> walls)
     {
@@ -107,9 +89,9 @@ public sealed class DefenseSelectionPresentation:MonoBehaviour
         CurrentTargetColor=owner.IncomingMonarchAttack?shared.monarchTargetColor:shared.normalTargetColor;CurrentAttackerColor=shared.attackerColor;int index=0;
         if(showLowlight)
         {
-            FocusCombatant(owner.IncomingAttacker, shared.attackerColor, 1f, shared.attackerHighlight);
+            Add(CardBounds(owner.IncomingAttacker), shared.attackerColor, 1f, shared.attackerHighlight);
             if((!pending||owner.SelectedDefenseBlocker==null)&&owner.IncomingFieldTarget!=null)
-                FocusCombatant(owner.IncomingFieldTarget, CurrentTargetColor, wave, shared.attackerHighlight);
+                Add(CardBounds(owner.IncomingFieldTarget), CurrentTargetColor, wave, shared.attackerHighlight);
             if (!pending || owner.SelectedDefenseBlocker == null)
             {
                 foreach(var wall in wallTargets){var card=wall.GetComponent<CardController>();Add(CardBounds(card),CurrentTargetColor,wave,shared.attackerHighlight);HighlightedWallCount++;}
@@ -123,7 +105,7 @@ public sealed class DefenseSelectionPresentation:MonoBehaviour
                 var bounds=CardBounds(c);bool selected=owner.SelectedDefenseBlocker==c;
                 if (!pending || selected)
                 {
-                    FocusGuardBadge(c);
+                    Add(bounds, shared.attackerColor, wave, selected ? shared.attackerHighlight : 0f);
                     HighlightedGuardCount++;
                 }
                 if(!active||pending)continue;

@@ -88,6 +88,7 @@ public static class AttackSelectionDiagnostics
   Directory.CreateDirectory(Folder);var t=d.turnManager;d.turnManager=null;typeof(HandDealer).GetMethod("CompleteOpeningSelection",Flags).Invoke(d,null);d.turnManager=t;yield return new WaitForSeconds(.5f);
   Set(t,"isPlayerTurnActive",true);Set(t,"isPlayerMainPhase",true);Set(t,"isBattlePhase",false);Set(t,"isEndingTurn",false);Set(t,"battleIconsEnded",false);typeof(TurnManager).GetField("actionGlowTurn",Flags).SetValue(t,1);
   var normal=Add(d,t.playerBattleArea,"10");var queen=Add(d,t.playerBattleArea,"Q");var king=Add(d,t.playerBattleArea,"K");var target=Add(d,t.enemyBattleArea,"2",true);
+  var readyGuard=Add(d,t.enemyBattleArea,"8");
   yield return null;foreach(var area in new[]{t.playerBattleArea,t.enemyBattleArea}){var layout=area.GetComponent<BattleAreaLayout>();layout.Refresh();foreach(var c in area.GetComponentsInChildren<CardController>())if(c.transform.parent==area)layout.PlaceImmediately(c);}
   yield return new WaitForSeconds(.3f);string error=null;var view=t.GetComponent<AttackSelectionPresentation>();
   bool accepted=false;
@@ -132,6 +133,20 @@ public static class AttackSelectionDiagnostics
   try{Check(view!=null,"Presentation absent");Check(!ShaderUtil.ShaderHasError(Shader.Find("T-card/UI/Attack Selection")),"Shader compilation failed");Click(Center(normal));Check(t.AttackSelectionActive&&t.GetCurrentAttacker()==normal.gameObject,"Actual attacker click failed");Check(!t.IsBattlePhase,"Choosing attacker prematurely starts battle phase");t.SelectAttackTarget(t.LiveAttackWalls()[0]);Check(t.HasPendingAttackConfirmation&&!normal.isTapped&&!t.IsBattlePhase,"Normal wall attack executed before confirmation");Check(view.EntryCount==2,"Wall confirmation must light only attacker and selected wall");t.CancelAttackSelection();Check(!t.HasPendingAttackConfirmation&&!normal.isTapped,"Cancelling confirmation spent an attack");t.StartBattleByAttackSelect(normal.gameObject);}
   catch(Exception e){Finish("FAIL: "+e);yield break;}
   yield return new WaitForSecondsRealtime(.25f);
+  yield return new WaitForEndOfFrame();
+  try
+  {
+   var readyBadge=readyGuard.GetComponent<CardGuardBadge>();
+   var restedBadge=target.GetComponent<CardGuardBadge>();
+   var contour=readyBadge.GetComponentInChildren<RawImage>().transform.parent.Find("Shield contour glow").GetComponent<RawImage>();
+   Check(readyBadge.IsRippling&&readyBadge.BadgeOpacity==1f&&contour.enabled&&!ShaderUtil.ShaderHasError(contour.material.shader),"Active enemy guard did not get its opaque contour and ripple");
+   Check(!restedBadge.IsRippling,"Rested guard emitted an icon ripple");
+   var entries=view.Graphic.material.GetVectorArray("_Entries");
+   Check(!entries.Take(view.EntryCount).Any(e=>Vector2.Distance(new Vector2(e.x,e.y),Center(readyGuard))<2f),"Active enemy guard is lit as a whole card");
+   var preview=Capture("enemy-guard-contour");UnityEngine.Object.Destroy(preview);
+  }
+  catch(Exception e){Finish("FAIL: "+e);yield break;}
+  UnityEngine.Object.Destroy(readyGuard.gameObject);
   try{Check(view.Opacity>.99f&&!view.WallZoneButton.gameObject.activeSelf,"Normal attack incorrectly exposes wall zone");Check(!view.Graphic.IsRaycastLocationValid(Center(target),null),"Target raycast blocked");Check(!view.Graphic.IsRaycastLocationValid(Center(queen),null),"Switching raycast blocked");Click(Center(normal));Check(!t.AttackSelectionActive,"Retap did not cancel");Click(Center(normal));Click(Center(queen));Check(t.GetCurrentAttacker()==queen.gameObject&&t.IsMonarchAttacker,"Attacker switch failed");}
   catch(Exception e){Finish("FAIL: "+e);yield break;}
   yield return new WaitForSecondsRealtime(.25f);
@@ -170,7 +185,28 @@ public static class AttackSelectionDiagnostics
   var savedBrain=t.enemyAIBrain;t.enemyAIBrain=null;var guard=Add(d,t.enemyBattleArea,"8");normal.isTapped=false;
   yield return null;int guardedWalls=t.LiveAttackWalls().Count;t.StartBattleByAttackSelect(normal.gameObject);yield return new WaitForSecondsRealtime(.2f);
   try{Check(!view.Graphic.IsRaycastLocationValid(Center(normal),null),"Attacker blocked by overlay");t.SelectAttackTarget(t.LiveAttackWalls()[0]);Check(!normal.isTapped&&t.HasPendingAttackConfirmation,"Guard battle ran before confirmation");Confirm(t);Check(normal.isTapped&&!t.AttackSelectionActive&&t.LiveAttackWalls().Count==guardedWalls,"Guard did not intercept wall attack");}
-  catch(Exception e){error=e.ToString();}t.enemyAIBrain=savedBrain;yield return WaitForAttack(t);
+  catch(Exception e){error=e.ToString();}
+  t.enemyAIBrain=savedBrain;
+  if(error==null)
+  {
+   yield return new WaitForEndOfFrame();
+   try
+   {
+    var motion=t.GetComponent<AttackMotionPresentation>();
+    Check(motion!=null&&motion.DefendingCard!=null,"Enemy guard defense motion did not start");
+    var badge=motion.DefendingCard.Find("Guard badge");
+    Check(badge!=null&&badge.Find("Guard ripple")==null&&badge.Find("Shield contour glow")==null,
+          "Executing enemy guard retained the icon-only effects");
+    var material=motion.FocusGraphic.material;
+    var boxes=material.GetVectorArray("_Entries");
+    var glows=material.GetVectorArray("_Colors");
+    var defenderBounds=ScreenBounds(motion.DefendingCard);
+    Check(glows[0].w>0f&&Mathf.Abs(boxes[0].z-defenderBounds.width)<1f&&
+          Mathf.Abs(boxes[0].w-defenderBounds.height)<1f,"Enemy guard defense did not highlight the whole card");
+   }
+   catch(Exception e){error=e.ToString();}
+  }
+  yield return WaitForAttack(t);
   if(error!=null){Finish("FAIL: "+error);yield break;}
   // Reduce the real three remaining walls to one through the same committed damage path.
   king.isTapped=false;t.StartBattleByAttackSelect(king.gameObject);yield return new WaitForSecondsRealtime(.2f);

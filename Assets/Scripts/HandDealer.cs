@@ -2058,32 +2058,32 @@ public IEnumerator DamagePlayerWallsAndWait(IEnumerable<GameObject> requested)
             cg.interactable = false;
         }
         playerWallAliveCount = Mathf.Max(0, playerWallAliveCount - walls.Count);
-        var shields = cards.FindAll(IsShieldCard);
-        if (shields.Count == 2 && ReverseChoiceManager.I != null)
+        var order = new List<int>(2);
+        var reverse = ReverseChoiceManager.I;
+        var canvas = wallArea.GetComponentInParent<Canvas>();
+        if (reverse != null)
+            yield return reverse.Check(cards, canvas, order);
+
+        for (int i = 0; i < cards.Count; i++)
         {
-            int first = 0;
-            yield return ReverseChoiceManager.I.ShowOrderRoutine(shields[0], shields[1], value => first = value);
-            if (first == 1) { var swap = shields[0]; shields[0] = shields[1]; shields[1] = swap; }
+            if (turnManager != null && turnManager.IsBattleEnded) yield break;
+            if (order.Contains(i)) continue;
+            yield return ResolveBrokenPlayerWall(cards[i], false, 0, 0);
+            while (IsHandLimitSelecting && (turnManager == null || !turnManager.IsBattleEnded)) yield return null;
         }
-        foreach (var data in cards)
-            if (!IsShieldCard(data)) yield return ResolveBrokenPlayerWall(data);
-        foreach (var data in shields)
+        for (int i = 0; i < order.Count; i++)
         {
-            yield return ResolveBrokenPlayerWall(data);
-            yield return new WaitUntil(() => !IsWallPlacementRunning && !IsHandLimitSelecting);
+            if (turnManager != null && turnManager.IsBattleEnded) yield break;
+            yield return ResolveBrokenPlayerWall(cards[order[i]], true, i, order.Count);
+            while ((IsWallPlacementRunning || IsHandLimitSelecting) &&
+                (turnManager == null || !turnManager.IsBattleEnded)) yield return null;
         }
         Debug.Log("ウォール攻撃完了：同時破壊 " + walls.Count + "枚 / 残り " + playerWallAliveCount);
     }
     finally { IsResolvingWallAttack = false; }
 }
 
-bool IsShieldCard(CardData data)
-{
-    return (data != null && data.effectTypes != null &&
-        System.Array.Exists(data.effectTypes, effect => effect == EffectType.ShieldTrigger));
-}
-
-IEnumerator ResolveBrokenPlayerWall(CardData data)
+IEnumerator ResolveBrokenPlayerWall(CardData data, bool useReverse, int playIndex, int playCount)
 {
 bool shieldTrigger =
     (
@@ -2093,22 +2093,6 @@ bool shieldTrigger =
             x => x == EffectType.ShieldTrigger
         )
     );
-
-    bool useReverse = false;
-
-    if(shieldTrigger &&
-       ReverseChoiceManager.I != null)
-    {
-        yield return StartCoroutine(
-            ReverseChoiceManager.I.ShowChoiceRoutine(
-                data,
-                result =>
-                {
-                    useReverse = result;
-                }
-            )
-        );
-    }
 
     if(shieldTrigger && useReverse)
     {
@@ -2139,8 +2123,10 @@ bool shieldTrigger =
             yield break;
         }
 
-        // Show the accepted reverse before field entry and trigger resolution.
-        yield return CardPlayPresentation.Play(data,turnManager.playerBattleArea);
+        var reverse = ReverseChoiceManager.I;
+        if (reverse != null)
+            yield return reverse.PlayCue(data, playIndex, playCount, turnManager.playerBattleArea.GetComponentInParent<Canvas>());
+        if (turnManager.IsBattleEnded) yield break;
 
         GameObject triggerCard =
             Instantiate(
@@ -2207,7 +2193,7 @@ bool shieldTrigger =
             if(triggerDrag != null)
             {
                 triggerDrag.enabled = true;
-                bool showcase=CardPlaySettings.Load().enabledEffect;
+                bool showcase = reverse != null;
                 triggerDrag.PlaceFromShield(turnManager.playerBattleArea,!showcase);
                 layout.Refresh();
                 if(showcase)

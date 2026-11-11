@@ -110,7 +110,8 @@ public sealed class AttackSelectionPresentation : MonoBehaviour
             {
                 var c=t.GetComponent<CardController>();if(c==null||c.data==null||!c.gameObject.activeInHierarchy)continue;
                 if(owner.CanChooseEnemyAttackTarget(c)){var bounds=CardBounds(c);float highlight=owner.IsAttackConfirmationTarget(c.gameObject)?s.attackerHighlight*confirmation:0;Add(bounds,targetColor,wave,true,highlight,weight:SelectionWeight(c.gameObject));graphic.passThrough.Add(bounds);}
-                else if(CardActionIcon.CanBlock(c))Add(CardBounds(c),Color.clear,0,true,weight:1-confirmation);
+                else if (confirmation < 1f && CardActionIcon.CanBlock(c))
+                    c.GetComponent<CardGuardBadge>()?.FocusForAttack(canvas, opacity * (1f - confirmation));
             }
             var walls=owner.LiveAttackWalls();Rect wallBounds=new Rect();bool first=true;
             bool individualWalls=!owner.IsMonarchAttacker||wallsMode||walls.Count==1;

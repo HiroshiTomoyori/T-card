@@ -5,21 +5,26 @@ using UnityEngine.UI;
 public sealed class CardGuardBadge : MonoBehaviour
 {
     const string ResourcePrefix = "TCardField/GuardBadge-";
-    static Texture2D shieldTexture, rimTexture, ambientTexture;
+    static Texture2D shieldTexture, silhouetteTexture;
     static Shader rippleShader;
     static TurnManager turn;
 
     CardController card;
     CardDrag drag;
     Visual visual;
+    Transform displayZone;
+    float appearedAt = -1f;
     int focusFrame = -2;
     float rippleStarted;
+    Canvas attackCanvas;
+    float focusWeight;
 
     public bool IsVisible => visual != null && visual.Root.gameObject.activeInHierarchy;
     public float BadgeOpacity => IsVisible ? visual.Opacity : 0f;
     public bool IsRippling => IsVisible && visual.IsRippling;
-    internal bool SuppressCardOutline => AttackMotionPresentation.IsEnemyAttackPlaying ||
-        (turn != null && turn.IncomingSwordVisible);
+    internal bool SuppressCardOutline => AttackMotionPresentation.IsPlaying || (turn != null && (turn.IncomingSwordVisible ||
+        turn.DefenseSelectionActive || (turn.AttackSelectionActive &&
+        transform.parent == turn.enemyBattleArea && !card.isTapped)));
 
     void Awake()
     {
@@ -27,11 +32,13 @@ public sealed class CardGuardBadge : MonoBehaviour
         drag = GetComponent<CardDrag>();
     }
 
-    internal RectTransform FocusForDefense()
+    internal void FocusForAttack(Canvas canvas, float weight)
     {
+        if (weight <= 0f) return;
         if (focusFrame < Time.frameCount - 1) rippleStarted = Time.unscaledTime;
         focusFrame = Time.frameCount;
-        return IsVisible ? visual.Root : null;
+        attackCanvas = canvas;
+        focusWeight = weight;
     }
 
     void LateUpdate()
@@ -50,20 +57,23 @@ public sealed class CardGuardBadge : MonoBehaviour
         visual.Root.gameObject.SetActive(true);
         var settings = CardActionGlowSettings.Load();
         PlaceBadge(visual.Root, source, settings);
-        bool focused = focusFrame == Time.frameCount;
-        visual.Apply(settings, source.color.a, focused, Time.unscaledTime - rippleStarted);
+        bool focused = focusFrame == Time.frameCount && !card.isTapped && !AttackMotionPresentation.IsPlaying;
+        visual.SortAbove(focused ? attackCanvas : null);
+        if (appearedAt < 0f && source.canvasRenderer.GetInheritedAlpha() > .01f && source.color.a > .01f)
+            appearedAt = Time.unscaledTime;
+        float fade = settings.guardBadgeFadeIn <= 0f ? 1f :
+            appearedAt < 0f ? 0f : Mathf.SmoothStep(0f, 1f, (Time.unscaledTime - appearedAt) / settings.guardBadgeFadeIn);
+        visual.Apply(settings, source.color.a * fade, focused ? focusWeight : 0f, Time.unscaledTime - rippleStarted);
     }
 
-    internal Visual CopyToAttackVisual(Image artwork, bool focusBadge)
+    internal void CopyToAttackVisual(Image artwork)
     {
-        if (!IsVisible || !CardActionIcon.IsGuard(card.data)) return null;
+        if (!IsVisible || !CardActionIcon.IsGuard(card.data)) return;
         var copy = CreateVisual(artwork);
-        if (copy == null) return null;
+        if (copy == null) return;
         var settings = CardActionGlowSettings.Load();
         PlaceBadge(copy.Root, artwork, settings);
-        copy.StartTime = focusBadge && focusFrame >= Time.frameCount - 1 ? rippleStarted : Time.unscaledTime;
-        copy.Apply(settings, 1f, focusBadge, Time.unscaledTime - copy.StartTime);
-        return copy;
+        copy.Apply(settings, BadgeOpacity, 0f, 0f);
     }
 
     bool IsDisplayZone()
@@ -73,21 +83,21 @@ public sealed class CardGuardBadge : MonoBehaviour
         var parent = transform.parent;
         if (parent == null) return false;
         if (parent == turn.playerBattleArea || parent == turn.enemyBattleArea || parent == turn.handDealer?.handArea)
+        {
+            if (parent != displayZone)
+            {
+                displayZone = parent;
+                appearedAt = -1f;
+            }
             return true;
+        }
 
         return IsVisible && drag != null && drag.IsDragging;
     }
 
     static void PlaceBadge(RectTransform target, Image source, CardActionGlowSettings settings)
     {
-        Rect area = source.rectTransform.rect;
-        if (source.preserveAspect)
-        {
-            float aspect = source.overrideSprite.rect.width / source.overrideSprite.rect.height;
-            var size = new Vector2(Mathf.Min(area.width, area.height * aspect), Mathf.Min(area.height, area.width / aspect));
-            area.position += Vector2.Scale(area.size - size, source.rectTransform.pivot);
-            area.size = size;
-        }
+        Rect area = AttackMotionPresentation.ArtworkRect(source);
         target.anchorMin = target.anchorMax = source.rectTransform.pivot;
         target.anchoredPosition = area.min + Vector2.Scale(area.size, settings.guardBadgeInset);
         target.sizeDelta = Vector2.one * (area.width * settings.guardBadgeSize);
@@ -96,9 +106,8 @@ public sealed class CardGuardBadge : MonoBehaviour
     static Visual CreateVisual(Image source)
     {
         if (shieldTexture == null) shieldTexture = Resources.Load<Texture2D>(ResourcePrefix + "Shield");
-        if (rimTexture == null) rimTexture = Resources.Load<Texture2D>(ResourcePrefix + "Rim");
-        if (ambientTexture == null) ambientTexture = Resources.Load<Texture2D>(ResourcePrefix + "Ambient");
-        if (shieldTexture == null || rimTexture == null || ambientTexture == null) return null;
+        if (silhouetteTexture == null) silhouetteTexture = Resources.Load<Texture2D>(ResourcePrefix + "Rim");
+        if (shieldTexture == null) return null;
         return new Visual(source.transform);
     }
 
@@ -107,11 +116,10 @@ public sealed class CardGuardBadge : MonoBehaviour
         internal RectTransform Root { get; }
         internal float Opacity => group.alpha;
         internal bool IsRippling => ripple != null && ripple.enabled;
-        internal float StartTime;
         readonly CanvasGroup group;
-        readonly RawImage ambient, rim, shield;
-        RawImage ripple;
-        Material rippleMaterial;
+        Canvas canvas;
+        RawImage ripple, outline;
+        Material rippleMaterial, outlineMaterial;
 
         internal Visual(Transform parent)
         {
@@ -119,23 +127,45 @@ public sealed class CardGuardBadge : MonoBehaviour
             Root.pivot = Vector2.zero;
             group = Root.gameObject.AddComponent<CanvasGroup>();
             group.interactable = group.blocksRaycasts = false;
-            ambient = AddLayer("Blue diffusion", ambientTexture);
-            rim = AddLayer("Cyan rim", rimTexture);
-            shield = AddLayer("Original shield", shieldTexture);
+            AddLayer("Photoshop shield", shieldTexture);
         }
 
-        internal void Apply(CardActionGlowSettings settings, float artworkAlpha, bool focused, float age)
+        internal void SortAbove(Canvas overlay)
         {
-            group.alpha = artworkAlpha * (focused ? 1f : settings.guardIdleOpacity);
-            float cycle = Mathf.Max(.2f, settings.guardBreathPeriod);
-            float phase = .5f - .5f * Mathf.Cos(Time.unscaledTime / cycle * Mathf.PI * 2f);
-            float breathing = Mathf.Lerp(settings.guardIdleMinimum, 1f, phase);
-            ambient.color = new Color(1f, 1f, 1f, .04f + .96f * breathing);
-            rim.color = new Color(1f, 1f, 1f, .10f + .90f * breathing);
-
-            if (focused && settings.guardRippleStrength > 0f)
+            if (overlay != null)
             {
-                if (ripple == null) CreateRipple();
+                if (canvas == null) canvas = Root.gameObject.AddComponent<Canvas>();
+                canvas.overrideSorting = true;
+                canvas.sortingLayerID = overlay.sortingLayerID;
+                canvas.sortingOrder = overlay.sortingOrder + 1;
+            }
+            else if (canvas != null) canvas.overrideSorting = false;
+        }
+
+        internal void Apply(CardActionGlowSettings settings, float artworkAlpha, float focus, float age)
+        {
+            group.alpha = artworkAlpha;
+            if (focus > 0f && silhouetteTexture != null)
+            {
+                if (outline == null) outline = CreateEffect("Shield contour glow", silhouetteTexture, out outlineMaterial);
+                if (outline != null)
+                {
+                    outline.enabled = true;
+                    float phase = .5f - .5f * Mathf.Cos(Time.unscaledTime / Mathf.Max(.2f, settings.guardBreathPeriod) * Mathf.PI * 2f);
+                    float pulse = Mathf.Lerp(settings.guardIdleMinimum, 1f, phase);
+                    outlineMaterial.SetColor("_RippleColor", settings.guardRippleColor);
+                    outlineMaterial.SetVector("_Ripple", new Vector4(0f, (.55f + .45f * pulse) * focus, 1f, 0f));
+                }
+            }
+            else if (outline != null) outline.enabled = false;
+
+            if (focus > 0f && settings.guardRippleStrength > 0f)
+            {
+                if (ripple == null)
+                {
+                    ripple = CreateEffect("Guard ripple", Texture2D.whiteTexture, out rippleMaterial);
+                    if (ripple != null) ripple.transform.SetAsFirstSibling();
+                }
                 if (ripple == null) return;
                 ripple.enabled = true;
                 var rect = ripple.rectTransform;
@@ -145,20 +175,21 @@ public sealed class CardGuardBadge : MonoBehaviour
                 float normalizedAge = Mathf.Repeat(Mathf.Max(0f, age), Mathf.Max(.2f, settings.guardRipplePeriod))
                     * 1.65f / Mathf.Max(.2f, settings.guardRipplePeriod);
                 rippleMaterial.SetColor("_RippleColor", settings.guardRippleColor);
-                rippleMaterial.SetVector("_Ripple", new Vector4(normalizedAge, settings.guardRippleStrength, 0f, 0f));
+                rippleMaterial.SetVector("_Ripple", new Vector4(normalizedAge, settings.guardRippleStrength * focus, 0f, 0f));
             }
             else if (ripple != null) ripple.enabled = false;
         }
 
-        void CreateRipple()
+        RawImage CreateEffect(string name, Texture2D texture, out Material material)
         {
+            material = null;
             if (rippleShader == null) rippleShader = Resources.Load<Shader>("TCardField/GuardBadgeRipple");
-            if (rippleShader == null) return;
-            ripple = AddLayer("Guard ripple", Texture2D.whiteTexture);
-            ripple.transform.SetSiblingIndex(shield.transform.GetSiblingIndex());
-            ripple.maskable = false;
-            rippleMaterial = new Material(rippleShader) { hideFlags = HideFlags.HideAndDontSave };
-            ripple.material = rippleMaterial;
+            if (rippleShader == null) return null;
+            var effect = AddLayer(name, texture);
+            effect.maskable = false;
+            material = new Material(rippleShader) { hideFlags = HideFlags.HideAndDontSave };
+            effect.material = material;
+            return effect;
         }
 
         RawImage AddLayer(string name, Texture2D texture)
@@ -176,6 +207,7 @@ public sealed class CardGuardBadge : MonoBehaviour
         internal void Dispose()
         {
             if (rippleMaterial != null) Destroy(rippleMaterial);
+            if (outlineMaterial != null) Destroy(outlineMaterial);
             if (Root != null) Destroy(Root.gameObject);
         }
     }
@@ -192,6 +224,8 @@ public sealed class CardGuardBadge : MonoBehaviour
     void Hide()
     {
         if (visual != null) visual.Root.gameObject.SetActive(false);
+        displayZone = null;
+        appearedAt = -1f;
     }
 
     void OnDisable() => Hide();

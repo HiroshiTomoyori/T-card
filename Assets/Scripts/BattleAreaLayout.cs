@@ -408,6 +408,15 @@ public class BattleAreaLayout : MonoBehaviour
         Slot(count,count-1,out Vector3 local,out float width);
         position=transform.TransformPoint(local);visualSize=new Vector2(width,width*1.5f)*Mathf.Max(.01f,cardSize);
     }
+    internal float CurrentSlotSpacing()
+    {
+        CollectCards();
+        int count = Mathf.Max(2, fieldCards.Count);
+        Slot(count, 0, out Vector3 first, out _);
+        Slot(count, 1, out Vector3 second, out _);
+        return second.x - first.x;
+    }
+
     void Slot(int count,int index,out Vector3 position,out float width)
     {
         var setting=GetSetting(count);width=Mathf.Max(1,setting.cardWidth);float gap=Mathf.Max(-width+1,setting.gap);

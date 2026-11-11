@@ -4188,9 +4188,8 @@ public partial class TurnManager
         ReverseChoiceManager reverse = ReverseChoiceManager.I;
         if (reverse != null && reverse.IsChoosing)
         {
-            GameObject panel = reverse.IsChoosingOrder ? reverse.orderPanel : reverse.choicePanel;
-            decision = new PendingDecision(TimedDecision.Shield, shieldTimer, panel != null ? panel.transform : playerWallArea,
-                "shield:" + reverse.ChoiceRevision, reverse.IsChoosingOrder ? "SHIELD ORDER" : "SHIELD CHOICE");
+            decision = new PendingDecision(TimedDecision.Shield, shieldTimer, reverse.TimerAnchor,
+                "shield:" + reverse.ChoiceRevision, "CARD CHECK");
             return true;
         }
         if (handDealer != null && handDealer.IsHandLimitSelecting) return false;

@@ -38,8 +38,7 @@ public sealed class AttackMotionPresentation : MonoBehaviour
     void OnDestroy(){ClearWallDestructionFocus();}
     static int active;
     public static bool IsPlaying=>active>0;
-    internal static bool IsEnemyAttackPlaying { get; private set; }
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)] static void ResetStatics(){active=0;IsEnemyAttackPlaying=false;}
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)] static void ResetStatics(){active=0;}
     public float Elapsed {get;private set;}
     public bool ImpactEmitted {get;private set;}
     public RectTransform MovingCard {get;private set;}
@@ -82,10 +81,20 @@ public sealed class AttackMotionPresentation : MonoBehaviour
         float reference=layout!=null?((Vector2)root.InverseTransformVector(zone.TransformVector(Vector3.right*layout.PresentationSpan(referenceCount)))).magnitude:LocalBox(root,zone).width;
         return Mathf.Max(1,extent*2,reference);
     }
-    public static float BattleLateralFactor(float distance,float combinedHalfWidth,float requested)
+    public static float BattleLateralFactor(float distance, float combinedHalfWidth, float requested,
+        float maxTravel = float.PositiveInfinity)
     {
-        float minimum=distance>0?Mathf.Clamp01(1-Mathf.Max(0,combinedHalfWidth-1)/distance):0;
-        return Mathf.Max(Mathf.Clamp01(requested),minimum);
+        if (distance <= 0f) return 0f;
+        float minimum = Mathf.Clamp01(1 - Mathf.Max(0, combinedHalfWidth - 1) / distance);
+        return Mathf.Min(Mathf.Max(Mathf.Clamp01(requested), minimum), Mathf.Clamp01(maxTravel / distance));
+    }
+
+    static float SlotSpacing(RectTransform root, CardController card, float fallback)
+    {
+        var layout = card.transform.parent.GetComponent<BattleAreaLayout>();
+        if (layout == null) return fallback;
+        var pitch = layout.transform.TransformVector(Vector3.right * layout.CurrentSlotSpacing());
+        return Mathf.Abs(root.InverseTransformVector(pitch).x);
     }
     sealed class Actor
     {
@@ -96,8 +105,6 @@ public sealed class AttackMotionPresentation : MonoBehaviour
         public float alpha;
         public Vector3 center;
         public Vector2 size;
-        public Image artwork;
-        public CardGuardBadge.Visual badge;
     }
     static float Smooth(float start,float end,float t)=>Mathf.SmoothStep(0,1,Mathf.InverseLerp(start,Mathf.Max(start+.0001f,end),t));
     static float Forward(AttackMotionSettings s,float t)
@@ -123,17 +130,42 @@ public sealed class AttackMotionPresentation : MonoBehaviour
         var go=new GameObject(name,typeof(RectTransform));go.layer=parent.gameObject.layer;go.transform.SetParent(parent,false);return (RectTransform)go.transform;
     }
     static void Stretch(RectTransform rt){rt.anchorMin=Vector2.zero;rt.anchorMax=Vector2.one;rt.offsetMin=rt.offsetMax=Vector2.zero;}
-    static Actor CreateActor(RectTransform root,CardController card,string name,bool enemyAttack)
+    internal static Rect ArtworkRect(Image artwork)
     {
-        var art=card.artworkImage;var corners=new Vector3[4];art.rectTransform.GetWorldCorners(corners);
-        Vector3 min=root.InverseTransformPoint(corners[0]),max=root.InverseTransformPoint(corners[2]);
-        var actor=new Actor{card=card,size=new Vector2(Mathf.Abs(max.x-min.x),Mathf.Abs(max.y-min.y)),center=(min+max)*.5f};
+        var transform = artwork.rectTransform;
+        Rect area = transform.rect;
+        Sprite sprite = artwork.overrideSprite;
+        if (!artwork.preserveAspect || sprite == null || area.width <= 0f || area.height <= 0f)
+            return area;
+
+        float aspect = sprite.rect.width / sprite.rect.height;
+        Vector2 size = new Vector2(Mathf.Min(area.width, area.height * aspect),
+            Mathf.Min(area.height, area.width / aspect));
+        return new Rect(area.min + Vector2.Scale(area.size - size, transform.pivot), size);
+    }
+
+    static Actor CreateActor(RectTransform root,CardController card,string name)
+    {
+        var art = card.artworkImage;
+        var rect = ArtworkRect(art);
+        var source = art.rectTransform;
+        Vector3 right = root.InverseTransformVector(source.TransformVector(Vector3.right));
+        Vector3 up = root.InverseTransformVector(source.TransformVector(Vector3.up));
+        var actor = new Actor
+        {
+            card = card,
+            size = new Vector2(rect.width * right.magnitude, rect.height * up.magnitude),
+            center = root.InverseTransformPoint(source.TransformPoint(rect.center))
+        };
         actor.shade=Make(root,name+" field shadow");actor.shade.gameObject.AddComponent<CanvasRenderer>();actor.shadow=actor.shade.gameObject.AddComponent<TurnDrawFieldShadowGraphic>();actor.shadow.raycastTarget=false;actor.shade.sizeDelta=actor.size+Vector2.one*88;
         actor.visual=Make(root,name);actor.visual.sizeDelta=actor.size;actor.visual.localPosition=actor.center;
-        var copy=actor.visual.gameObject.AddComponent<Image>();copy.sprite=art.sprite;copy.color=Color.white;copy.raycastTarget=false;copy.preserveAspect=true;
-        actor.artwork = copy;
-        var badge = card.GetComponent<CardGuardBadge>();
-        if (badge != null) actor.badge = badge.CopyToAttackVisual(copy, enemyAttack);
+        actor.visual.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(right.y, right.x) * Mathf.Rad2Deg);
+        var copy = actor.visual.gameObject.AddComponent<Image>();
+        copy.sprite = art.overrideSprite;
+        copy.material = art.material;
+        copy.color = art.color;
+        copy.raycastTarget = false;
+        card.GetComponent<CardGuardBadge>()?.CopyToAttackVisual(copy);
         actor.original=card.GetComponent<CanvasGroup>();if(actor.original==null)actor.original=card.gameObject.AddComponent<CanvasGroup>();actor.alpha=actor.original.alpha;actor.original.alpha=0;
         return actor;
     }
@@ -152,7 +184,6 @@ public sealed class AttackMotionPresentation : MonoBehaviour
         var s=AttackMotionSettings.Load();RectTransform root=null;var actors=new List<Actor>();Actor moving=null;
         ClearWallDestructionFocus();bool completed=false;
         active++;Elapsed=0;ImpactEmitted=false;VictimCount=victims.Count;effectVisuals.Clear();effectVictims.Clear();ContactFrameGap=float.NaN;
-        IsEnemyAttackPlaying = enemy;
         var ae=AEAttackSettings.Load();UsesWallCross=monarch&&wallZone!=null;
         var clip=ae!=null?(UsesWallCross?ae.wallCrossClip:ae.straightClip):null;
         bool useAE=ae!=null&&ae.enabledEffect&&clip!=null&&clip.IsValid;
@@ -166,9 +197,10 @@ public sealed class AttackMotionPresentation : MonoBehaviour
             var dimRect=Make(root,"Attack execution lowlight");Stretch(dimRect);FocusGraphic=dimRect.gameObject.AddComponent<AttackMotionFocusGraphic>();
             // Defender first, attacker last: the attacker's card stays above the target's glow/artwork.
             if(wallZone==null)foreach(var card in related)
-                if(card!=null&&card!=attacker&&card.artworkImage!=null&&!actors.Exists(a=>a.card==card))actors.Add(CreateActor(root,card,"Defending card visual",enemy));
+                if(card!=null&&card!=attacker&&card.artworkImage!=null&&!actors.Exists(a=>a.card==card))
+                    actors.Add(CreateActor(root, card, "Defending card visual"));
             DefendingCard=actors.Count>0?actors[0].visual:null;
-            moving=CreateActor(root,attacker,"Attacking card visual",enemy);actors.Add(moving);MovingCard=moving.visual;foreach(var actor in actors)actor.shade.SetSiblingIndex(1);
+            moving=CreateActor(root,attacker,"Attacking card visual");actors.Add(moving);MovingCard=moving.visual;foreach(var actor in actors)actor.shade.SetSiblingIndex(1);
             var fxRect=Make(root,"Attack impacts");Stretch(fxRect);
             AttackImpactGraphic fx=null;
             if(useAE)
@@ -189,7 +221,10 @@ public sealed class AttackMotionPresentation : MonoBehaviour
                 var ap=Pose(s,s.ImpactTime,direction);var bp=DefenderPose(s,s.ImpactTime,direction);
                 BattleContactOffsets((Vector2)moving.center+Vector2.up*ap.x*unit,(Vector2)defending.center+Vector2.up*bp.x*unit,
                     moving.size*ap.y,defending.size*bp.y,direction,ae.contactGap*unit,ae.attackerContactShare,out attackerCorrection,out defenderCorrection);
-                float lateral=BattleLateralFactor(Mathf.Abs(moving.center.x-defending.center.x),(moving.size.x*ap.y+defending.size.x*bp.y)*.5f,ae.battleLateralMotion);
+                float contactWidth = (moving.size.x * ap.y + defending.size.x * bp.y) * .5f;
+                float slotSpacing = Mathf.Min(SlotSpacing(root, moving.card, contactWidth), SlotSpacing(root, defending.card, contactWidth));
+                float lateral = BattleLateralFactor(Mathf.Abs(moving.center.x - defending.center.x), contactWidth,
+                    ae.battleLateralMotion, slotSpacing);
                 attackerCorrection.x*=lateral;defenderCorrection.x*=lateral;
             }
             for(Elapsed=0;Elapsed<duration;Elapsed+=Time.unscaledDeltaTime*Mathf.Max(.05f,s.speed))
@@ -214,19 +249,10 @@ public sealed class AttackMotionPresentation : MonoBehaviour
                 foreach (var actor in actors)
                 {
                     if (actor.card == null) continue;
-                    bool badgeOnly = enemy && actor.badge != null;
-                    if (actor.badge != null)
-                    {
-                        actor.badge.Apply(CardActionGlowSettings.Load(), 1f, badgeOnly, Time.unscaledTime - actor.badge.StartTime);
-                        if (badgeOnly)
-                        {
-                            Color shade = Color.Lerp(Color.white, s.lowlightColor, s.lowlightColor.a * opacity);
-                            shade.a = 1f;
-                            actor.artwork.color = shade;
-                        }
-                    }
                     float power = actor == moving ? s.attackerGlow : s.targetGlow;
-                    Put(ScreenBox(actor.visual,camera), actor==moving?s.attackerColor:targetTint, badgeOnly ? 0f : power,
+                    bool blocking = enemy && actor != moving && CardActionIcon.CanBlock(actor.card);
+                    Color glowColor = actor == moving || blocking ? s.attackerColor : targetTint;
+                    Put(ScreenBox(actor.visual,camera), glowColor, power,
                         s.cardLowlightFeather,boxes,colors,flags,ref count);
                 }
                 if(wallZone!=null)
@@ -299,11 +325,10 @@ public sealed class AttackMotionPresentation : MonoBehaviour
             foreach (var actor in actors)
             {
                 if (actor.original != null) actor.original.alpha = actor.alpha;
-                actor.badge?.Dispose();
             }
             if(completed&&preserveWallFocus&&wallZone!=null&&FocusGraphic!=null)RetainWallFocus(root,FocusGraphic);
             if(root!=null){root.gameObject.SetActive(false);Destroy(root.gameObject);}
-            effectVisuals.Clear();effectVictims.Clear();MovingCard=null;DefendingCard=null;FocusGraphic=null;active=Mathf.Max(0,active-1);IsEnemyAttackPlaying=false;
+            effectVisuals.Clear();effectVictims.Clear();MovingCard=null;DefendingCard=null;FocusGraphic=null;active=Mathf.Max(0,active-1);
         }
     }
     static Rect ScreenBox(RectTransform rt,Camera camera)

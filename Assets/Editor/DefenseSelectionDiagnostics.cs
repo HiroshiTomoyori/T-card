@@ -60,13 +60,11 @@ public static class DefenseSelectionDiagnostics
   {
    var badge=guard.GetComponent<CardGuardBadge>();
    var aura=guard.GetComponent<CardActionGlow>().Graphic;
-   var rippleShader=Shader.Find("T-card/UI/Guard Badge Ripple");
-   Check(rippleShader!=null&&!ShaderUtil.ShaderHasError(rippleShader),"Guard ripple shader did not compile");
-   Check(badge.IsRippling&&Mathf.Approximately(badge.BadgeOpacity,1f),"Eligible guard badge did not become opaque and ripple");
-   Check(aura==null||!aura.gameObject.activeSelf,"Card edge still glows during the guard prompt");
+   Check(!badge.IsRippling&&Mathf.Approximately(badge.BadgeOpacity,1f),"Defending guard badge changed opacity or emitted a ripple");
+   Check(aura==null||!aura.gameObject.activeSelf,"Ambient outline overlaps the defense highlight");
    var flags=view.Graphic.material.GetVectorArray("_Flags");
    var colors=view.Graphic.material.GetVectorArray("_Colors");
-   Check(flags[1].w==1f&&flags[2].w==1f&&colors[1].w==0f&&colors[2].w==0f,"Incoming guard target or candidate gets a whole-card glow");
+   Check(flags[1].x==1f&&flags[2].x==1f&&colors[1].w>0f&&colors[2].w>0f,"Incoming target and eligible guard need card highlights");
   }
   catch(Exception e){Finish("FAIL: "+e);yield break;}
   var fieldSwordPosition=CheckSwords(view,1)[0];
@@ -87,10 +85,9 @@ public static class DefenseSelectionDiagnostics
   {
    var motion=t.GetComponent<AttackMotionPresentation>();
    var proxyBadge=motion.DefendingCard.Find("Guard badge");
-   var ripple=proxyBadge.Find("Guard ripple").GetComponent<UnityEngine.UI.RawImage>();
-   Check(proxyBadge.GetComponent<CanvasGroup>().alpha==1f&&ripple.enabled&&!ripple.raycastTarget,"Moving defender lost the opaque shield/ripple or captures input");
-   Check(motion.FocusGraphic.material.GetVectorArray("_Colors")[0].w==0f,"Moving guard still has an execution outline");
-   Capture("guard-execution-ripple");
+   Check(proxyBadge.GetComponent<CanvasGroup>().alpha==1f&&proxyBadge.Find("Guard ripple")==null,"Moving defender emitted an icon ripple");
+   Check(motion.FocusGraphic.material.GetVectorArray("_Colors")[0].w>0f,"Moving guard lost its card highlight");
+   Capture("guard-execution-highlight");
   }
   catch(Exception e){Finish("FAIL: "+e);yield break;}
   yield return new WaitForSeconds(AttackMotionSettings.Load().Duration/AttackMotionSettings.Load().speed+.06f);
@@ -141,8 +138,17 @@ public static class DefenseSelectionDiagnostics
   try{Check(!t.DefenseSelectionActive&&!t.HasPendingDefenseConfirmation,"No-guard wall attack requested confirmation");}
   catch(Exception e){Finish("FAIL: "+e);yield break;}
   yield return new WaitForSeconds(AttackMotionSettings.Load().Duration/AttackMotionSettings.Load().speed+1.5f);
-  try{Check(LiveWalls(d)==before-2,"Automatic monarch damage did not break exactly two walls");}
+  float checkDeadline=Time.realtimeSinceStartup+5f;
+  while(ReverseChoiceManager.I!=null&&!ReverseChoiceManager.I.IsChoosing&&Time.realtimeSinceStartup<checkDeadline)yield return null;
+  try
+  {
+   Check(LiveWalls(d)==before-2,"Automatic monarch damage did not break exactly two walls");
+   var check=ReverseChoiceManager.I;
+   Check(check!=null&&check.IsChoosing&&!check.TimerAnchor.Find("Play Selected").gameObject.activeSelf,"Regular Walls did not open a hand-only Card Check");
+   check.ResolveInactivity();
+  }
   catch(Exception e){Finish("FAIL: "+e);yield break;}
+  while(d.IsResolvingWallAttack&&Time.realtimeSinceStartup<checkDeadline)yield return null;
   foreach(Transform w in d.wallArea){var cg=w.GetComponent<CanvasGroup>();if(cg!=null){cg.alpha=0;cg.blocksRaycasts=false;}}
   normal.isTapped=false;awaitingDirectResult=true;t.StartCoroutine(Call(t,"EnemyBattlePhase"));
  }

@@ -27,13 +27,6 @@
     for(int n=0;n<32;n++)
     {
      if(n>=_Count)break;
-     if(_Flags[n].w>.5)
-     {
-      // Keep the badge and its ripple clear of the lowlight without lifting the card face.
-      float edge=length((p-_Entries[n].xy)/max(1,_Entries[n].zw*.5));
-      hole=max(hole,(1-smoothstep(.72,1.08,edge))*_Flags[n].x);
-      continue;
-     }
      float d=distanceToBox(p,_Entries[n],lerp(8*_ViewSize.z,_WallTune.x,_Flags[n].z));
      float inside=1-smoothstep(-1,1,d);hole=max(hole,inside*_Flags[n].x);highlight=max(highlight,inside*_Flags[n].y);
      float blur=max(1,lerp(_Tune.x,_WallTune.y,_Flags[n].z)),strokeWidth=max(.3,_Tune.y);

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.IO;
 using System.Linq;
@@ -30,14 +30,14 @@ public static class CardActionGlowDiagnostics
   typeof(TurnManager).GetField("actionGlowTurn",Flags).SetValue(turn,1);
   var layout=turn.playerBattleArea.GetComponent<BattleAreaLayout>();yield return null;layout.Refresh();foreach(var c in new[]{normal,sick,blocker,tapped})layout.PlaceImmediately(c);
   Set(turn,"isPlayerTurnActive",true);Set(turn,"isPlayerMainPhase",false);Set(turn,"isBattlePhase",false);Set(turn,"isEndingTurn",false);Set(turn,"battleIconsEnded",false);Set(turn,"enemyBattleIconsActive",false);
-  settings.enabledEffect=true;settings.brightness=1;settings.minimumBrightness=.25f;settings.pulsePeriod=4.4f;
+  settings.guardBadgeFadeIn=.16f;settings.enabledEffect=true;settings.brightness=1;settings.minimumBrightness=.25f;settings.pulsePeriod=4.4f;
   yield return new WaitForSecondsRealtime(.35f);string error=null;
   try{
    Check(!UnityEditor.ShaderUtil.ShaderHasError(Shader.Find("T-card/UI/Card Action Glow")),"Shader compilation failed");
    Check(normal.GetComponent<CardActionGlow>().Opacity>.99f,"Attack-ready card not glowing during main phase");
    Check(enemyBlocker.GetComponent<CardActionGlow>().Opacity>.99f,"Enemy eight not glowing for defense during player main phase");
    var enemyBadge=enemyBlocker.GetComponent<CardGuardBadge>();
-   Check(enemyBadge!=null&&enemyBadge.IsVisible&&Mathf.Approximately(enemyBadge.BadgeOpacity,settings.guardIdleOpacity)&&!enemyBadge.IsRippling,"Ordinary guard badge is not translucent and quiet");
+   Check(enemyBadge!=null&&enemyBadge.IsVisible&&Mathf.Approximately(enemyBadge.BadgeOpacity,1f)&&!enemyBadge.IsRippling,"Ordinary guard badge is not opaque and quiet");
    Check(enemyBlocker.GetComponent<CardActionGlow>().Graphic.gameObject.activeInHierarchy,"Enemy guard lacks the ordinary breathing edge");
    Check(normal.GetComponent<CardGuardBadge>()==null,"An ordinary card was given a guard badge");
    Check(blocker.GetComponent<CardActionGlow>()==null||blocker.GetComponent<CardActionGlow>().Opacity<.001f,"Eight incorrectly glows for attack");
@@ -53,8 +53,10 @@ public static class CardActionGlowDiagnostics
   try{Check(normal.GetComponent<CardActionGlow>().Opacity<.001f,"Attack glow remains on opponent turn");Check(blocker.GetComponent<CardActionGlow>().Opacity>.99f,"Actual eight defender not glowing during enemy main phase");Check(enemyNormal.GetComponent<CardActionGlow>().Opacity>.99f,"Enemy attacker not glowing during enemy main phase");Check(enemyBlocker.GetComponent<CardActionGlow>().Opacity<.001f,"Enemy eight incorrectly glows for attack");}catch(Exception e){error=e.ToString();}if(error!=null){Finish("FAIL: "+error);yield break;}
   yield return new WaitForEndOfFrame();var defense=Capture("defense");UnityEngine.Object.Destroy(defense);blocker.isTapped=true;yield return new WaitForSecondsRealtime(.4f);
   try{Check(blocker.GetComponent<CardActionGlow>().Opacity<.001f&&!blocker.GetComponent<CardActionGlow>().Graphic.gameObject.activeSelf,"Used defender still glowing");}catch(Exception e){error=e.ToString();}
-  blocker.isTapped=false;yield return new WaitForSecondsRealtime(.3f);blocker.transform.SetParent(dealer.handArea,false);yield return null;yield return null;
-  try{var badge=blocker.GetComponent<CardGuardBadge>();Check(badge.IsVisible&&Mathf.Approximately(badge.BadgeOpacity,settings.guardIdleOpacity)&&!badge.IsRippling&&blocker.GetComponent<CardActionGlow>().Opacity==0f,"Hand guard badge missing or still action-highlighted");}catch(Exception e){error=e.ToString();}
+  blocker.isTapped=false;yield return new WaitForSecondsRealtime(.3f);blocker.transform.SetParent(dealer.handArea,false);yield return new WaitForEndOfFrame();
+  try{var entering=blocker.GetComponent<CardGuardBadge>();Check(entering.IsVisible&&entering.BadgeOpacity<1f,"Hand badge skipped its fade");}catch(Exception e){Finish("FAIL: "+e);yield break;}
+  yield return new WaitForSecondsRealtime(settings.guardBadgeFadeIn+.05f);
+  try{var badge=blocker.GetComponent<CardGuardBadge>();Check(badge.IsVisible&&Mathf.Approximately(badge.BadgeOpacity,1f)&&!badge.IsRippling&&blocker.GetComponent<CardActionGlow>().Opacity==0f,"Hand guard badge missing or still action-highlighted");}catch(Exception e){error=e.ToString();}
   var artwork=blocker.artworkImage.sprite;blocker.artworkImage.sprite=dealer.cardBackSprite;yield return null;yield return null;
   try{Check(!blocker.GetComponent<CardGuardBadge>().IsVisible,"Face-down card shows a guard badge");}catch(Exception e){error=e.ToString();}
   blocker.artworkImage.sprite=artwork;

@@ -21,14 +21,14 @@ public sealed class CardActionGlowSettings : ScriptableObject
     [Header("Guard badge / fractions of the card artwork")]
     [Range(.1f, .5f)] public float guardBadgeSize = .25f;
     public Vector2 guardBadgeInset = new Vector2(.017f, .008f);
+    [Min(0)] public float guardBadgeFadeIn = .16f;
     [Min(.2f)] public float guardBreathPeriod = 6f;
     [Range(0, 1)] public float guardIdleMinimum = .22f;
-    [Range(0, 1)] public float guardIdleOpacity = .72f;
-    [Header("Guard ripple during an incoming attack")]
+    [Header("Enemy guard ripple during player attack")]
     public Color guardRippleColor = new Color32(49, 215, 198, 255);
     [Min(.2f)] public float guardRipplePeriod = 1.65f;
-    [Range(.5f, 1.5f)] public float guardRippleSize = 1f;
-    [Range(0, 2)] public float guardRippleStrength = 1f;
+    [Range(.5f, 2f)] public float guardRippleSize = 1.4f;
+    [Range(0, 3)] public float guardRippleStrength = 1.8f;
     static CardActionGlowSettings cached;
     public static CardActionGlowSettings Load()
     {

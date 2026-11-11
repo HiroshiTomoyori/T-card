@@ -101,43 +101,101 @@ public static class CardPlayDiagnostics
         }catch(Exception e){failure=e.ToString();}
         EditorJsonUtility.FromJsonOverwrite(saved,settings);
         if(failure!=null){Finish("FAIL: "+failure);yield break;}
-        // Resolve a real accepted reverse choice; do not bypass its gameplay path.
-        var reverse=UnityEngine.Object.Instantiate(data);reverse.effectTypes=new[]{EffectType.ShieldTrigger};
-        int reverseField=Count(turn.playerBattleArea),reverseHand=Count(dealer.handArea);
-        var resources=UnityEngine.Object.FindFirstObjectByType<ResourceManager>();int resourceBefore=resources!=null?resources.currentResource:0;
-        bool reverseDone=false,reverseSeen=false;float reverseStart=Time.realtimeSinceStartup;
-        dealer.StartCoroutine(ReverseProbe(dealer,reverse,()=>reverseDone=true));
-        while(ReverseChoiceManager.I!=null&&!ReverseChoiceManager.I.IsChoosing&&Time.realtimeSinceStartup-reverseStart<2)yield return null;
-        if(ReverseChoiceManager.I==null||!ReverseChoiceManager.I.IsChoosing){Finish("FAIL: reverse choice did not open");yield break;}
-        ReverseChoiceManager.I.useButton.onClick.Invoke();
-        if(turn.IsPlayerDecisionOpen)typeof(TurnManager).GetMethod("AcceptPlayerDecision",Flags).Invoke(turn,null);
-        while(!reverseDone&&Time.realtimeSinceStartup-reverseStart<8)
+        // Exercise the real two-wall break and select the second card first.
+        var walls = dealer.wallArea.GetComponentsInChildren<CardController>()
+            .Where(c => c.transform.parent == dealer.wallArea).Take(3).ToArray();
+        if(walls.Length != 3){Finish("FAIL: expected three available Wall cards");yield break;}
+        var first = UnityEngine.Object.Instantiate(data);
+        var second = UnityEngine.Object.Instantiate(data);
+        first.effectTypes = second.effectTypes = new[]{EffectType.ShieldTrigger};
+        walls[0].SetData(first);
+        walls[1].SetData(second);
+        walls[0].artworkImage.sprite = walls[1].artworkImage.sprite = dealer.cardBackSprite;
+        int reverseField = Count(turn.playerBattleArea), reverseHand = Count(dealer.handArea);
+        var resources = UnityEngine.Object.FindFirstObjectByType<ResourceManager>();
+        int resourceBefore = resources != null ? resources.currentResource : 0;
+        var reverse = ReverseChoiceManager.I;
+        bool completeCheck = false;
+        dealer.StartCoroutine(WallProbe(dealer, new[]{walls[0].gameObject,walls[1].gameObject},()=>completeCheck=true));
+        float reverseDeadline = Time.realtimeSinceStartup + 15;
+        while(reverse != null && !reverse.IsChoosing && Time.realtimeSinceStartup < reverseDeadline) yield return null;
+        try
         {
-            var fx=UnityEngine.Object.FindFirstObjectByType<CardPlayPresentation>();
-            if(fx!=null)
+            Require(reverse != null && reverse.IsChoosing && dealer.IsResolvingWallAttack,"Card Check did not open");
+            var panel = reverse.TimerAnchor;
+            var firstButton = panel.Find("Revealed Wall 1").GetComponent<Button>();
+            var secondButton = panel.Find("Revealed Wall 2").GetComponent<Button>();
+            var firstGlow = firstButton.transform.Find("Flip/AE Platinum Orbit").GetComponent<RawImage>();
+            Require(firstGlow.enabled && firstGlow.texture != null,"AE glow missing on a Reverse card");
+            var playButton = panel.Find("Play Selected").GetComponent<Button>();
+            Require(!playButton.interactable,"Play enabled with an empty selection");
+            secondButton.onClick.Invoke();
+            firstButton.onClick.Invoke();
+            secondButton.onClick.Invoke();
+            Require(firstButton.transform.Find("Flip/Reverse Order Stamp").GetComponent<RawImage>().texture.name=="Order1","Deselect did not renumber");
+            firstButton.onClick.Invoke();
+            secondButton.onClick.Invoke();
+            firstButton.onClick.Invoke();
+            Require(Count(turn.playerBattleArea)==reverseField,"A Reverse entered the field before commitment");
+        
+        }
+        catch(Exception e){Finish("FAIL: "+e);yield break;}
+        yield return new WaitForEndOfFrame();
+        var checkImage=ScreenCapture.CaptureScreenshotAsTexture();
+        if(checkImage!=null){File.WriteAllBytes(Path.Combine(Folder,"reverse-check.png"),checkImage.EncodeToPNG());UnityEngine.Object.Destroy(checkImage);}
+        reverse.TimerAnchor.Find("Play Selected").GetComponent<Button>().onClick.Invoke();
+        bool reverseSeen = false, correctFirst = false, sawSecondCue = false;
+        while(!completeCheck && Time.realtimeSinceStartup < reverseDeadline)
+        {
+            if(reverse.IsPlayingCue)
             {
-                reverseSeen=true;
-                try{Require(!fx.IsEnemy,"Player reverse uses opponent palette");Require(Count(turn.playerBattleArea)==reverseField,"Reverse entered field before reveal completed");}
-                catch(Exception e){failure=e.ToString();break;}
+                reverseSeen = true;
+                int fieldCount = Count(turn.playerBattleArea);
+                if(fieldCount == reverseField+1)
+                {
+                    sawSecondCue = true;
+                    correctFirst = turn.playerBattleArea.GetComponentsInChildren<CardController>().Any(c=>c.data==second);
+                }
             }
             yield return null;
         }
-        yield return new WaitForSeconds(.1f);
         try
         {
-            Require(reverseDone&&reverseSeen,"Accepted reverse did not use showcase");
-            Require(Count(turn.playerBattleArea)==reverseField+1,"Reverse did not add exactly one card");
-            Require(Count(dealer.handArea)==reverseHand,"Used reverse unexpectedly changed hand");
-            Require(resources==null||resources.currentResource==resourceBefore,"Reverse spent resources");
-            var placed=turn.playerBattleArea.GetComponentsInChildren<CardController>().First(c=>c.data==reverse);
-            Require(!placed.hasSummonSickness,"Reverse gained summon sickness");
-            Require(placed.GetComponent<CardDrag>()==null||!placed.GetComponent<CardDrag>().IsDropSnapPlaying,"Old snap replayed after reverse showcase");
-            Require(!CardPlayPresentation.IsPlaying,"Reverse overlay leaked");
-        }catch(Exception e){failure=e.ToString();}
-        if(failure!=null){Finish("FAIL: "+failure);yield break;}
-        yield return new WaitForEndOfFrame();var final=ScreenCapture.CaptureScreenshotAsTexture();File.WriteAllBytes(Path.Combine(Folder,"field.png"),final.EncodeToPNG());UnityEngine.Object.Destroy(final);
-        Finish("PASS: Real committed player-card routine: back-to-front reveal, circular ripple cue, hidden source, no field entry until presentation finishes, exactly one card leaves hand and enters field, summon sickness/input preserved, default duration "+duration.ToString("F2")+"s, overlay cleanup. Opponent-specific cyan color, upward offset and 1.6x speed verified independently; settings restored. Accepted reverse choice used the same showcase before exactly one field entry, with no resource cost, hand change, summon sickness or duplicate snap. No scene saved.");
+            Require(completeCheck && reverseSeen && sawSecondCue && correctFirst,"Reverse cards did not play in the selected order");
+            Require(Count(turn.playerBattleArea)==reverseField+2,"Two Reverse cards did not enter the field");
+            Require(Count(dealer.handArea)==reverseHand,"Played Reverse cards unexpectedly changed hand");
+            Require(resources==null || resources.currentResource==resourceBefore,"Reverse spent resources");
+            foreach(var placed in turn.playerBattleArea.GetComponentsInChildren<CardController>().Where(c=>c.data==first||c.data==second))
+                Require(!placed.hasSummonSickness,"Reverse gained summon sickness");
+            Require(!reverse.IsPlayingCue && !PresentationSequenceLock.IsLocked,"Reverse presentation leaked");
+        }
+        catch(Exception e){Finish("FAIL: "+e);yield break;}
+
+        var regular = UnityEngine.Object.Instantiate(data);
+        regular.effectTypes = Array.Empty<EffectType>();
+        walls[2].SetData(regular);
+        walls[2].artworkImage.sprite = dealer.cardBackSprite;
+        completeCheck = false;
+        dealer.StartCoroutine(WallProbe(dealer,new[]{walls[2].gameObject},()=>completeCheck=true));
+        reverseDeadline = Time.realtimeSinceStartup+12;
+        while(!reverse.IsChoosing && Time.realtimeSinceStartup<reverseDeadline) yield return null;
+        try
+        {
+            Require(reverse.IsChoosing,"Regular Wall did not open Card Check");
+            Require(!reverse.TimerAnchor.Find("Play Selected").gameObject.activeSelf,"Regular Wall exposed a Play action");
+            Require(!reverse.TimerAnchor.Find("Revealed Wall 1/Flip/AE Platinum Orbit").GetComponent<RawImage>().enabled,"Regular Wall acquired a Reverse glow");
+            reverse.ResolveInactivity();
+        }
+        catch(Exception e){Finish("FAIL: "+e);yield break;}
+        while(!completeCheck && Time.realtimeSinceStartup<reverseDeadline) yield return null;
+        try { Require(completeCheck && Count(dealer.handArea)==reverseHand+1,"Regular Wall did not reach the hand after timeout"); }
+        catch(Exception e){Finish("FAIL: "+e);yield break;}
+        Finish("PASS: player and enemy card-play presentations, actual two-Wall Card Check, AE glow and order stamp renumbering, committed reverse play order and cue before field entry, no resource spend, regular Wall to hand on timeout. No scene saved.");
     }
-    static IEnumerator ReverseProbe(HandDealer dealer,CardData data,Action done){yield return (IEnumerator)typeof(HandDealer).GetMethod("ResolveBrokenPlayerWall",Flags).Invoke(dealer,new object[]{data});done();}
+    static IEnumerator WallProbe(HandDealer dealer, GameObject[] walls, Action done)
+    {
+        yield return dealer.DamagePlayerWallsAndWait(walls);
+        done();
+    }
     static IEnumerator EnemyProbe(CardData data,Transform area,Action done){yield return CardPlayPresentation.Play(data,area,isEnemy:true);done();}
 }
