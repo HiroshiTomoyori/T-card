@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using DG.Tweening;
@@ -47,6 +47,7 @@ public class WallAreaLayout : MonoBehaviour
     struct Placement { public CCP.Card card; public int slot; public bool king; public bool opening; }
     public bool IsAnimating => placementRoutine != null;
     public Vector2 CardSize => new Vector2(Mathf.Max(1f, cardSize.x), Mathf.Max(1f, cardSize.y));
+    public Vector3 PresentationBottomCenter => transform.TransformPoint(layoutCenter - Vector2.up * CardSize.y * .5f);
     public float PresentationSpan(int count)
     {
         count=Mathf.Clamp(count,1,Capacity);

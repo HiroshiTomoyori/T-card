@@ -179,6 +179,7 @@ public bool CanDragPlayerHand
         AEAttackSettings.Load(); // Cache approved attack frames before combat.
         if (playerTurnLogo != null) playerTurnLogo.SetActive(false);
         if (enemyTurnLogo != null) enemyTurnLogo.SetActive(false);
+        ConfirmationWindow.StyleEndTurnButton(endTurnButton);
         // シーン上でボタンが有効になっていても、マッチ開始前は必ず隠す。
         SetEndTurnButton(false);
 
@@ -1182,6 +1183,7 @@ CardData SelectEnemyResourceChargeCard()
             : 0;
 
         enemyAIBrain.KingRecoveriesAvailable = handDealer.EnemyKingRecoveryRemaining;
+        enemyAIBrain.RaisesAvailable = handDealer.EnemyRaisesRemaining;
         CardData aiSelectedCard =
             enemyAIBrain.SelectResourceCard(
                 handDealer.enemyHandCards,
@@ -1377,6 +1379,7 @@ IEnumerator EnemyMainPhase()
 
     while(summonCount < maxSummons)
     {
+        if (enemyAIBrain != null) enemyAIBrain.RaisesAvailable = handDealer.EnemyRaisesRemaining;
         if(handDealer.enemyHandCards == null ||
            handDealer.enemyHandCards.Count == 0)
         {
@@ -1473,7 +1476,8 @@ IEnumerator EnemyMainPhase()
         // =========================
 
         CardController kingBase = !debugForceEnemyQ && enemyAIBrain != null ? enemyAIBrain.PlannedKingBase : null;
-        if(kingBase != null && kingBase.transform.parent != enemyBattleArea) kingBase = null;
+        if(kingBase != null && (kingBase.transform.parent != enemyBattleArea || handDealer.EnemyRaisesRemaining == 0)) kingBase = null;
+        if (!BattleAreaLayout.IsSpell(selectedCard) && !BattleAreaLayout.CanAccept(enemyBattleArea, kingBase)) yield break;
         int summonCost = selectedCard.cost;
         if(kingBase != null)
         {
@@ -1508,6 +1512,7 @@ IEnumerator EnemyMainPhase()
         // 敵手札から削除
         // =========================
 
+        if (kingBase != null) handDealer.SpendRaise(true);
         handDealer.enemyHandCards.Remove(selectedCard);
         handDealer.enemyHandCount=handDealer.enemyHandCards.Count;
         handDealer.RefreshEnemyHandVisual();
@@ -1533,7 +1538,11 @@ IEnumerator EnemyMainPhase()
         {
             controller.SetData(selectedCard);
             if(BattleAreaLayout.IsSpell(selectedCard)) ActCardPresentation.HideOnField(controller);
-            if(kingBase != null) StackEnemyKingBase(controller, kingBase);
+            if (kingBase != null)
+            {
+                controller.transform.SetSiblingIndex(kingBase.transform.GetSiblingIndex());
+                StackEnemyKingBase(controller, kingBase);
+            }
 
             bool noSummonSickness =
                 controller.data.effectTypes != null &&
@@ -1601,7 +1610,7 @@ IEnumerator EnemyMainPhase()
         if(enemyBattleLayout != null)
         {
             enemyBattleLayout.Refresh();
-            if(controller!=null&&CardPlaySettings.Load().enabledEffect)enemyBattleLayout.PlaceImmediately(controller);
+            if(controller!=null&&(kingBase!=null||CardPlaySettings.Load().enabledEffect))enemyBattleLayout.PlaceImmediately(controller);
         }
 
         while(PresentationSequenceLock.IsLocked || IsSelectingDestroyTarget() || (CardEffectManager.I != null && (CardEffectManager.I.IsResolvingNine || CardEffectManager.I.IsResolvingSummon))) yield return null;
@@ -2810,6 +2819,7 @@ void ShowBlockableCards()
         CardDrag graveDrag = cardObj.GetComponent<CardDrag>();
         if(graveDrag != null) graveDrag.enabled = false;
 
+        bool arrived = cardObj.transform.parent != graveyard;
         cardObj.transform.SetParent(graveyard, false);
         cardObj.transform.SetAsLastSibling();
 
@@ -2869,7 +2879,89 @@ void ShowBlockableCards()
             icon.HideAll();
 
         SyncGraveyardCardSizes(graveyard);
+        if (arrived && rt != null) PlayDiscardArrival(graveyard, rt);
     }
+
+    const int DiscardArrivalColumns = 7;
+    const int DiscardArrivalFrames = 49;
+    const float DiscardArrivalFps = 60f;
+    const float DiscardArrivalTileWidth = 192f;
+    const float DiscardArrivalTileHeight = 234f;
+    const float DiscardArrivalPreviewScale = .76f / 164f;
+
+    sealed class DiscardArrival
+    {
+        public RawImage Image;
+        public float StartedAt;
+    }
+
+    readonly Dictionary<Transform, DiscardArrival> discardArrivals = new Dictionary<Transform, DiscardArrival>();
+    Texture2D discardArrivalAtlas;
+
+    void PlayDiscardArrival(Transform pile, RectTransform card)
+    {
+        if (!isActiveAndEnabled || !card.gameObject.activeInHierarchy) return;
+        if (discardArrivalAtlas == null)
+            discardArrivalAtlas = Resources.Load<Texture2D>("TCardField/DiscardArrival");
+        if (discardArrivalAtlas == null) return;
+
+        bool create = !discardArrivals.TryGetValue(pile, out DiscardArrival arrival) || arrival.Image == null;
+        if (create)
+        {
+            var visual = new GameObject("Discard arrival", typeof(RectTransform), typeof(RawImage), typeof(LayoutElement));
+            visual.layer = pile.gameObject.layer;
+            visual.GetComponent<LayoutElement>().ignoreLayout = true;
+            arrival = new DiscardArrival { Image = visual.GetComponent<RawImage>() };
+            arrival.Image.texture = discardArrivalAtlas;
+            arrival.Image.raycastTarget = false;
+            arrival.Image.maskable = false;
+            visual.transform.SetParent(pile, false);
+            discardArrivals[pile] = arrival;
+        }
+
+        var effect = arrival.Image.rectTransform;
+        effect.SetParent(card, false);
+        effect.anchorMin = effect.anchorMax = new Vector2(.5f, .5f);
+        effect.pivot = new Vector2(.5f, 1f - 608f / 780f);
+        effect.sizeDelta = new Vector2(640f, 780f) * (card.rect.width * DiscardArrivalPreviewScale);
+        effect.position = card.TransformPoint(card.rect.center);
+        effect.SetAsLastSibling();
+        arrival.StartedAt = Time.unscaledTime;
+        SampleDiscardArrival(arrival.Image, 0);
+        if (create) StartCoroutine(AnimateDiscardArrival(pile, arrival));
+    }
+
+    IEnumerator AnimateDiscardArrival(Transform pile, DiscardArrival arrival)
+    {
+        while (pile != null && pile.gameObject.activeInHierarchy && arrival.Image != null)
+        {
+            int frame = (int)((Time.unscaledTime - arrival.StartedAt) * DiscardArrivalFps);
+            if (frame >= DiscardArrivalFrames) break;
+            SampleDiscardArrival(arrival.Image, frame);
+            yield return null;
+        }
+        discardArrivals.Remove(pile);
+        if (arrival.Image != null) Destroy(arrival.Image.gameObject);
+    }
+
+    void ClearDiscardArrivals()
+    {
+        foreach (var arrival in discardArrivals.Values)
+            if (arrival.Image != null) Destroy(arrival.Image.gameObject);
+        discardArrivals.Clear();
+    }
+
+    static void SampleDiscardArrival(RawImage image, int frame)
+    {
+        float insetX = .5f / DiscardArrivalTileWidth;
+        float insetY = .5f / DiscardArrivalTileHeight;
+        image.uvRect = new Rect(
+            (frame % DiscardArrivalColumns + insetX) / DiscardArrivalColumns,
+            (DiscardArrivalColumns - 1 - frame / DiscardArrivalColumns + insetY) / DiscardArrivalColumns,
+            (1f - 2f * insetX) / DiscardArrivalColumns,
+            (1f - 2f * insetY) / DiscardArrivalColumns);
+    }
+
 
     void FitGraveyardCard(RectTransform cardRect, Transform graveyard)
     {
@@ -3324,7 +3416,8 @@ public bool TrySelectDestroyTarget(
     }
 
     if (sourceIsPlayer && RequestPlayerDecision("destroy-target:" + target.GetInstanceID(),
-        $"Destroy {GetCardName(target.data).Replace('_', ' ')}?", () => TrySelectDestroyTarget(target))) return true;
+        $"Destroy {GetCardName(target.data).Replace('_', ' ')}?", () => TrySelectDestroyTarget(target),
+        focusCard: target)) return true;
 
     Debug.Log(
         "選択破壊：" +
@@ -3575,6 +3668,7 @@ public bool IsSelectingDestroyTarget()
         if (resultPanel != null) resultPanel.SetActive(false);
         // Cancel the whole turn chain, including the parent enemy-turn coroutine.
         StopAllCoroutines();
+        ClearDiscardArrivals();
         battleIconsEnded = true;
         actionGlowTurn = 0;
         enemyBattleIconsActive = false;
@@ -4717,6 +4811,13 @@ public partial class TurnManager
     RectTransform playerDecisionBody;
     RectTransform playerDecisionBoard;
     ConfirmationWindow playerDecisionWindow;
+    AttackSelectionGraphic playerDecisionFocus;
+    CardController playerDecisionCard, playerDecisionSecondCard;
+    Color playerDecisionGlowColor;
+    float playerDecisionGlowStrength;
+    readonly Vector4[] playerDecisionBoxes = new Vector4[32], playerDecisionColors = new Vector4[32],
+        playerDecisionFlags = new Vector4[32];
+    readonly Vector3[] playerDecisionCorners = new Vector3[4];
     System.Action pendingPlayerDecision;
     System.Action pendingPlayerCancellation;
     string pendingPlayerDecisionKey;
@@ -4726,7 +4827,9 @@ public partial class TurnManager
     public bool IsPlayerDecisionOpen => pendingPlayerDecision != null;
 
     // Returns true when the caller must defer. Only the exact approved action may pass.
-    public bool RequestPlayerDecision(string key, string message, System.Action accept, System.Action cancel = null)
+    public bool RequestPlayerDecision(string key, string message, System.Action accept, System.Action cancel = null,
+        System.Action opened = null, CardController focusCard = null, CardController secondFocusCard = null,
+        Color? focusColor = null, float focusStrength = 1f)
     {
         if (IsBattleEnded || IsChoosingEnemyHand || (handDealer != null && handDealer.IsHandLimitDecisionReady)) return true;
         if (TitleManager.SkipActionConfirmations) return false;
@@ -4737,11 +4840,17 @@ public partial class TurnManager
         pendingPlayerDecisionKey = key;
         pendingPlayerDecision = accept;
         pendingPlayerCancellation = cancel;
+        playerDecisionCard = focusCard;
+        playerDecisionSecondCard = secondFocusCard;
+        playerDecisionGlowColor = focusColor ?? AttackSelectionSettings.Load().normalTargetColor;
+        playerDecisionGlowStrength = focusStrength;
         playerDecisionRevision++;
+        playerDecisionWindow.Message.font = ConfirmationWindow.WindowFont;
         playerDecisionWindow.Message.text = message;
         playerDecisionOverlay.gameObject.SetActive(true);
         PositionPlayerDecisionPanel();
         decisionCountdown.Reset();
+        opened?.Invoke();
         return true;
     }
 
@@ -4757,7 +4866,7 @@ public partial class TurnManager
         if (!IsPlayerDecisionOpen || IsBattleEnded) return;
         System.Action action = pendingPlayerDecision;
         string key = pendingPlayerDecisionKey;
-        DismissPlayerDecision();
+        DismissPlayerDecision(cancel: false);
         string previous = approvedPlayerDecisionKey;
         approvedPlayerDecisionKey = key;
         try { action?.Invoke(); }
@@ -4767,17 +4876,18 @@ public partial class TurnManager
     void RejectPlayerDecision()
     {
         if (!IsPlayerDecisionOpen) return;
-        System.Action cancel = pendingPlayerCancellation;
         DismissPlayerDecision();
-        cancel?.Invoke();
     }
 
-    void DismissPlayerDecision()
+    void DismissPlayerDecision(bool cancel = true)
     {
+        System.Action cancellation = pendingPlayerCancellation;
         pendingPlayerDecision = pendingPlayerCancellation = null;
         pendingPlayerDecisionKey = null;
+        playerDecisionCard = playerDecisionSecondCard = null;
         if (playerDecisionOverlay != null) playerDecisionOverlay.gameObject.SetActive(false);
         decisionCountdown.Reset();
+        if (cancel) cancellation?.Invoke();
     }
 
     void EnsurePlayerDecisionUi()
@@ -4804,6 +4914,14 @@ public partial class TurnManager
         shade.color = ConfirmationTheme.Load().StrengthenLowlight(new Color(0f, 0f, 0f, 0.18f)); shade.raycastTarget = true;
         CanvasGroup group = overlay.GetComponent<CanvasGroup>();
         group.ignoreParentGroups = true; group.interactable = group.blocksRaycasts = true;
+        var focus = new GameObject("Decision lowlight and card glows", typeof(RectTransform), typeof(AttackSelectionGraphic));
+        focus.layer = overlay.layer;
+        playerDecisionFocus = focus.GetComponent<AttackSelectionGraphic>();
+        var focusRect = playerDecisionFocus.rectTransform;
+        focusRect.SetParent(playerDecisionOverlay, false);
+        focusRect.anchorMin = Vector2.zero;
+        focusRect.anchorMax = Vector2.one;
+        focusRect.offsetMin = focusRect.offsetMax = Vector2.zero;
         playerDecisionWindow = new ConfirmationWindow(playerDecisionOverlay, "Decision Content", "Confirm Action",
             "Cancel Action", "Back", RejectPlayerDecision, "Confirm Action", "Confirm", AcceptPlayerDecision);
         playerDecisionBody = playerDecisionWindow.Rect;
@@ -4813,8 +4931,8 @@ public partial class TurnManager
     void PositionPlayerDecisionPanel()
     {
         if (playerDecisionBody == null || !IsPlayerDecisionOpen) return;
-        playerDecisionOverlay.GetComponent<Image>().color = ConfirmationTheme.Load().StrengthenLowlight(new Color(0f, 0f, 0f, .18f));
         var canvas = playerDecisionOverlay.GetComponentInParent<Canvas>().rootCanvas;
+        RefreshPlayerDecisionFocus(canvas);
         float unit = Screen.width / 720f * Mathf.Max(.5f, playerDecisionPanelScale) / 2f;
         var theme = ConfirmationTheme.Load();
         Vector2 size = Vector2.Min(theme.WindowSize * unit, Screen.safeArea.size);
@@ -4824,6 +4942,43 @@ public partial class TurnManager
             theme.ActionOffset(pendingPlayerDecisionKey));
         playerDecisionWindow.Layout();
         playerDecisionOverlay.SetAsLastSibling();
+    }
+
+    void RefreshPlayerDecisionFocus(Canvas canvas)
+    {
+        var settings = AttackSelectionSettings.Load();
+        float phase = Time.unscaledTime * 2f * Mathf.PI / Mathf.Max(.2f, settings.pulsePeriod);
+        float pulse = Mathf.Lerp(settings.minimumPulse, 1f, .5f - .5f * Mathf.Cos(phase));
+        Camera camera = canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
+        int count = 0;
+        AddFocus(playerDecisionCard, playerDecisionGlowStrength);
+        AddFocus(playerDecisionSecondCard, 1f);
+        var shade = new Color(0f, 0f, 0f, .18f);
+        playerDecisionFocus.enabled = count > 0;
+        playerDecisionOverlay.GetComponent<Image>().color = count > 0 ? Color.clear : ConfirmationTheme.Load().StrengthenLowlight(shade);
+        if (count > 0)
+            playerDecisionFocus.Configure(this, settings, playerDecisionBoxes, playerDecisionColors,
+                playerDecisionFlags, count, 1f, captureInput: false, lowlight: shade);
+
+        void AddFocus(CardController card, float strength)
+        {
+            if (card == null || !card.gameObject.activeInHierarchy || card.artworkImage == null) return;
+            card.artworkImage.rectTransform.GetWorldCorners(playerDecisionCorners);
+            Vector2 min = Vector2.positiveInfinity, max = Vector2.negativeInfinity;
+            foreach (Vector3 corner in playerDecisionCorners)
+            {
+                Vector2 point = RectTransformUtility.WorldToScreenPoint(camera, corner);
+                min = Vector2.Min(min, point);
+                max = Vector2.Max(max, point);
+            }
+            Vector2 center = (min + max) * .5f;
+            Vector2 size = max - min;
+            playerDecisionBoxes[count] = new Vector4(center.x, center.y, size.x, size.y);
+            Color tint = playerDecisionGlowColor;
+            playerDecisionColors[count] = new Vector4(tint.r, tint.g, tint.b, tint.a * pulse * strength);
+            playerDecisionFlags[count] = new Vector4(1f, 0f, 0f, 0f);
+            count++;
+        }
     }
 }
 

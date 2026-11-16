@@ -6,6 +6,10 @@ public sealed class AttackSelectionPresentation : MonoBehaviour
 {
     TurnManager owner;RectTransform root;Canvas canvas;AttackSelectionGraphic graphic;Image zone;Button zoneButton;ConfirmationWindow confirmationWindow;
     readonly List<Button> wallButtons=new List<Button>();
+    readonly List<RawImage> wallOrnaments=new List<RawImage>(2);
+    RectTransform ornamentLayer;
+    Texture2D wallOrnamentArt;
+    Material wallOrnamentMaterial;
     readonly Vector4[] boxes=new Vector4[32],colors=new Vector4[32],flags=new Vector4[32];int count,retiringCount;float opacity;
     readonly Vector3[] corners=new Vector3[4];
     readonly List<Rect> confirmationObstacles = new List<Rect>(5);
@@ -26,6 +30,13 @@ public sealed class AttackSelectionPresentation : MonoBehaviour
         root=Rect(source.transform,"Attack target selection");root.anchorMin=Vector2.zero;root.anchorMax=Vector2.one;root.offsetMin=root.offsetMax=Vector2.zero;
         canvas=root.gameObject.AddComponent<Canvas>();canvas.overrideSorting=true;canvas.sortingLayerID=source.sortingLayerID;canvas.sortingOrder=source.sortingOrder+100;root.gameObject.AddComponent<GraphicRaycaster>();
         var surface=Rect(root,"Target glows and lowlight");surface.anchorMin=Vector2.zero;surface.anchorMax=Vector2.one;surface.offsetMin=surface.offsetMax=Vector2.zero;surface.gameObject.AddComponent<CanvasRenderer>();graphic=surface.gameObject.AddComponent<AttackSelectionGraphic>();
+        ornamentLayer = Rect(root, "Monarch wall selection ornaments");
+        ornamentLayer.anchorMin = Vector2.zero; ornamentLayer.anchorMax = Vector2.one;
+        ornamentLayer.offsetMin = ornamentLayer.offsetMax = Vector2.zero;
+        wallOrnamentArt = Resources.Load<Texture2D>("TCardField/MonarchWallOrnament");
+        var ornamentShader = Resources.Load<Shader>("TCardField/MonarchWallOrnamentGlow");
+        if (ornamentShader != null && ornamentShader.isSupported)
+            wallOrnamentMaterial = new Material(ornamentShader) { hideFlags = HideFlags.HideAndDontSave };
         swordOverlay = new ConfirmationSwordOverlay(Rect(root, "Attack confirmation swords"));
         var zr=Rect(root,"Monarch wall zone target");zone=zr.gameObject.AddComponent<Image>();zone.color=Color.clear;zoneButton=zr.gameObject.AddComponent<Button>();zoneButton.transition=Selectable.Transition.None;zoneButton.onClick.AddListener(()=>owner.BeginMonarchWallChoice());
         confirmationWindow = new ConfirmationWindow(root, "Confirm attack choice", "Confirm Attack",
@@ -89,6 +100,35 @@ public sealed class AttackSelectionPresentation : MonoBehaviour
     {
         while(wallButtons.Count<=index){var rt=Rect(root,"Individual wall attack target");var image=rt.gameObject.AddComponent<Image>();image.color=Color.clear;var b=rt.gameObject.AddComponent<Button>();b.transition=Selectable.Transition.None;wallButtons.Add(b);}return wallButtons[index];
     }
+    void ShowWallOrnament(int index, Rect bounds, AttackSelectionSettings settings, float breath)
+    {
+        if (wallOrnamentArt == null) return;
+        while (wallOrnaments.Count <= index)
+        {
+            var image = Rect(ornamentLayer, "Selected wall filigree").gameObject.AddComponent<RawImage>();
+            image.texture = wallOrnamentArt;
+            image.raycastTarget = false;
+            image.material = wallOrnamentMaterial;
+            wallOrnaments.Add(image);
+        }
+        var mark = wallOrnaments[index];
+        Vector2 center = bounds.center;
+        bounds.size *= settings.monarchWallOrnamentScale;
+        bounds.center = center;
+        bounds = Expand(bounds, settings.monarchWallOrnamentGap * Screen.width / 720f);
+        Place(mark.rectTransform, bounds);
+        Color tint = Color.white;
+        tint.a = Mathf.Clamp01(settings.monarchWallOrnamentTint.a * opacity * settings.monarchWallOrnamentStrength);
+        if (wallOrnamentMaterial != null)
+        {
+            wallOrnamentMaterial.SetFloat("_Breath", breath);
+            // White is neutral. Keep existing Inspector tint adjustments relative to the approved purple.
+            wallOrnamentMaterial.SetColor("_InkTint", new Color(settings.monarchWallOrnamentTint.r / .86f,
+                settings.monarchWallOrnamentTint.g / .68f, settings.monarchWallOrnamentTint.b));
+        }
+        mark.color = tint;
+        if (!mark.gameObject.activeSelf) mark.gameObject.SetActive(true);
+    }
     public void Refresh()
     {
         EnsureRoot();if(root==null)return;var s=AttackSelectionSettings.Load();bool active=owner.AttackSelectionActive;bool confirming=owner.AttackExecutionConfirmationActive;
@@ -100,7 +140,9 @@ public sealed class AttackSelectionPresentation : MonoBehaviour
         float SelectionWeight(GameObject target) => !confirming||owner.IsAttackConfirmationTarget(target) ? 1 : 1-confirmation;
         swordOverlay.Opacity = opacity*confirmation;
         count=retiringCount=0;IndividualWallGlowCount=0;WallZoneGlowVisible=false;int wallIndex=0;graphic.passThrough.Clear();bool wallsMode=owner.ChoosingMonarchWalls;
-        float wave=s.minimumPulse+(1-s.minimumPulse)*(1-Mathf.Cos(Time.unscaledTime/Mathf.Max(.2f,s.pulsePeriod)*Mathf.PI*2))*.5f;
+        int ornamentCount = 0;
+        float breath = .5f - .5f * Mathf.Cos(Time.unscaledTime / Mathf.Max(.2f, s.pulsePeriod) * Mathf.PI * 2f);
+        float wave = Mathf.Lerp(s.minimumPulse, 1f, breath);
         var targetColor=owner.IsMonarchAttacker?s.monarchTargetColor:s.normalTargetColor;
         if(active)
         {
@@ -121,19 +163,28 @@ public sealed class AttackSelectionPresentation : MonoBehaviour
                 if(individualWalls)
                 {
                     var button=WallButton(wallIndex++);if(!button.gameObject.activeSelf)button.gameObject.SetActive(true);Place((RectTransform)button.transform,bounds);button.onClick.RemoveAllListeners();var targetWall=w;button.onClick.AddListener(()=>owner.SelectAttackTarget(targetWall));
-                    float selection = selected ? 1 : 0;
-                    var targets = owner.AttackConfirmationTargets;
-                    if(selected&&confirming&&targets.Count==2&&targets[1]==w)selection=confirmation;
-                    float highlight=selected?.08f*selection:0;
-                    if(!selected&&owner.IsAttackConfirmationTarget(w))highlight=s.attackerHighlight*confirmation;
-                    Add(bounds,Color.Lerp(targetColor,s.selectedWallColor,selection),Mathf.Lerp(wave,1.5f,selection),true,highlight,weight:SelectionWeight(w));
+                    bool adorned = owner.IsMonarchAttacker && (selected || owner.IsAttackConfirmationTarget(w));
+                    // The filigree identifies the selection. Keep the card's artwork
+                    // clear of any pale fill or competing bright outline underneath it.
+                    float highlight = !adorned && owner.IsAttackConfirmationTarget(w) ? s.attackerHighlight * confirmation : 0f;
+                    Add(bounds, targetColor, adorned ? wave * .4f : wave, true, highlight, weight:SelectionWeight(w));
+                    if (adorned) ShowWallOrnament(ornamentCount++, bounds, s, breath);
                     if(!confirming||owner.IsAttackConfirmationTarget(w))IndividualWallGlowCount++;
                     graphic.passThrough.Add(bounds);
                 }
                 wallBounds=first?bounds:UnityEngine.Rect.MinMaxRect(Mathf.Min(wallBounds.xMin,bounds.xMin),Mathf.Min(wallBounds.yMin,bounds.yMin),Mathf.Max(wallBounds.xMax,bounds.xMax),Mathf.Max(wallBounds.yMax,bounds.yMax));first=false;
             }
             bool zoneAvailable=owner.IsMonarchAttacker&&walls.Count>1&&!wallsMode;
-            if(zoneAvailable){float pad=s.wallZonePadding*Screen.width/720f;wallBounds.xMin-=pad;wallBounds.xMax+=pad;wallBounds.yMin-=pad;wallBounds.yMax+=pad;Add(wallBounds,targetColor,wave,true,wallZone:true,weight:1-confirmation);WallZoneGlowVisible=!confirming;Place(zone.rectTransform,wallBounds);}
+            if (zoneAvailable)
+            {
+                float unit = Screen.width / 720f;
+                wallBounds = Expand(wallBounds, s.wallZonePadding * unit);
+                Place(zone.rectTransform, wallBounds);
+                Rect haloBounds = Expand(wallBounds, s.wallZoneHighlightPadding * unit);
+                float strength = Mathf.Lerp(1f - s.wallZoneBreathDepth, 1f, breath);
+                Add(haloBounds, targetColor, strength, true, wallZone: true, weight: 1f - confirmation);
+                WallZoneGlowVisible = !confirming;
+            }
             zone.gameObject.SetActive(zoneAvailable&&!confirming);
             if(owner.CanDirectAttack()&&!wallsMode)foreach(var direct in Object.FindObjectsByType<EnemyDirectClick>(FindObjectsSortMode.None)){if(direct.transform is RectTransform dr){var bounds=Bounds(dr);Add(bounds,targetColor,wave,true,weight:SelectionWeight(direct.gameObject));graphic.passThrough.Add(bounds);}}
             if (confirming) ShowConfirmation(s, attackerBounds);
@@ -146,10 +197,22 @@ public sealed class AttackSelectionPresentation : MonoBehaviour
         }
         // Keep live targets enabled across pointer-down/up frames; retire only unused buttons.
         for(int i=wallIndex;i<wallButtons.Count;i++)if(wallButtons[i].gameObject.activeSelf)wallButtons[i].gameObject.SetActive(false);
+        for (int i = ornamentCount; i < wallOrnaments.Count; i++)
+            if (wallOrnaments[i].gameObject.activeSelf) wallOrnaments[i].gameObject.SetActive(false);
         graphic.Configure(owner,s,boxes,colors,flags,count,opacity,confirmation:confirmation);graphic.gameObject.SetActive(opacity>.0001f);
+    }
+    static Rect Expand(Rect bounds, float padding)
+    {
+        var margin = Vector2.one * padding;
+        return new Rect(bounds.position - margin, bounds.size + margin * 2f);
     }
     void LateUpdate(){Refresh();}
     void OnDisable(){opacity=0;if(root!=null)root.gameObject.SetActive(false);}
     void OnEnable(){if(root!=null)root.gameObject.SetActive(true);}
-    void OnDestroy(){swordOverlay?.Dispose();if(root!=null)Destroy(root.gameObject);}
+    void OnDestroy()
+    {
+        swordOverlay?.Dispose();
+        if (wallOrnamentMaterial != null) Destroy(wallOrnamentMaterial);
+        if (root != null) Destroy(root.gameObject);
+    }
 }

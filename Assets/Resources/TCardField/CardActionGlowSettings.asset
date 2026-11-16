@@ -24,3 +24,18 @@ MonoBehaviour:
   cornerRadius: 8
   edgeOffset: 2
   positionOffset: {x: 0, y: 0}
+  guardBadgeSize: 0.25
+  guardBadgeIdleSizeMultiplier: 0.9
+  guardBadgeInset: {x: 0.017, y: 0.008}
+  guardBadgeFadeIn: 0.16
+  guardBreathPeriod: 6
+  guardIdleMinimum: 0.22
+  guardIdleGlowColor: {r: 0.16862746, g: 0.6313726, b: 1, a: 1}
+  guardIdleGlowStrength: 1
+  guardIdleGlowSpread: 1
+  guardRippleColor: {r: 0.19215684, g: 0.7085828, b: 0.84313726, a: 1}
+  guardRipplePeriod: 2
+  guardRippleSize: 1.4
+  guardRippleStrength: 1.8
+  guardFocusGlowStrength: 1
+  guardSparkleStrength: 1

@@ -42,7 +42,7 @@ MonoBehaviour:
     wallTarget: {x: 0, y: 0}
     monarchWallTarget: {x: 0, y: 0}
     directAttack: {x: 0, y: 0}
-  passButtonOffset: {x: 0, y: -90}
+  passButtonOffset: {x: 0, y: 40}
   playCardOffset: {x: 0, y: -80}
   endTurnOffset: {x: 0, y: -80}
   useShieldEffectOffset: {x: 0, y: 0}

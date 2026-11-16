@@ -53,7 +53,7 @@ public static class DefenseSelectionDiagnostics
   yield return new WaitForSeconds(.9f);
   try{Check(view.PassButton.targetGraphic is ConfirmationGlass&&view.PassButton.transform.parent!=view.ConfirmButton.transform.parent,"Pass is not an independent shared choice button");}
   catch(Exception e){Finish("FAIL: "+e);yield break;}
-  try{Check(t.DefenseSelectionActive&&view!=null,"Field defense did not open");CheckSwords(view,1);Check(view.HighlightedGuardCount==2,"Eligible guard highlight count");Check(view.Graphic.material.GetColor("_DimColor")==AttackSelectionSettings.Load().lowlightColor&&view.Graphic.material.GetColor("_DimColor").a>=.5f,"Shared stronger lowlight absent");Check(view.CurrentTargetColor==AttackSelectionSettings.Load().monarchTargetColor,"Monarch target not purple");Check(view.CurrentAttackerColor==AttackSelectionSettings.Load().attackerColor,"Enemy attacker not configured emerald");Check(view.PassButton.gameObject.activeSelf,"Pass button absent");Check(t.noBlockButton==null||!t.noBlockButton.activeSelf,"Legacy pass button still visible");}
+  try{Check(t.DefenseSelectionActive&&view!=null,"Field defense did not open");CheckSwords(view,1);Check(view.HighlightedGuardCount==2,"Eligible guard highlight count");Check(view.Graphic.material.GetColor("_DimColor")==AttackSelectionSettings.Load().lowlightColor&&view.Graphic.material.GetColor("_DimColor").a>=.5f,"Shared stronger lowlight absent");Check(view.CurrentTargetColor==AttackSelectionSettings.Load().monarchTargetColor,"Monarch target not purple");Check(view.CurrentAttackerColor==DefenseSelectionSettings.Load().incomingRippleColor,"Enemy attacker glow does not match the ripple");Check(view.PassButton.gameObject.activeSelf,"Pass button absent");Check(t.noBlockButton==null||!t.noBlockButton.activeSelf,"Legacy pass button still visible");}
   catch(Exception e){Finish("FAIL: "+e);yield break;}
   yield return new WaitForEndOfFrame();Capture("monarch-field-defense");
   try
@@ -64,7 +64,13 @@ public static class DefenseSelectionDiagnostics
    Check(aura==null||!aura.gameObject.activeSelf,"Ambient outline overlaps the defense highlight");
    var flags=view.Graphic.material.GetVectorArray("_Flags");
    var colors=view.Graphic.material.GetVectorArray("_Colors");
-   Check(flags[1].x==1f&&flags[2].x==1f&&colors[1].w>0f&&colors[2].w>0f,"Incoming target and eligible guard need card highlights");
+   var actionGlow=CardActionGlowSettings.Load();
+   var guardLight=view.Graphic.material.GetVector("_DefenseGuardLight");
+   Check(flags[1].x==1f&&colors[1].w>0f,"Incoming target needs its selection highlight");
+   Check(flags[2].x==1f&&flags[2].w==2f&&colors[2].w==0f,"Eligible guards must use the action glow profile");
+   Check(view.Graphic.material.GetColor("_DefenseGuardColor")==actionGlow.defenseColor&&
+       Mathf.Approximately(guardLight.x,actionGlow.blur)&&Mathf.Approximately(guardLight.y,actionGlow.lineWidth),
+       "Defense preview must match the usual guard outline color and width");
   }
   catch(Exception e){Finish("FAIL: "+e);yield break;}
   var fieldSwordPosition=CheckSwords(view,1)[0];

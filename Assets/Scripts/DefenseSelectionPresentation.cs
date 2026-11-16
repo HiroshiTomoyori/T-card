@@ -7,7 +7,11 @@ public sealed class DefenseSelectionPresentation:MonoBehaviour
     TurnManager owner;RectTransform root;AttackSelectionGraphic graphic;Button pass;ConfirmationWindow confirmationWindow;
     readonly List<Button> guards=new List<Button>();
     ConfirmationSwordOverlay swordOverlay;
+    CardController rippleAttacker;
+    float rippleStartedAt;
     readonly List<Rect> confirmationObstacles = new List<Rect>(6);
+    readonly Vector4[] guardBadgeCutouts = new Vector4[32];
+    readonly Vector4[] defenseGuardArtwork = new Vector4[32];
     readonly Vector4[] boxes=new Vector4[32],colors=new Vector4[32],flags=new Vector4[32];readonly Vector3[] corners=new Vector3[4];int count;float opacity,confirmationShade;
     public Button PassButton=>pass;public Button ConfirmButton=>confirmationWindow?.Accept;public Button BackButton=>confirmationWindow?.Back;public AttackSelectionGraphic Graphic=>graphic;
     public int HighlightedGuardCount{get;private set;}public int HighlightedWallCount{get;private set;}public Color CurrentTargetColor{get;private set;}public Color CurrentAttackerColor{get;private set;}
@@ -31,7 +35,28 @@ public sealed class DefenseSelectionPresentation:MonoBehaviour
     Rect Bounds(RectTransform rt){rt.GetWorldCorners(corners);Vector2 min=Vector2.positiveInfinity,max=Vector2.negativeInfinity;foreach(var c in corners){var p=RectTransformUtility.WorldToScreenPoint(EventCamera,c);min=Vector2.Min(min,p);max=Vector2.Max(max,p);}return UnityEngine.Rect.MinMaxRect(min.x,min.y,max.x,max.y);}
     Rect CardBounds(CardController c)=>Bounds(c.artworkImage!=null?c.artworkImage.rectTransform:(RectTransform)c.transform);
     void Place(RectTransform rt,Rect screen){RectTransformUtility.ScreenPointToLocalPointInRectangle(root,screen.min,EventCamera,out var a);RectTransformUtility.ScreenPointToLocalPointInRectangle(root,screen.max,EventCamera,out var b);rt.localPosition=(a+b)*.5f;rt.sizeDelta=b-a;}
-    void Add(Rect bounds,Color color,float power,float highlight){if(count>=32)return;var s=AttackSelectionSettings.Load();float unit=Screen.width/720f;bounds.center+=s.glowOffset*unit;bounds.size+=s.glowSizeAdjustment*unit;boxes[count]=new Vector4(bounds.center.x,bounds.center.y,bounds.width,bounds.height);colors[count]=new Vector4(color.r,color.g,color.b,power*color.a);flags[count]=new Vector4(1,highlight,0,0);count++;}
+    void Add(Rect bounds, Color color, float power, float highlight, CardController card = null, bool useDefenseGlow = false)
+    {
+        if (count >= boxes.Length) return;
+        bool includeBadge = card != null && CardActionIcon.IsGuard(card.data);
+        if (includeBadge)
+        {
+            var badge = CardActionGlowSettings.Load();
+            float size = bounds.width * badge.IdleGuardBadgeSize;
+            Vector2 center = bounds.min + Vector2.Scale(bounds.size, badge.guardBadgeInset) + Vector2.one * (size * .5f);
+            guardBadgeCutouts[count] = new Vector4(center.x, center.y, size, badge.guardIdleGlowSpread);
+        }
+        var settings = AttackSelectionSettings.Load();
+        if (useDefenseGlow)
+            defenseGuardArtwork[count] = new Vector4(bounds.center.x, bounds.center.y, bounds.width, bounds.height);
+        float unit = Screen.width / 720f;
+        bounds.center += settings.glowOffset * unit;
+        bounds.size += settings.glowSizeAdjustment * unit;
+        boxes[count] = new Vector4(bounds.center.x, bounds.center.y, bounds.width, bounds.height);
+        colors[count] = new Vector4(color.r, color.g, color.b, power * color.a);
+        flags[count] = new Vector4(1f, highlight, 0f, useDefenseGlow ? 2f : includeBadge ? 1f : 0f);
+        count++;
+    }
     Button Guard(int index){while(guards.Count<=index){var rt=Rect(root,"Choose defender");var im=rt.gameObject.AddComponent<Image>();im.color=Color.clear;var b=rt.gameObject.AddComponent<Button>();b.transition=Selectable.Transition.None;guards.Add(b);}return guards[index];}
     void RefreshSwords(AttackSelectionSettings settings, bool visible, List<GameObject> walls)
     {
@@ -86,12 +111,12 @@ public sealed class DefenseSelectionPresentation:MonoBehaviour
         confirmationObstacles.Clear();
         RefreshSwords(shared, swordsVisible, wallTargets);
         float wave=shared.minimumPulse+(1-shared.minimumPulse)*(1-Mathf.Cos(Time.unscaledTime/Mathf.Max(.2f,shared.pulsePeriod)*Mathf.PI*2))*.5f;
-        CurrentTargetColor=owner.IncomingMonarchAttack?shared.monarchTargetColor:shared.normalTargetColor;CurrentAttackerColor=shared.attackerColor;int index=0;
+        CurrentTargetColor=owner.IncomingMonarchAttack?shared.monarchTargetColor:shared.normalTargetColor;CurrentAttackerColor=s.incomingRippleColor;int index=0;
         if(showLowlight)
         {
-            Add(CardBounds(owner.IncomingAttacker), shared.attackerColor, 1f, shared.attackerHighlight);
+            Add(CardBounds(owner.IncomingAttacker), CurrentAttackerColor, 1f, shared.attackerHighlight, owner.IncomingAttacker);
             if((!pending||owner.SelectedDefenseBlocker==null)&&owner.IncomingFieldTarget!=null)
-                Add(CardBounds(owner.IncomingFieldTarget), CurrentTargetColor, wave, shared.attackerHighlight);
+                Add(CardBounds(owner.IncomingFieldTarget), CurrentTargetColor, wave, shared.attackerHighlight, owner.IncomingFieldTarget);
             if (!pending || owner.SelectedDefenseBlocker == null)
             {
                 foreach(var wall in wallTargets){var card=wall.GetComponent<CardController>();Add(CardBounds(card),CurrentTargetColor,wave,shared.attackerHighlight);HighlightedWallCount++;}
@@ -105,7 +130,7 @@ public sealed class DefenseSelectionPresentation:MonoBehaviour
                 var bounds=CardBounds(c);bool selected=owner.SelectedDefenseBlocker==c;
                 if (!pending || selected)
                 {
-                    Add(bounds, shared.attackerColor, wave, selected ? shared.attackerHighlight : 0f);
+                    Add(bounds, Color.clear, 0f, selected ? shared.attackerHighlight : 0f, c, useDefenseGlow: true);
                     HighlightedGuardCount++;
                 }
                 if(!active||pending)continue;
@@ -113,21 +138,13 @@ public sealed class DefenseSelectionPresentation:MonoBehaviour
             }
         }
         for(int i=index;i<guards.Count;i++)guards[i].gameObject.SetActive(false);
-        float scale=Screen.width/720f;Vector2 anchor=new Vector2(Screen.width*.5f,Screen.height*.12f);
-        if(owner.handDealer!=null&&owner.handDealer.handArea is RectTransform hand)
-        {
-            var bounds=Bounds(hand);float top=float.NegativeInfinity;
-            foreach(var card in hand.GetComponentsInChildren<CardController>())if(card.gameObject.activeInHierarchy){var cg=card.GetComponent<CanvasGroup>();if(cg==null||cg.alpha>.01f)top=Mathf.Max(top,CardBounds(card).yMax);}
-            anchor=new Vector2(bounds.center.x,float.IsNegativeInfinity(top)?Mathf.Min(bounds.yMax,Screen.height*.12f):top);
-        }
+        float scale = Screen.width / 720f;
         var theme = ConfirmationTheme.Load();
         Rect safe = Screen.safeArea;
-        Vector2 passAnchor = anchor + s.passButtonOffset * scale;
-        Vector2 passPoint = passAnchor + theme.passButtonOffset * scale;
-        Vector2 passSize = Vector2.Min(s.passButtonSize * scale, safe.size);
-        passPoint.x = Mathf.Clamp(passPoint.x, safe.xMin + passSize.x * .5f, safe.xMax - passSize.x * .5f);
-        passPoint.y = Mathf.Clamp(passPoint.y, safe.yMin + passSize.y * .5f, safe.yMax - passSize.y * .5f);
-        Place((RectTransform)pass.transform,new Rect(passPoint-passSize*.5f,passSize));pass.gameObject.SetActive(active&&!pending);pass.interactable=active&&!pending;
+        bool showPass = active && !pending;
+        if (showPass) PlacePassButton(s, scale, safe);
+        pass.gameObject.SetActive(showPass);
+        pass.interactable = showPass;
         var panel = confirmationWindow.Rect;
         if (active && pending)
         {
@@ -135,7 +152,7 @@ public sealed class DefenseSelectionPresentation:MonoBehaviour
             if (owner.SelectedDefenseBlocker != null) confirmationObstacles.Add(CardBounds(owner.SelectedDefenseBlocker));
             var offsets = owner.SelectedDefenseBlocker != null ? theme.blockConfirmation : theme.passConfirmation;
             Vector2 caseOffset = offsets?.For(owner.IncomingFieldTarget != null, wallTargets.Count > 0, owner.IncomingMonarchAttack) ?? Vector2.zero;
-            Vector2 preferred = passAnchor + (s.confirmationOffset + caseOffset) * scale;
+            Vector2 preferred = ConfirmationAnchor() + (s.passButtonOffset + s.confirmationOffset + caseOffset) * scale;
             Place(panel, confirmationWindow.FindPlacement(safe, theme.WindowSize * scale, preferred,
                 shared.confirmationClearance * scale, confirmationObstacles, theme.avoidCardsAndSwords));
             confirmationWindow.Message.text = owner.DefenseConfirmationLabel;
@@ -143,11 +160,70 @@ public sealed class DefenseSelectionPresentation:MonoBehaviour
         }
         panel.gameObject.SetActive(active && pending);
         graphic.Configure(owner,shared,boxes,colors,flags,count,opacity,active,()=>{if(owner.HasPendingDefenseConfirmation)owner.CancelDefenseChoice();},confirmationShade);graphic.gameObject.SetActive(opacity>.0001f);
+        if (showLowlight)
+        {
+            graphic.ConfigureGuardBadgeCutouts(guardBadgeCutouts);
+            graphic.ConfigureDefenseGuardGlow(defenseGuardArtwork, CardActionGlowSettings.Load());
+        }
+        RefreshIncomingRipple(s, showLowlight && !pending);
         // Confirmation and pass controls must stay above the full-screen input shield.
         pass.transform.SetAsLastSibling();panel.SetAsLastSibling();
     }
+    void PlacePassButton(DefenseSelectionSettings settings, float scale, Rect safe)
+    {
+        Vector2 size = Vector2.Min(settings.passButtonSize * scale, safe.size);
+        Vector2 anchor = new Vector2(safe.center.x, safe.yMin + safe.height * .22f);
+        if (owner.playerWallArea is RectTransform wall)
+        {
+            var layout = wall.GetComponent<WallAreaLayout>();
+            if (layout != null)
+                anchor = RectTransformUtility.WorldToScreenPoint(EventCamera, layout.PresentationBottomCenter);
+            else
+            {
+                Rect bounds = Bounds(wall);
+                anchor = new Vector2(bounds.center.x, bounds.yMin);
+            }
+        }
+        Vector2 center = anchor - Vector2.up * (settings.passWallGap * scale + size.y * .5f);
+        center.x = Mathf.Clamp(center.x, safe.xMin + size.x * .5f, safe.xMax - size.x * .5f);
+        center.y = Mathf.Clamp(center.y, safe.yMin + size.y * .5f, safe.yMax - size.y * .5f);
+        Place((RectTransform)pass.transform, new Rect(center - size * .5f, size));
+    }
+    Vector2 ConfirmationAnchor()
+    {
+        if (!(owner.handDealer?.handArea is RectTransform hand))
+            return new Vector2(Screen.width * .5f, Screen.height * .12f);
+        Rect bounds = Bounds(hand);
+        float top = float.NegativeInfinity;
+        foreach (var card in hand.GetComponentsInChildren<CardController>())
+        {
+            var group = card.GetComponent<CanvasGroup>();
+            if (card.gameObject.activeInHierarchy && (group == null || group.alpha > .01f))
+                top = Mathf.Max(top, CardBounds(card).yMax);
+        }
+        return new Vector2(bounds.center.x, float.IsNegativeInfinity(top) ? Mathf.Min(bounds.yMax, Screen.height * .12f) : top);
+    }
     void LateUpdate(){Refresh();}
-    void OnDisable(){opacity=confirmationShade=0;if(root!=null)root.gameObject.SetActive(false);}
+    void RefreshIncomingRipple(DefenseSelectionSettings settings, bool visible)
+    {
+        var attacker = visible ? owner.IncomingAttacker : null;
+        if (attacker != rippleAttacker)
+        {
+            rippleAttacker = attacker;
+            rippleStartedAt = Time.unscaledTime;
+        }
+        if (attacker == null || !attacker.gameObject.activeInHierarchy)
+        {
+            graphic.ConfigureIncomingRipple(default, Color.clear, 0f, 0f, 1f);
+            return;
+        }
+
+        float elapsed = Time.unscaledTime - rippleStartedAt;
+        float phase = Mathf.Repeat(elapsed, Mathf.Max(1.3f, settings.incomingRipplePeriod));
+        graphic.ConfigureIncomingRipple(CardBounds(attacker), settings.incomingRippleColor,
+            phase, settings.incomingRippleStrength * opacity, settings.incomingRippleSpread);
+    }
+    void OnDisable(){opacity=confirmationShade=0;rippleAttacker=null;if(root!=null)root.gameObject.SetActive(false);}
     void OnEnable(){if(root!=null)root.gameObject.SetActive(true);}
     void OnDestroy(){swordOverlay?.Dispose();if(root!=null)Destroy(root.gameObject);}
 }

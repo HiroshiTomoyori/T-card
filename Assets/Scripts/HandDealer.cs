@@ -10,6 +10,24 @@ public partial class HandDealer : MonoBehaviour
     [Header("Hand")]
     public Transform handArea;
     public RectTransform deckPosition;
+    public const int RaiseLimit = 2;
+    public int PlayerRaisesRemaining { get; private set; } = RaiseLimit;
+    public int EnemyRaisesRemaining { get; private set; } = RaiseLimit;
+
+    internal bool SpendRaise(bool enemy)
+    {
+        if (enemy)
+        {
+            if (EnemyRaisesRemaining == 0) return false;
+            EnemyRaisesRemaining--;
+        }
+        else
+        {
+            if (PlayerRaisesRemaining == 0) return false;
+            PlayerRaisesRemaining--;
+        }
+        return true;
+    }
 
     [Header("配布始点の調整")]
     public Vector2 dealStartOffset = Vector2.zero;
@@ -228,6 +246,7 @@ public Transform playerWallArea;
     }
     public void DealStart()
     {
+        PlayerRaisesRemaining = EnemyRaisesRemaining = RaiseLimit;
         IsRedrawSelecting = true;
 
         if(InputLockManager.I != null)
@@ -260,6 +279,8 @@ public Transform playerWallArea;
         if (enemyDeckImage != null)
             enemyDeckImage.gameObject.SetActive(true);
 
+        if (GetComponent<RaiseCounterPresentation>() == null)
+            gameObject.AddComponent<RaiseCounterPresentation>().Initialize(this);
         StartCoroutine(DealRoutine(true));
     }
 

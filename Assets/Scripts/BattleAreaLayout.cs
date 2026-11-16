@@ -1,10 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using DG.Tweening;
 
 [RequireComponent(typeof(CCP.CardGroup))]
-public class BattleAreaLayout : MonoBehaviour
+public class BattleAreaLayout : MonoBehaviour, UnityEngine.EventSystems.IDropHandler
 {
     [Serializable]
     public class LayoutSetting
@@ -25,6 +25,9 @@ public class BattleAreaLayout : MonoBehaviour
     [Header("フィールド")]
     [Range(1, 6)]
     public int maxCards = 6;
+
+    public void OnDrop(UnityEngine.EventSystems.PointerEventData data) =>
+        FieldDropPresentation.ForwardFieldCardDrop(transform, data);
 
     public static bool IsSpell(CardData data)
     {
@@ -403,9 +406,10 @@ public class BattleAreaLayout : MonoBehaviour
     // Predict the final slot while the committed card is still outside the field.
     public void GetIncomingPlacement(CardController replaced,out Vector3 position,out Vector2 visualSize)
     {
-        CollectCards();int count=fieldCards.Count+1;
-        if(replaced!=null&&fieldCards.Contains(replaced))count--;
-        Slot(count,count-1,out Vector3 local,out float width);
+        CollectCards();
+        int replacementIndex = replaced != null ? fieldCards.IndexOf(replaced) : -1;
+        int count = fieldCards.Count + (replacementIndex < 0 ? 1 : 0);
+        Slot(count, replacementIndex < 0 ? count - 1 : replacementIndex, out Vector3 local, out float width);
         position=transform.TransformPoint(local);visualSize=new Vector2(width,width*1.5f)*Mathf.Max(.01f,cardSize);
     }
     internal float CurrentSlotSpacing()

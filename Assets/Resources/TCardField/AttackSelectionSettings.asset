@@ -28,6 +28,7 @@ MonoBehaviour:
   glowOffset: {x: 0, y: 0}
   glowSizeAdjustment: {x: 0, y: 0}
   wallZonePadding: 12
+  wallZoneHighlightPadding: 7
   confirmationOffset: {x: 0, y: 80}
   confirmationSize: {x: 310, y: 60}
   confirmationSwordScale: 1.1
@@ -36,5 +37,9 @@ MonoBehaviour:
   confirmationSwordPoint: {x: 0.5, y: 0.52}
   confirmationClearance: 14
   contrastRevision: 1
-  wallZoneCornerRadius: 24
-  wallZoneGlowBlur: 28
+  wallZoneCornerRadius: 32
+  wallZoneGlowBlur: 37
+  monarchWallOrnamentTint: {r: 0.86, g: 0.68, b: 1, a: 1}
+  monarchWallOrnamentStrength: 1
+  monarchWallOrnamentScale: 1.29
+  monarchWallOrnamentGap: 4

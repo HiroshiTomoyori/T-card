@@ -36,8 +36,8 @@ MonoBehaviour:
   hitShake: 3
   hitShakeFrequency: 84
   hitShakeDecay: 14
-  attackerColor: {r: 0.62767, g: 0.8584906, b: 0.8341082, a: 1}
-  targetColor: {r: 0.8207547, g: 0, b: 0.124671705, a: 1}
+  attackerColor: {r: 0.61957103, g: 0.8584906, b: 0.8341937, a: 1}
+  targetColor: {r: 0.6981132, g: 0, b: 0.10688813, a: 1}
   attackerGlow: 0.65
   targetGlow: 0.3
   wallGlow: 0.25

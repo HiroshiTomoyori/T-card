@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 [CreateAssetMenu(menuName="T-card/Card Action Glow Settings")]
 public sealed class CardActionGlowSettings : ScriptableObject
 {
@@ -20,15 +20,22 @@ public sealed class CardActionGlowSettings : ScriptableObject
     public Vector2 positionOffset = Vector2.zero;
     [Header("Guard badge / fractions of the card artwork")]
     [Range(.1f, .5f)] public float guardBadgeSize = .25f;
+    [Range(.65f, 1f)] public float guardBadgeIdleSizeMultiplier = .9f;
+    internal float IdleGuardBadgeSize => guardBadgeSize * guardBadgeIdleSizeMultiplier;
     public Vector2 guardBadgeInset = new Vector2(.017f, .008f);
     [Min(0)] public float guardBadgeFadeIn = .16f;
     [Min(.2f)] public float guardBreathPeriod = 6f;
     [Range(0, 1)] public float guardIdleMinimum = .22f;
+    public Color guardIdleGlowColor = new Color32(43, 161, 255, 255);
+    [Range(0, 2)] public float guardIdleGlowStrength = 1f;
+    [Range(.6f, 1.5f)] public float guardIdleGlowSpread = 1f;
     [Header("Enemy guard ripple during player attack")]
     public Color guardRippleColor = new Color32(49, 215, 198, 255);
-    [Min(.2f)] public float guardRipplePeriod = 1.65f;
+    [Min(.2f)] public float guardRipplePeriod = 2f;
     [Range(.5f, 2f)] public float guardRippleSize = 1.4f;
     [Range(0, 3)] public float guardRippleStrength = 1.8f;
+    [Range(0, 2)] public float guardFocusGlowStrength = 1f;
+    [Range(0, 2)] public float guardSparkleStrength = 1f;
     static CardActionGlowSettings cached;
     public static CardActionGlowSettings Load()
     {

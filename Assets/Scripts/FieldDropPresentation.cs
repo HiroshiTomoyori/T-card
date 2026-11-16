@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 [DisallowMultipleComponent]
@@ -6,8 +6,11 @@ public sealed class FieldDropPresentation : MonoBehaviour
 {
     static FieldDropPresentation current;
     BattleDropZone owner;HandDealer dealer;TurnManager manager;RectTransform root;
-    Image target;FieldHighlightGraphic glow;CardDrag drag;Vector2 pointer;Camera pointerCamera;
+    Image target;FieldHighlightGraphic glow,raiseGlow,raiseKingGlow;CardDrag drag;Vector2 pointer;Camera pointerCamera;
     float opacity,start,targetAlpha,transitionTime=1,clock;bool activeDrag;
+    internal static readonly Color RaiseViolet = new Color(.41f, .095f, .84f);
+    internal const float RaiseKingGlowStrength = .60f;
+    static readonly Color RaiseRim = new Color(.78f, .43f, 1f);
     public Rect ScreenRectangle {get;private set;}
     public float Opacity=>opacity;
     public bool IsTargeted=>targetAlpha>0;
@@ -19,7 +22,12 @@ public sealed class FieldDropPresentation : MonoBehaviour
         if(current==null)current=Object.FindFirstObjectByType<FieldDropPresentation>();
         if(current==null)return;current.drag=card;current.pointer=point;current.pointerCamera=camera;current.activeDrag=true;current.RefreshTarget();
     }
-    public static void EndDrag(){if(current!=null){current.activeDrag=false;current.drag=null;current.SetTarget(false);if(current.target!=null)current.target.raycastTarget=false;}}
+    public static void EndDrag(){if(current!=null){current.activeDrag=false;current.drag=null;current.SetTarget(false);if(current.target!=null)current.target.raycastTarget=false;current.HideRaiseGlows();}}
+    internal static void ForwardFieldCardDrop(Transform area, PointerEventData data)
+    {
+        if (current != null && current.owner != null && current.owner.battleArea == area)
+            current.owner.OnDrop(data);
+    }
     public bool Contains(Vector2 screenPoint){RefreshGeometry();return root!=null&&ScreenRectangle.Contains(screenPoint);}
     void Cache()
     {
@@ -90,15 +98,78 @@ public sealed class FieldDropPresentation : MonoBehaviour
         bool playable=allowed&&owner.CanHighlightCard(drag.GetComponent<CardController>());
         if(target!=null)target.raycastTarget=playable;
         bool inside=playable&&ScreenRectangle.Contains(pointer);
-        SetTarget(inside&&FieldHighlightSettings.Load().highlightEnabled);
+        var draggedCard = playable ? drag.GetComponent<CardController>() : null;
+        var raiseTarget = playable ? owner.FindRaiseTarget(draggedCard, pointer, pointerCamera) : null;
+        RefreshRaiseGlows(raiseTarget, draggedCard);
+        SetTarget(inside && raiseTarget == null && owner.CanPlayNormally(drag.GetComponent<CardController>()) && FieldHighlightSettings.Load().highlightEnabled);
     }
+    void HideRaiseGlows()
+    {
+        if (raiseGlow != null) raiseGlow.enabled = false;
+        if (raiseKingGlow != null) raiseKingGlow.enabled = false;
+    }
+
+    void RefreshRaiseGlows(CardController targetCard, CardController king)
+    {
+        if (targetCard == null || king == null || root == null)
+        {
+            HideRaiseGlows();
+            return;
+        }
+
+        var settings = FieldHighlightSettings.Load();
+        float unit = root.rect.width / Mathf.Max(1, ScreenRectangle.width) * Screen.width / 720f * .42f;
+        float pulseTime = Time.unscaledTime;
+        ShowRaiseGlow(ref raiseGlow, targetCard, "Raise target violet glow", settings, unit, pulseTime, false);
+        ShowRaiseGlow(ref raiseKingGlow, king, "Dragged King violet glow", settings, unit, pulseTime, true);
+    }
+
+    void ShowRaiseGlow(ref FieldHighlightGraphic graphic, CardController card, string name,
+        FieldHighlightSettings settings, float unit, float pulseTime, bool followsDraggedCard)
+    {
+        var artwork = card.artworkImage != null ? card.artworkImage.rectTransform : card.transform as RectTransform;
+        if (artwork == null)
+        {
+            if (graphic != null) graphic.enabled = false;
+            return;
+        }
+        if (graphic == null)
+        {
+            var visual = new GameObject(name, typeof(RectTransform), typeof(FieldHighlightGraphic));
+            visual.layer = root.gameObject.layer;
+            graphic = visual.GetComponent<FieldHighlightGraphic>();
+        }
+
+        var rect = graphic.rectTransform;
+        RectTransform parent = followsDraggedCard ? artwork.parent as RectTransform : root;
+        if (parent == null) parent = root;
+        if (rect.parent != parent) rect.SetParent(parent, false);
+        if (parent != root)
+        {
+            int artworkIndex = artwork.GetSiblingIndex();
+            if (rect.GetSiblingIndex() > artworkIndex) rect.SetSiblingIndex(artworkIndex);
+        }
+        rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(.5f, .5f);
+
+        var area = Bounds(artwork, pointerCamera);
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(parent, area.min, pointerCamera, out Vector2 a);
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(parent, area.max, pointerCamera, out Vector2 b);
+        float localUnit = unit * root.TransformVector(Vector3.right).magnitude /
+            Mathf.Max(.001f, parent.TransformVector(Vector3.right).magnitude);
+        rect.localPosition = (a + b) * .5f;
+        rect.sizeDelta = b - a + Vector2.one * (settings.outwardSpread + settings.blur * 4 + 30) * localUnit * 2f;
+        float strength = followsDraggedCard ? RaiseKingGlowStrength : 1f;
+        graphic.Show(settings, b - a, localUnit, strength, pulseTime, RaiseViolet, RaiseRim, 1.36f);
+        graphic.enabled = true;
+    }
+
     void LateUpdate()
     {
         RefreshTarget();var settings=FieldHighlightSettings.Load();float duration=targetAlpha>0?settings.fadeIn:settings.fadeOut;
         float dt=Mathf.Min(Time.unscaledDeltaTime,.05f);transitionTime+=dt;opacity=Mathf.Lerp(start,targetAlpha,duration<=0?1:Mathf.SmoothStep(0,1,Mathf.Clamp01(transitionTime/duration)));
         if(opacity>0)clock+=dt;RefreshGeometry();
     }
-    void OnDisable(){activeDrag=false;drag=null;opacity=start=targetAlpha=0;if(root!=null)root.gameObject.SetActive(false);}
+    void OnDisable(){activeDrag=false;drag=null;HideRaiseGlows();opacity=start=targetAlpha=0;if(root!=null)root.gameObject.SetActive(false);}
     void OnEnable(){if(root!=null)root.gameObject.SetActive(true);}
-    void OnDestroy(){if(root!=null)Destroy(root.gameObject);if(current==this)current=null;}
+    void OnDestroy(){if(raiseKingGlow!=null)Destroy(raiseKingGlow.gameObject);if(root!=null)Destroy(root.gameObject);if(current==this)current=null;}
 }

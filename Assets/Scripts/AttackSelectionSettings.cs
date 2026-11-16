@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 [CreateAssetMenu(menuName="T-card/Attack Selection Settings")]
 public sealed class AttackSelectionSettings : ScriptableObject
 {
@@ -21,6 +21,8 @@ public sealed class AttackSelectionSettings : ScriptableObject
     public Vector2 glowOffset=Vector2.zero;
     public Vector2 glowSizeAdjustment=Vector2.zero;
     [Min(0)] public float wallZonePadding=12;
+    [Min(0)] public float wallZoneHighlightPadding = 7f;
+    [Range(0f, .5f)] public float wallZoneBreathDepth = .16f;
     public Vector2 confirmationOffset=new Vector2(0,80);
     public Vector2 confirmationSize=new Vector2(310,60);
     [Header("攻撃確認の剣")]
@@ -32,8 +34,14 @@ public sealed class AttackSelectionSettings : ScriptableObject
     [Min(0)] public float confirmationClearance = 14f;
     [HideInInspector] public int contrastRevision;
     [Header("ウォールゾーンの丸み・グローぼかし / 720px幅基準")]
-    [Min(0)] public float wallZoneCornerRadius=24;
-    [Min(1)] public float wallZoneGlowBlur=28;
+    [Min(0)] public float wallZoneCornerRadius=32;
+    [Min(1)] public float wallZoneGlowBlur=37;
+    [Header("モナークの選択マーク")]
+    public Color monarchWallOrnamentTint = new Color(.86f, .68f, 1f);
+    [Range(0f, 2f)] public float monarchWallOrnamentStrength = 1f;
+    [Min(.5f)] public float monarchWallOrnamentScale = 1.29f;
+    [Min(0f), Tooltip("Extra spacing from the card, in units at 720px screen width.")]
+    public float monarchWallOrnamentGap = 4f;
     static AttackSelectionSettings cached;
     public static AttackSelectionSettings Load(){if(cached!=null)return cached;cached=Resources.Load<AttackSelectionSettings>("TCardField/AttackSelectionSettings");if(cached==null){cached=CreateInstance<AttackSelectionSettings>();cached.hideFlags=HideFlags.HideAndDontSave;}return cached;}
 }

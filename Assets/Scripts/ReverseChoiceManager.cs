@@ -16,7 +16,7 @@ public class ReverseChoiceManager : MonoBehaviour
     [Header("Card Check")]
     [SerializeField] Vector2 windowSize = new Vector2(575, 456);
     [SerializeField] Vector2 windowOffset;
-    [SerializeField, Min(0)] float windowFade = .13f;
+    [SerializeField, Min(0)] float windowFade = 0f;
     [SerializeField, Min(0)] float reverseCueDuration = .815f;
     [SerializeField, Min(0)] float glowSpeed = 1f;
     [SerializeField] Color glowTint = Color.white;
@@ -86,12 +86,17 @@ public class ReverseChoiceManager : MonoBehaviour
         committed = false;
         foreach (var slot in slots) slot.Button.gameObject.SetActive(false);
         int count = Mathf.Min(slots.Length, cards.Count);
-        bool canPlay = false;
+        int reverseCount = 0;
+        int lastReverse = -1;
         for (int i = 0; i < count; i++)
         {
             var slot = slots[i];
             slot.IsReverse = HasReverse(cards[i]);
-            canPlay |= slot.IsReverse;
+            if (slot.IsReverse)
+            {
+                reverseCount++;
+                lastReverse = i;
+            }
             slot.Art.sprite = cards[i].artwork;
             slot.Glow.enabled = slot.IsReverse;
             if (slot.IsReverse) SampleGlow(slot.Glow, 0f);
@@ -100,8 +105,14 @@ public class ReverseChoiceManager : MonoBehaviour
             slot.Button.interactable = slot.IsReverse;
             slot.Button.gameObject.SetActive(true);
         }
-        play.gameObject.SetActive(canPlay);
-        Layout(fit, count, canPlay);
+        if (reverseCount == 1)
+        {
+            // Offer the only Reverse directly; Play Card still requires confirmation.
+            selected.Add(lastReverse);
+            slots[lastReverse].Button.interactable = false;
+        }
+        play.gameObject.SetActive(reverseCount > 0);
+        Layout(fit, count, reverseCount > 0);
         RefreshSelection();
 
         root.gameObject.SetActive(true);
@@ -112,7 +123,7 @@ public class ReverseChoiceManager : MonoBehaviour
             while (!committed && isActiveAndEnabled)
             {
                 float age = Time.unscaledTime - started;
-                panelGroup.alpha = Ease(age / Mathf.Max(.001f, windowFade));
+                panelGroup.alpha = windowFade <= 0f ? 1f : Ease(age / windowFade);
                 for (int i = 0; i < count; i++)
                 {
                     var slot = slots[i];
@@ -141,7 +152,7 @@ public class ReverseChoiceManager : MonoBehaviour
 
     void Toggle(int index)
     {
-        if (!IsChoosing || committed || !slots[index].IsReverse) return;
+        if (!IsChoosing || committed || !slots[index].Button.interactable) return;
         if (!selected.Remove(index) && selected.Count < 2) selected.Add(index);
         RefreshSelection();
     }
@@ -161,8 +172,8 @@ public class ReverseChoiceManager : MonoBehaviour
         {
             if (!slots[i].Button.gameObject.activeSelf) continue;
             int index = selected.IndexOf(i);
-            slots[i].Order.enabled = index >= 0;
-            if (index >= 0) slots[i].Order.texture = orderArt[index];
+            slots[i].Order.enabled = index >= 0 && slots[i].Button.interactable;
+            if (slots[i].Order.enabled) slots[i].Order.texture = orderArt[index];
         }
         play.interactable = selected.Count > 0;
         playLabel.text = selected.Count == 2 ? "Play 2 Cards" :

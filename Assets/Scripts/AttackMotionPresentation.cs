@@ -200,7 +200,8 @@ public sealed class AttackMotionPresentation : MonoBehaviour
                 if(card!=null&&card!=attacker&&card.artworkImage!=null&&!actors.Exists(a=>a.card==card))
                     actors.Add(CreateActor(root, card, "Defending card visual"));
             DefendingCard=actors.Count>0?actors[0].visual:null;
-            moving=CreateActor(root,attacker,"Attacking card visual");actors.Add(moving);MovingCard=moving.visual;foreach(var actor in actors)actor.shade.SetSiblingIndex(1);
+            moving=CreateActor(root,attacker,"Attacking card visual");actors.Add(moving);MovingCard=moving.visual;
+            foreach(var actor in actors) actor.shade.SetAsFirstSibling();
             var fxRect=Make(root,"Attack impacts");Stretch(fxRect);
             AttackImpactGraphic fx=null;
             if(useAE)
@@ -213,6 +214,7 @@ public sealed class AttackMotionPresentation : MonoBehaviour
             float unit=root.rect.width/720f,direction=enemy?-1:1;
             var boxes=new Vector4[32];var colors=new Vector4[32];var flags=new Vector4[32];var points=new List<Vector2>();var highlighted=new HashSet<CardController>();
             var tint=monarch?s.monarchColor:s.hitColor;var targetTint=monarch?s.monarchColor:s.targetColor;
+            Color attackerGlowColor = enemy ? DefenseSelectionSettings.Load().incomingRippleColor : s.attackerColor;
             Camera camera=source.renderMode==RenderMode.ScreenSpaceOverlay?null:source.worldCamera;
             Vector2 attackerCorrection=Vector2.zero,defenderCorrection=Vector2.zero;
             Actor defending=actors.Find(a=>a!=moving);
@@ -251,7 +253,7 @@ public sealed class AttackMotionPresentation : MonoBehaviour
                     if (actor.card == null) continue;
                     float power = actor == moving ? s.attackerGlow : s.targetGlow;
                     bool blocking = enemy && actor != moving && CardActionIcon.CanBlock(actor.card);
-                    Color glowColor = actor == moving || blocking ? s.attackerColor : targetTint;
+                    Color glowColor = actor == moving ? attackerGlowColor : blocking ? s.attackerColor : targetTint;
                     Put(ScreenBox(actor.visual,camera), glowColor, power,
                         s.cardLowlightFeather,boxes,colors,flags,ref count);
                 }

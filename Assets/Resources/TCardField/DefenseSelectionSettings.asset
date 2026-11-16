@@ -14,7 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   passButtonOffset: {x: 0, y: 65}
   passButtonSize: {x: 260, y: 60}
+  passWallGap: 20
   confirmationOffset: {x: 0, y: 105}
   confirmationSize: {x: 340, y: 155}
   buttonColor: {r: 0.2, g: 0.17, b: 0.14, a: 1}
   buttonTextColor: {r: 1, g: 0.95, b: 0.86, a: 1}
+  incomingRippleColor: {r: 0.4245283, g: 0, b: 0.06147016, a: 1}
+  incomingRippleStrength: 1
+  incomingRippleSpread: 1
+  incomingRipplePeriod: 2

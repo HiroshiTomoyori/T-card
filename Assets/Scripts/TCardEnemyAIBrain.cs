@@ -91,7 +91,7 @@ public class TCardEnemyAIBrain : MonoBehaviour
         int cost = card.cost;
         bool raised = false;
         foreach(var basis in state.own)
-            if(CanRaiseFrom(card, basis.data) && card.cost - basis.data.power < cost)
+            if(state.raisesRemaining > 0 && CanRaiseFrom(card, basis.data) && card.cost - basis.data.power < cost)
             { cost = card.cost - basis.data.power; raised = true; }
         bool affordable = cost <= state.mana;
         if(HasEffect(card, EffectType.DestroyOneEnemyBattle))
@@ -1264,6 +1264,7 @@ bool CanSpecialBreak(
         return target;
     }
     public int KingRecoveriesAvailable { get; set; } = 4;
+    public int RaisesAvailable { get; set; } = HandDealer.RaiseLimit;
 
     sealed class StrategicUnit
     {
@@ -1278,7 +1279,7 @@ bool CanSpecialBreak(
         public List<StrategicUnit> own = new List<StrategicUnit>();
         public List<StrategicUnit> foe = new List<StrategicUnit>();
         public bool[] used;
-        public int mana, ownWalls, foeWalls, first = -1, slots = 6, kingRecoveries;
+        public int mana, ownWalls, foeWalls, first = -1, slots = 6, kingRecoveries, raisesRemaining;
         public CardController firstBase;
         public CardController firstTarget;
         public float effectValue, handValue;
@@ -1452,12 +1453,13 @@ bool CanSpecialBreak(
         // Normal summon and every legal King base are separate tactical actions.
         for(int basis = -1; basis < state.own.Count; basis++)
         {
-            if(basis >= 0 && !CanRaiseFrom(card, state.own[basis].data)) continue;
+            if(basis >= 0 && (state.raisesRemaining <= 0 || !CanRaiseFrom(card, state.own[basis].data))) continue;
             int cost = basis < 0 ? card.cost : Mathf.Max(0, card.cost - state.own[basis].data.power);
             if(cost > state.mana || (basis < 0 && state.own.Count >= state.slots)) continue;
             var next = StartSummon(state, index, cost, card);
             if(basis >= 0)
             {
+                next.raisesRemaining--;
                 if(state.first < 0) next.firstBase = state.own[basis].source;
                 if (state.own[basis].sick && IsVanillaSeven(state.own[basis].data))
                     next.effectValue -= Mathf.Max(0f, freshVanillaRaisePenalty);
@@ -1554,7 +1556,7 @@ bool CanSpecialBreak(
         foreach(var card in hand) if(card != null) reserve += GetCardValue(card) * 0.3f;
         return new StrategicState { handValue = reserve, own = ReadUnits(enemyField), foe = ReadUnits(playerField),
             used = new bool[hand.Count], mana = mana, ownWalls = ownWalls, foeWalls = foeWalls,
-            slots = slots, kingRecoveries = KingRecoveriesAvailable };
+            slots = slots, kingRecoveries = KingRecoveriesAvailable, raisesRemaining = RaisesAvailable };
     }
 
     CardData SelectStrategicSummon(List<CardData> hand, int mana, int ownWalls, int foeWalls,
@@ -1601,7 +1603,7 @@ bool CanSpecialBreak(
     public CardController SelectKingBase(CardData king, IReadOnlyList<CardController> field,
         int mana, int slots = 6)
     {
-        if(field == null || !HasEffect(king, EffectType.SpecialSummonK)) return null;
+        if(RaisesAvailable <= 0 || field == null || !HasEffect(king, EffectType.SpecialSummonK)) return null;
         king.SetCostFromName();
         CardController best = null;
         float bestScore = float.MinValue;
@@ -1786,7 +1788,7 @@ bool CanSpecialBreak(
         foreach(var unit in foes) key.Append('|').Append(unit);
         if(includeHand)
         {
-            key.Append('/').Append(state.mana).Append('/').Append(state.kingRecoveries).Append('/').Append(state.effectValue);
+            key.Append('/').Append(state.mana).Append('/').Append(state.kingRecoveries).Append('/').Append(state.raisesRemaining).Append('/').Append(state.effectValue);
             foreach(bool used in state.used) key.Append(used ? '1' : '0');
         }
         return key.ToString();

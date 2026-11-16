@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.EventSystems;
 using System.Collections;
 using DG.Tweening;
@@ -7,6 +7,7 @@ public class BattleDropZone :
     MonoBehaviour,
     IDropHandler
 {
+    const string RaiseConfirmation = "Raise this King?";
     public Transform battleArea;
 
     public FieldDropPresentation FieldPresentation {get;private set;}
@@ -34,12 +35,13 @@ public class BattleDropZone :
         // Match the normal drop path, including the best eligible K base and its discount.
         card.data.SetPowerFromName();
         SetCardCost(card);
-        var selectedBase = IsSpecialSummonK(card) ? FindKSpecialSummonBase(null) : null;
-        if (!BattleAreaLayout.IsSpell(card.data) && !BattleAreaLayout.CanAccept(battleArea, selectedBase)) return false;
-        int summonCost = selectedBase != null ? Mathf.Max(0, card.data.cost - selectedBase.data.power) : card.data.cost;
-        if (!useCostCheck) return true;
         var resources = FindFirstObjectByType<ResourceManager>();
-        return resources != null && resources.currentResource >= summonCost;
+        int mana = useCostCheck ? (resources != null ? resources.currentResource : -1) : int.MaxValue;
+        if (mana >= card.data.cost && (BattleAreaLayout.IsSpell(card.data) || BattleAreaLayout.CanAccept(battleArea))) return true;
+        if (!IsSpecialSummonK(card) || !HasRaisesRemaining()) return false;
+        foreach (Transform child in battleArea)
+            if (CanRaiseOn(card, child.GetComponent<CardController>(), mana)) return true;
+        return false;
     }
 
     [Header("Cost Debug")]
@@ -75,8 +77,6 @@ public class BattleDropZone :
 
         if (!cardDrag.IsDragging)
     return;
-        if(FieldPresentation!=null&&!FieldPresentation.Contains(eventData.position))return;
-        FieldDropPresentation.EndDrag();
 
         CardController card =
             eventData.pointerDrag
@@ -96,7 +96,9 @@ public class BattleDropZone :
         if (battleArea == null)
             battleArea = transform;
 
-        CardController selectedBaseCard = IsSpecialSummonK(card) ? FindKSpecialSummonBase(eventData) : null;
+        CardController selectedBaseCard = FindRaiseTarget(card, eventData.position, eventData.pressEventCamera);
+        if (selectedBaseCard == null && FieldPresentation != null && !FieldPresentation.Contains(eventData.position)) return;
+        FieldDropPresentation.EndDrag();
         TryPlayConfirmedCard(cardDrag, selectedBaseCard);
     }
 
@@ -108,15 +110,14 @@ public class BattleDropZone :
         CardController card = cardDrag.GetComponent<CardController>();
         if (card == null || card.data == null) return;
         if (decisionManager != null && decisionManager.handDealer != null &&
-            !cardDrag.IsDragging && !card.transform.IsChildOf(decisionManager.handDealer.handArea)) return;
+            !cardDrag.IsDragging && !cardDrag.IsAwaitingPlayConfirmation && !card.transform.IsChildOf(decisionManager.handDealer.handArea)) return;
         card.data.SetPowerFromName();
         SetCardCost(card);
         int summonCost = card.data.cost;
         if (selectedBaseCard != null)
         {
-            if (selectedBaseCard.data == null || selectedBaseCard.transform.parent != battleArea ||
-                !selectedBaseCard.gameObject.activeInHierarchy) return;
-            selectedBaseCard.data.SetPowerFromName();
+            if (decisionManager?.handDealer == null || !HasRaisesRemaining() ||
+                !CanRaiseOn(card, selectedBaseCard, int.MaxValue)) return;
             summonCost = Mathf.Max(0, card.data.cost - selectedBaseCard.data.power);
         }
         if(!BattleAreaLayout.IsSpell(card.data) && !BattleAreaLayout.CanAccept(battleArea, selectedBaseCard))
@@ -152,8 +153,8 @@ public class BattleDropZone :
                 return;
             }
 
-            if (decisionManager != null && decisionManager.RequestPlayerDecision("summon:" + card.GetInstanceID(),
-                "Play " + (card.data.cardName ?? "this card").Replace('_', ' ') + "?", () => TryPlayConfirmedCard(cardDrag, selectedBaseCard))) return;
+            if (RequestPlayConfirmation(decisionManager, card, cardDrag, selectedBaseCard)) return;
+            if (selectedBaseCard != null && !decisionManager.handDealer.SpendRaise(false)) return;
             resourceManager.UseResource(
                 summonCost
             );
@@ -179,8 +180,11 @@ public class BattleDropZone :
          * 対象選択完了までは
          * playerBattleAreaの子として維持する。
          */
-        if (!useCostCheck && decisionManager != null && decisionManager.RequestPlayerDecision("summon:" + card.GetInstanceID(),
-            "Play " + (card.data.cardName ?? "this card").Replace('_', ' ') + "?", () => TryPlayConfirmedCard(cardDrag, selectedBaseCard))) return;
+        if (!useCostCheck)
+        {
+            if (RequestPlayConfirmation(decisionManager, card, cardDrag, selectedBaseCard)) return;
+            if (selectedBaseCard != null && !decisionManager.handDealer.SpendRaise(false)) return;
+        }
         if (decisionManager != null) decisionManager.NotifyPlayerActionCommitted();
         if(CardPlaySettings.Load().enabledEffect)
         {
@@ -188,6 +192,26 @@ public class BattleDropZone :
             return;
         }
         FinishPlayingCard(card,cardDrag,selectedBaseCard,true);
+    }
+
+    bool RequestPlayConfirmation(TurnManager manager, CardController card, CardDrag drag, CardController basis)
+    {
+        bool isRaise = basis != null;
+        string message = isRaise ? RaiseConfirmation : "Play " + (card.data.cardName ?? "this card").Replace('_', ' ') + "?";
+        return manager != null && manager.RequestPlayerDecision("summon:" + card.GetInstanceID(), message,
+            () =>
+            {
+                if (drag == null) return;
+                try
+                {
+                    if (!isRaise || basis != null) TryPlayConfirmedCard(drag, basis);
+                }
+                finally { if (drag != null) drag.CancelPlayConfirmation(); }
+            },
+            () => { if (drag != null) drag.CancelPlayConfirmation(); },
+            drag.HoldForPlayConfirmation, focusCard: card, secondFocusCard: basis,
+            focusColor: isRaise ? FieldDropPresentation.RaiseViolet : CardPlaySettings.Load().Highlight(false),
+            focusStrength: isRaise ? FieldDropPresentation.RaiseKingGlowStrength : 1f);
     }
 
     IEnumerator PlayCommittedCard(CardController card,CardDrag cardDrag,CardController selectedBaseCard)
@@ -200,7 +224,7 @@ public class BattleDropZone :
 
     void FinishPlayingCard(CardController card,CardDrag cardDrag,CardController selectedBaseCard,bool playSnap)
     {
-        cardDrag.DropToBattleArea(battleArea,playSnap);
+        cardDrag.DropToBattleArea(battleArea,playSnap && selectedBaseCard == null);
 
         RectTransform rt =
             card.GetComponent<RectTransform>();
@@ -248,6 +272,7 @@ public class BattleDropZone :
 
         if (isRaisedKing)
         {
+            card.transform.SetSiblingIndex(selectedBaseCard.transform.GetSiblingIndex());
             StackBaseCardUnderK(
                 card,
                 selectedBaseCard
@@ -299,7 +324,7 @@ public class BattleDropZone :
             card.SetAttackable(false);
         }
 
-        if(!playSnap)
+        if(!playSnap || isRaisedKing)
         {
             var layout=battleArea.GetComponent<BattleAreaLayout>();if(layout!=null)layout.PlaceImmediately(card);
             cardDrag.EnablePlacedCardInput();
@@ -546,50 +571,48 @@ IEnumerator CompleteSummonAfterSnap(CardDrag cardDrag)
         );
     }
 
-    CardController FindKSpecialSummonBase(PointerEventData eventData)
+    bool HasRaisesRemaining()
     {
-        if (battleArea == null)
-            return null;
-
-        CardController best = null;
-        GameObject hit = eventData != null ? eventData.pointerCurrentRaycast.gameObject : null;
-        CardController pointed = hit != null ? hit.GetComponentInParent<CardController>() : null;
-        for (
-            int i = 0;
-            i < battleArea.childCount;
-            i++
-        )
-        {
-            CardController card =
-                battleArea
-                    .GetChild(i)
-                    .GetComponent<CardController>();
-
-            if (
-                card == null ||
-                card.data == null ||
-                !card.gameObject.activeInHierarchy
-            )
-            {
-                continue;
-            }
-
-            card.data.SetPowerFromName();
-
-            if (
-                card.data.power == 7 ||
-                card.data.power == 8 ||
-                card.data.power == 10
-            )
-            {
-                if (card == pointed) return card;
-                if (best == null || card.data.power > best.data.power) best = card;
-            }
-        }
-
-        return best;
+        var manager = FindFirstObjectByType<TurnManager>();
+        return manager != null && manager.handDealer != null && manager.handDealer.PlayerRaisesRemaining > 0;
     }
 
+    internal bool CanPlayNormally(CardController card)
+    {
+        if (card == null || card.data == null ||
+            (!BattleAreaLayout.IsSpell(card.data) && !BattleAreaLayout.CanAccept(battleArea))) return false;
+        var resources = FindFirstObjectByType<ResourceManager>();
+        return !useCostCheck || (resources != null && resources.currentResource >= card.data.cost);
+    }
+
+    bool CanRaiseOn(CardController king, CardController basis, int mana)
+    {
+        if (!IsSpecialSummonK(king) || basis == null || basis.data == null ||
+            basis.transform.parent != battleArea || !basis.gameObject.activeInHierarchy || BattleAreaLayout.IsSpell(basis.data))
+            return false;
+        basis.data.SetPowerFromName();
+        int power = basis.data.power;
+        return (power == 7 || power == 8 || power == 10) && mana >= Mathf.Max(0, king.data.cost - power)
+            && BattleAreaLayout.CanAccept(battleArea, basis);
+    }
+
+    internal CardController FindRaiseTarget(CardController king, Vector2 pointer, Camera camera)
+    {
+        if (battleArea == null || !IsSpecialSummonK(king) || !HasRaisesRemaining()) return null;
+        king.data.SetPowerFromName();
+        SetCardCost(king);
+        var resources = FindFirstObjectByType<ResourceManager>();
+        int mana = useCostCheck ? (resources != null ? resources.currentResource : -1) : int.MaxValue;
+        for (int i = battleArea.childCount - 1; i >= 0; i--)
+        {
+            var basis = battleArea.GetChild(i).GetComponent<CardController>();
+            if (!CanRaiseOn(king, basis, mana)) continue;
+            var artwork = basis.artworkImage != null ? basis.artworkImage.rectTransform : basis.transform as RectTransform;
+            if (artwork != null && RectTransformUtility.RectangleContainsScreenPoint(artwork, pointer, camera))
+                return basis;
+        }
+        return null;
+    }
     void StackBaseCardUnderK(
         CardController kCard,
         CardController baseCard

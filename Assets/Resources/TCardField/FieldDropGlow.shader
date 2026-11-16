@@ -1,4 +1,4 @@
-﻿Shader "T-card/UI/Field Drop Glow"
+Shader "T-card/UI/Field Drop Glow"
 {
  Properties
  {
@@ -26,7 +26,7 @@
    #include "UnityCG.cginc"
    struct appdata {float4 vertex:POSITION;float4 color:COLOR;float2 uv:TEXCOORD0;};
    struct v2f {float4 vertex:SV_POSITION;float2 localPosition:TEXCOORD0;float4 color:COLOR;};
-   float4 _Shape,_Appearance,_Motion,_FieldColor,_PanelSize,_Breath;
+   float4 _Shape,_Appearance,_Motion,_FieldColor,_PanelSize,_Breath,_RimColor;
    v2f vert(appdata v){v2f o;o.vertex=UnityObjectToClipPos(v.vertex);o.localPosition=(v.uv-.5)*_PanelSize.xy;o.color=v.color;return o;}
    float4 frag(v2f i):SV_Target
    {
@@ -47,7 +47,7 @@
     float surface=saturate(1-length((i.localPosition-center)/max(halfSize,float2(1,1))));
     float fill=inside*_Appearance.z*(.13+surface*.25);
     float alpha=saturate((rim*.65+soft+wisps+fill)*_Appearance.y*breath*_Appearance.x*_FieldColor.a);
-    float3 tint=lerp(_FieldColor.rgb,float3(.81,1,.965),saturate(rim*.6+surface*inside*_Appearance.z*.3));
+    float3 tint=lerp(_FieldColor.rgb,_RimColor.rgb,saturate(rim*.6+surface*inside*_Appearance.z*.3));
     return float4(tint,alpha)*i.color;
    }
    ENDCG

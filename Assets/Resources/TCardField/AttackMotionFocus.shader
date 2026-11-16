@@ -1,4 +1,4 @@
-﻿Shader "T-card/UI/Attack Motion Focus"
+Shader "T-card/UI/Attack Motion Focus"
 {
  Properties { [PerRendererData] _MainTex ("Texture",2D)="white" {} }
  SubShader
@@ -34,15 +34,16 @@
      float blur=max(1,lerp(_Tune.x,_WallTune.y,softWall)),width=max(.3,_Tune.y);
      float halo=exp(-d*d/(blur*blur))*.55+exp(-d*d/(blur*blur*.25))*.35+exp(-d*d/(width*width))*.65*(1-softWall);
      float a=saturate(halo*_Colors[n].a*_Opacity)*lerp(smoothstep(-2*_ViewSize.z,0,d),smoothstep(-blur,blur*.1,d),softWall);
-     light+=_Colors[n].rgb*a;glowAlpha+=a;
+     light=_Colors[n].rgb*a+light*(1-a);
+     glowAlpha=a+glowAlpha*(1-a);
     }
     float dim=_DimColor.a*_Opacity*(1-hole);
     // The preview's alpha describes visible darkness. Preserve that appearance in linear rendering.
     #ifndef UNITY_COLORSPACE_GAMMA
      dim=1-pow(saturate(1-dim),2.2);
     #endif
-    float alpha=saturate(dim+glowAlpha);
-    return float4((_DimColor.rgb*dim+light)/max(.0001,alpha),alpha);
+    float alpha=glowAlpha+dim*(1-glowAlpha);
+    return float4((light+_DimColor.rgb*dim*(1-glowAlpha))/max(.0001,alpha),alpha);
    }
    ENDCG
   }

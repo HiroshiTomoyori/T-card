@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.EventSystems;
 using System.Collections;
 using DG.Tweening;
@@ -55,6 +55,7 @@ public class CardDrag :
 
     Coroutine dropSnapCoroutine;
     bool playPresentationRunning;
+    bool playConfirmationPending;
     bool battlePlacementStarted;
     bool battlePlacementFinished;
 CCP.Card proCard;
@@ -63,6 +64,7 @@ HandController sourceHand;
 bool proWasEnabled;
 
 public bool IsDragging => canDrag;
+internal bool IsAwaitingPlayConfirmation => playConfirmationPending;
 
 void SuspendProCard()
 {
@@ -134,6 +136,7 @@ void ReleaseProHand()
     }
 public void OnBeginDrag(PointerEventData eventData)
 {
+    if (playConfirmationPending) return;
     canDrag = false;
 
     if (eventData == null ||
@@ -372,6 +375,26 @@ public void OnEndDrag(PointerEventData eventData)
     if (droppedSuccessfully)
         return;
 
+    ReturnToHand();
+}
+
+internal void HoldForPlayConfirmation()
+{
+    if (!canDrag) return;
+    canDrag = false;
+    playConfirmationPending = true;
+    transform.DOKill();
+}
+
+internal void CancelPlayConfirmation()
+{
+    if (!playConfirmationPending) return;
+    playConfirmationPending = false;
+    ReturnToHand();
+}
+
+void ReturnToHand()
+{
     canvasGroup.blocksRaycasts = true;
 
     if (originalParent == null)
@@ -482,7 +505,8 @@ public void MarkDroppedSuccessfully()
     {
         FieldDropPresentation.EndDrag();
         // Double-click play has no OnBeginDrag geometry snapshot.
-        if(!canDrag && rectTransform!=null) originalSizeDelta=rectTransform.sizeDelta;
+        if(!canDrag && !playConfirmationPending && rectTransform!=null) originalSizeDelta=rectTransform.sizeDelta;
+        playConfirmationPending = false;
         droppedSuccessfully=true;canDrag=false;playPresentationRunning=true;
         if(sourceHand==null)sourceHand=GetComponentInParent<HandController>();
         if(proCard==null)SuspendProCard();
@@ -515,7 +539,8 @@ public void MarkDroppedSuccessfully()
         if (battleArea == null)
             return;
 
-            ReleaseProHand();
+        playConfirmationPending = false;
+        ReleaseProHand();
         ResetFieldVisualScale();
 
         CardController card =

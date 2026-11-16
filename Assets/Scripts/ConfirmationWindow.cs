@@ -72,6 +72,33 @@ internal sealed class ConfirmationWindow
         return button;
     }
 
+    internal static void StyleEndTurnButton(Button button)
+    {
+        if (button == null) return;
+        if (button.targetGraphic is Image oldArtwork)
+        {
+            // The old sprite includes transparent margins. Match its visible frame,
+            // while retaining the existing button RectTransform and hit area.
+            oldArtwork.color = Color.clear;
+            oldArtwork.canvasRenderer.cullTransparentMesh = false;
+        }
+        var rect = CreateRect(button.transform, "End Turn Glass");
+        // The legacy sprite's visible frame, excluding its transparent margins.
+        Vector2 center = new Vector2(.5065f, .537f);
+        Vector2 halfSize = new Vector2(.2935f, .177f) * .87f;
+        rect.anchorMin = center - halfSize;
+        rect.anchorMax = center + halfSize;
+        rect.offsetMin = rect.offsetMax = Vector2.zero;
+        var surface = AddSurface(rect);
+        button.targetGraphic = surface;
+        var label = CreateLabel(rect, "End Turn Label", "End Turn");
+        label.rectTransform.anchorMin = Vector2.zero;
+        label.rectTransform.anchorMax = Vector2.one;
+        label.rectTransform.offsetMin = new Vector2(3f, 2f);
+        label.rectTransform.offsetMax = new Vector2(-3f, -2f);
+        surface.ConfigureEndTurnLabel(label, button);
+    }
+
     internal static ConfirmationGlass AddSurface(RectTransform rect)
     {
         var graphic = rect.gameObject.AddComponent<ConfirmationGlass>();

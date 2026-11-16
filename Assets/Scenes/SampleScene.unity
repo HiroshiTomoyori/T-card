@@ -4955,8 +4955,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 0}
   m_AnchorMax: {x: 1, y: 0}
-  m_AnchoredPosition: {x: -175, y: 420}
-  m_SizeDelta: {x: 250, y: 200}
+  m_AnchoredPosition: {x: -175, y: 438}
+  m_SizeDelta: {x: 250, y: 175}
   m_Pivot: {x: 1, y: 0}
 --- !u!114 &619094524
 MonoBehaviour:
@@ -4980,10 +4980,10 @@ MonoBehaviour:
   m_Transition: 1
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
-    m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
-    m_PressedColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 1}
-    m_SelectedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
-    m_DisabledColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.5019608}
+    m_HighlightedColor: {r: 0.64705884, g: 0.8266753, b: 1, a: 1}
+    m_PressedColor: {r: 0.33333337, g: 0.6238445, b: 1, a: 1}
+    m_SelectedColor: {r: 0.35294116, g: 0.5643151, b: 1, a: 1}
+    m_DisabledColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 1}
     m_ColorMultiplier: 1
     m_FadeDuration: 0.1
   m_SpriteState:
@@ -5027,7 +5027,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0, g: 0, b: 0, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 50, y: 70, z: 50, w: 50}
   m_Maskable: 1
@@ -5541,15 +5541,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   choicePanel: {fileID: 1774339343}
-  useButton: {fileID: 1283354650}
-  handButton: {fileID: 1813371777}
   orderPanel: {fileID: 8100000001}
-  firstOrderButton: {fileID: 8100000013}
-  secondOrderButton: {fileID: 8100000022}
-  firstOrderPreview: {fileID: 8100000008}
-  secondOrderPreview: {fileID: 8100000030}
-  choiceTitle: {fileID: 8100000046}
-  cardPreviewImage: {fileID: 1655432093}
+  windowSize: {x: 575, y: 456}
+  windowOffset: {x: 0, y: 0}
+  windowFade: 0
+  reverseCueDuration: 0.815
+  glowSpeed: 1
+  glowTint: {r: 1, g: 1, b: 1, a: 1}
+  cueTint: {r: 1, g: 0.86, b: 0.55, a: 1}
 --- !u!1 &668040678
 GameObject:
   m_ObjectHideFlags: 0

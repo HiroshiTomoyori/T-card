@@ -1,10 +1,10 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.UI;
 [RequireComponent(typeof(CanvasRenderer))]
 public sealed class FieldHighlightGraphic : MaskableGraphic
 {
     Material owned;
-    public void Show(FieldHighlightSettings settings,Vector2 size,float scale,float opacity,float time)
+    public void Show(FieldHighlightSettings settings,Vector2 size,float scale,float opacity,float time,Color? tint=null, Color? rimTint=null, float brightnessMultiplier=1f)
     {
         if(owned==null)
         {
@@ -13,10 +13,11 @@ public sealed class FieldHighlightGraphic : MaskableGraphic
         }
         owned.SetVector("_PanelSize",rectTransform.rect.size);
         owned.SetVector("_Shape",new Vector4(size.x,size.y,settings.cornerRadius*scale,Mathf.Max(1,settings.blur*scale)));
-        owned.SetVector("_Appearance",new Vector4(opacity,settings.brightness,settings.interiorGlow,time));
+        owned.SetVector("_Appearance",new Vector4(opacity,settings.brightness * brightnessMultiplier,settings.interiorGlow,time));
         owned.SetVector("_Motion",new Vector4(Mathf.Max(.2f,settings.driftPeriod),settings.outwardSpread*scale,Mathf.Max(.1f,settings.lineWidth*scale),settings.outerGlow));
         owned.SetVector("_Breath",new Vector4(Mathf.Max(.2f,settings.pulsePeriod),settings.minimumPulseBrightness,settings.maximumPulseBrightness,0));
-        owned.SetColor("_FieldColor",settings.highlightColor);raycastTarget=false;maskable=false;
+        owned.SetVector("_RimColor", rimTint ?? new Color(.81f, 1f, .965f));
+        owned.SetColor("_FieldColor",tint??settings.highlightColor);raycastTarget=false;maskable=false;
     }
     protected override void OnPopulateMesh(VertexHelper vh)
     {
